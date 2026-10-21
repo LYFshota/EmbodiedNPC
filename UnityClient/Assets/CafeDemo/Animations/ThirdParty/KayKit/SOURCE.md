@@ -91,3 +91,25 @@ remains unchanged. The low-poly model's hands use the existing retargeted shape;
 this change adds no finger articulation or IK. The Merchant-specific hold-point
 offset positions the cup at the right palm, while the existing GrabPoint alignment
 and WorldState ownership transactions continue to attach/transfer the item.
+
+## VRM NPC idle and expressive-layer compatibility (2026-10-22)
+
+`Idle_A.anim` is extracted from KayKit Character Animations 1.1,
+`Animations/fbx/Rig_Medium/Rig_Medium_General.fbx`, by Kay Lousberg,
+under the same supplied CC0 license (`LICENSE.txt`). Imported as Humanoid /
+Create From This Model with Bake Axis Conversion and no materials. The 1.0667 s
+standalone clip loops with Loop Pose, baked root rotation/Y/XZ, and root
+orientation based on Body Orientation (Keep Original Orientation disabled).
+It has no events or source FBX dependency.
+
+CafeExpressive and CafeV2Expressive use this relaxed idle; CafeV2Seated retains
+its seated base motion. The Dialogue layer reuses Idle_A as a conservative
+arm-only fallback instead of the broad retargeted Talking motion. Facial
+expressions, head/nod presentation and the existing KayKit Waving remain.
+Dialogue and GestureUpperBody use CafeConversationArms (arms/fingers only),
+preventing these layers from replacing the hips, torso, legs or head. Carry,
+drink-preparation and cleaning masks remain separate and unchanged.
+
+CafeV2Expressive Locomotion Foot IK is disabled: on Vivi's VRM 1 Avatar the
+solver widened the idle stance and distorted the existing walk. The Walk clips,
+blend thresholds, playback rates, locomotion speeds and movement code are unchanged.

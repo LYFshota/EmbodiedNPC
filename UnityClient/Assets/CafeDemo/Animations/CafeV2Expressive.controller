@@ -9,7 +9,7 @@ BlendTree:
   m_Name: Locomotion
   m_Childs:
   - serializedVersion: 2
-    m_Motion: {fileID: 7400000, guid: 9db9b39de7957944ea4806cf736ea73d, type: 2}
+    m_Motion: {fileID: 7400000, guid: af4d858633997ad419973722eaf3a2a1, type: 2}
     m_Threshold: 0
     m_Position: {x: 0, y: 0}
     m_TimeScale: 1
@@ -184,7 +184,7 @@ AnimatorController:
   - serializedVersion: 5
     m_Name: Dialogue
     m_StateMachine: {fileID: 1800955382182455071}
-    m_Mask: {fileID: 31900000, guid: 8882a3370a86eb349907b983943979cb, type: 2}
+    m_Mask: {fileID: 31900000, guid: 2d14260ef473daa47b187517bd586ae9, type: 2}
     m_Motions: []
     m_Behaviours: []
     m_BlendingMode: 0
@@ -196,7 +196,7 @@ AnimatorController:
   - serializedVersion: 5
     m_Name: GestureUpperBody
     m_StateMachine: {fileID: 1260757256297190557}
-    m_Mask: {fileID: 31900000, guid: 8882a3370a86eb349907b983943979cb, type: 2}
+    m_Mask: {fileID: 31900000, guid: 2d14260ef473daa47b187517bd586ae9, type: 2}
     m_Motions: []
     m_Behaviours: []
     m_BlendingMode: 0
@@ -463,7 +463,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 3f28800681906704b8e66e10891f4f8f, type: 2}
+  m_Motion: {fileID: 7400000, guid: af4d858633997ad419973722eaf3a2a1, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -482,7 +482,7 @@ AnimatorState:
   m_Transitions: []
   m_StateMachineBehaviours: []
   m_Position: {x: 50, y: 50, z: 0}
-  m_IKOnFeet: 1
+  m_IKOnFeet: 0
   m_WriteDefaultValues: 1
   m_Mirror: 0
   m_SpeedParameterActive: 0
