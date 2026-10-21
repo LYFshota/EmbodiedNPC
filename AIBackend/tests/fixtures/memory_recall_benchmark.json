@@ -1,0 +1,718 @@
+{
+  "version": "memory-recall-benchmark/2.0",
+  "description": "固定人工编写的小型中文用例；运行时不调用 LLM 生成语料或 Gold。m01 等为显式 fixture 别名，seed 后映射到合法 canonical ID。 当前合同：开放 SEMANTIC_FACT；独立声明在显式维护前保持 ACTIVE，不从属性键自动推断冲突。此版本不与旧闭集属性基准直接比较。",
+  "observers": {
+    "NPC_A": "merchant.001",
+    "NPC_B": "regular.002"
+  },
+  "subjects": {
+    "Player_A": "U10001",
+    "Player_B": "U10002",
+    "Player_C": "U10003"
+  },
+  "memories": [
+    {
+      "memory_id": "m01",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家请求我把杯子送到桌边，我完成后玩家向我表示感谢。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m02",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家说最近睡眠不足，第二天上午还有考试。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m03",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家把手机落在座椅缝里，我找到后归还给了玩家。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m04",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家借走一把折叠伞，冒雨回家。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m05",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家为朋友订了生日蛋糕，约定周五来取。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m06",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家展示了旅行途中购买的明信片。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m07",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家请我为晚到的朋友留一个靠窗座位。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m08",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家嫌门口施工声太大，换到了店内最安静的角落。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m09",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家点了一杯拿铁，在窗边喝完后离开。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m10",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家请求我把杯子送到吧台，我完成交付后收到了感谢。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m11",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家搭了一整夜火车，坐下后一直打哈欠。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m12",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家把湿雨衣挂在门口，等天气转晴。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m13",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家跑到车站时末班公交已经开走，只好步行回家。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m14",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "电梯停运，我替玩家将沉重的行李箱搬上了三楼。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m15",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家约了牙医，喝完水便匆忙离店。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m16",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家在收银台找到了遗失的钥匙。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m17",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "玩家在店里复习数学，准备下周的期中测验。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m18",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "玩家把红围巾搭在椅背上，离开时又取走了。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m19",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "结账时玩家发现钱包忘在家里，同伴替玩家付了钱。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m20",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "雨下得很大，我把店里的长柄伞借给玩家带走。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m21",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "玩家喝完牛奶后肚子不舒服，向我询问有没有植物奶。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m22",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "玩家带来一盆薄荷，讲解了每天浇水的方法。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m23",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "玩家打翻了茶水，我擦净桌面并换了一杯热茶。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m24",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "玩家参观完博物馆后过来休息，给我看了展览照片。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m25",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家最喜欢的颜色是蓝色。"
+    },
+    {
+      "memory_id": "m26",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家希望被称为小林。"
+    },
+    {
+      "memory_id": "m27",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家喜欢肉桂卷。"
+    },
+    {
+      "memory_id": "m28",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家不喜欢香菜。"
+    },
+    {
+      "memory_id": "m29",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家最喜欢的颜色是绿色。"
+    },
+    {
+      "memory_id": "m30",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家最喜欢的颜色是红色。"
+    },
+    {
+      "memory_id": "m31",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家希望被称为阿泽。"
+    },
+    {
+      "memory_id": "m32",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家喜欢手冲咖啡。"
+    },
+    {
+      "memory_id": "m33",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家最喜欢的颜色是紫色。"
+    },
+    {
+      "memory_id": "m34",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家希望被称为小雨。"
+    },
+    {
+      "memory_id": "m35",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家喜欢低糖甜点。"
+    },
+    {
+      "memory_id": "m36",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家不喜欢冰饮。"
+    },
+    {
+      "memory_id": "m37",
+      "observer": "NPC_B",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家说以前我帮过玩家很多次，最难忘的是修好了坏掉的自行车。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m38",
+      "observer": "NPC_B",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家抱怨休息不好，连续三天没有睡好觉。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m39",
+      "observer": "NPC_B",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家点过拿铁，又买了一块芝士蛋糕。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m40",
+      "observer": "NPC_B",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "玩家让我把杯子送到桌边，我随后完成了。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m41",
+      "observer": "NPC_B",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家借走一把折叠伞，答应明天归还。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m42",
+      "observer": "NPC_B",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家请求我帮忙把行李箱搬上楼。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m43",
+      "observer": "NPC_B",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "玩家说钱包没带，朋友代付了午饭钱。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m44",
+      "observer": "NPC_B",
+      "subject": "Player_B",
+      "memory_type": "EPISODIC",
+      "summary": "玩家把手机忘在我这里，第二天回来领取。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m45",
+      "observer": "NPC_B",
+      "subject": "Player_C",
+      "memory_type": "EPISODIC",
+      "summary": "玩家不喜欢嘈杂的环境，请求更换座位。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m46",
+      "observer": "NPC_B",
+      "subject": "Player_A",
+      "memory_type": "EPISODIC",
+      "summary": "玩家送给我一张明信片，上面画着海边的灯塔。",
+      "expected_status": "ACTIVE"
+    },
+    {
+      "memory_id": "m47",
+      "observer": "NPC_B",
+      "subject": "Player_A",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家最喜欢的颜色是橙色。"
+    },
+    {
+      "memory_id": "m48",
+      "observer": "NPC_B",
+      "subject": "Player_B",
+      "memory_type": "SEMANTIC_FACT",
+      "expected_status": "ACTIVE",
+      "fact": "玩家不喜欢甜牛奶。"
+    }
+  ],
+  "queries": [
+    {
+      "query_id": "q01",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "semantic_query": "折叠伞",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m04"
+      ],
+      "category": "exact"
+    },
+    {
+      "query_id": "q02",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "semantic_query": "拿铁",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m09"
+      ],
+      "category": "exact"
+    },
+    {
+      "query_id": "q03",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "semantic_query": "红围巾",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m18"
+      ],
+      "category": "exact"
+    },
+    {
+      "query_id": "q04",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "semantic_query": "明信片",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m06"
+      ],
+      "category": "exact"
+    },
+    {
+      "query_id": "q05",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "semantic_query": "你以前帮过我吗？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m01",
+        "m03"
+      ],
+      "category": "semantic"
+    },
+    {
+      "query_id": "q06",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "semantic_query": "我之前是不是跟你抱怨过休息不好？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m02"
+      ],
+      "category": "semantic"
+    },
+    {
+      "query_id": "q07",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "semantic_query": "我的通讯设备丢失后，是谁替我寻回来的？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m03"
+      ],
+      "category": "semantic"
+    },
+    {
+      "query_id": "q08",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "semantic_query": "当时为什么我不愿坐在入口附近？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m08"
+      ],
+      "category": "semantic"
+    },
+    {
+      "query_id": "q09",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "semantic_query": "我有一次没赶上公共交通，后来怎么回去的？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m13"
+      ],
+      "category": "semantic"
+    },
+    {
+      "query_id": "q10",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "semantic_query": "楼里的升降设备坏了，你是怎样协助我的？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m14"
+      ],
+      "category": "semantic"
+    },
+    {
+      "query_id": "q11",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "semantic_query": "我没带现金和银行卡的那次，谁替我买单？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m19"
+      ],
+      "category": "semantic"
+    },
+    {
+      "query_id": "q12",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "semantic_query": "我弄洒饮料以后你是怎么处理的？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m23"
+      ],
+      "category": "semantic"
+    },
+    {
+      "query_id": "q13",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "semantic_query": "我喜欢什么颜色？",
+      "filters": {
+        "memory_type": "SEMANTIC_FACT"
+      },
+      "gold_memory_ids": [
+        "m29",
+        "m30"
+      ],
+      "category": "profile"
+    },
+    {
+      "query_id": "q14",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "semantic_query": "我希望你怎么称呼我？",
+      "filters": {
+        "memory_type": "SEMANTIC_FACT"
+      },
+      "gold_memory_ids": [
+        "m26"
+      ],
+      "category": "profile"
+    },
+    {
+      "query_id": "q15",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "semantic_query": "我喜欢吃什么？",
+      "filters": {
+        "memory_type": "SEMANTIC_FACT"
+      },
+      "gold_memory_ids": [
+        "m27"
+      ],
+      "category": "profile"
+    },
+    {
+      "query_id": "q16",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "semantic_query": "我不爱喝什么？",
+      "filters": {
+        "memory_type": "SEMANTIC_FACT"
+      },
+      "gold_memory_ids": [
+        "m36"
+      ],
+      "category": "profile"
+    },
+    {
+      "query_id": "q17",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "semantic_query": "你把杯子送到了哪里？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m10"
+      ],
+      "category": "subject_scoped"
+    },
+    {
+      "query_id": "q18",
+      "observer": "NPC_A",
+      "subject": "Player_C",
+      "semantic_query": "下雨时你借给我的东西是什么？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m20"
+      ],
+      "category": "subject_scoped"
+    },
+    {
+      "query_id": "q19",
+      "observer": "NPC_A",
+      "subject": "Player_A",
+      "semantic_query": "我为什么需要早点睡觉？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m02"
+      ],
+      "category": "subject_scoped"
+    },
+    {
+      "query_id": "q20",
+      "observer": "NPC_A",
+      "subject": null,
+      "semantic_query": "之前谁点过拿铁？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m09"
+      ],
+      "category": "open_subject"
+    },
+    {
+      "query_id": "q21",
+      "observer": "NPC_A",
+      "subject": null,
+      "semantic_query": "谁让我把杯子送到桌边或吧台？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m01",
+        "m10"
+      ],
+      "category": "open_subject"
+    },
+    {
+      "query_id": "q22",
+      "observer": "NPC_A",
+      "subject": null,
+      "semantic_query": "谁需要我帮忙把行李搬到楼上？",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [
+        "m14"
+      ],
+      "category": "open_subject"
+    },
+    {
+      "query_id": "q23",
+      "observer": "NPC_A",
+      "subject": null,
+      "semantic_query": "你以前帮我修好自行车的事情",
+      "filters": {
+        "memory_type": "EPISODIC"
+      },
+      "gold_memory_ids": [],
+      "category": "authority",
+      "forbidden_memory_ids": [
+        "m37"
+      ]
+    },
+    {
+      "query_id": "q24",
+      "observer": "NPC_A",
+      "subject": "Player_B",
+      "semantic_query": "我不喜欢甜牛奶",
+      "filters": {
+        "memory_type": "SEMANTIC_FACT"
+      },
+      "gold_memory_ids": [],
+      "category": "authority",
+      "forbidden_memory_ids": [
+        "m48"
+      ]
+    }
+  ]
+}

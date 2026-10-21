@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://embodiednpc.local/contracts/task-failure-response.schema.json",
+  "title": "EmbodiedNPC TaskFailureResponse 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["message_type", "schema_version", "request_id", "trace_id", "world_revision", "proposal_id", "proposal_revision", "resolution", "utterance", "emotion", "gesture", "selected_alternative_id"],
+  "properties": {
+    "message_type": { "const": "task_failure_response" },
+    "schema_version": { "const": "1.0" },
+    "request_id": { "type": "string", "minLength": 1 },
+    "trace_id": { "type": "string", "minLength": 1 },
+    "world_revision": { "type": "integer", "minimum": 0 },
+    "proposal_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 120 },
+    "proposal_revision": { "type": "integer", "minimum": 1, "maximum": 2 },
+    "resolution": { "enum": ["explain", "clarify", "revise"] },
+    "utterance": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "emotion": { "enum": ["happy", "neutral", "fear"] },
+    "gesture": { "enum": ["none", "wave", "nod"] },
+    "selected_alternative_id": {
+      "anyOf": [
+        { "type": "null" },
+        { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 120 }
+      ]
+    }
+  }
+}

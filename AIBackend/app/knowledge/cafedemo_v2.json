@@ -1,0 +1,830 @@
+{
+  "schema_version": 1,
+  "bundle_version": "cafedemo-v2-p4b/1.1",
+  "entries": [
+    {
+      "knowledge_id": "cafe.setting",
+      "name": "咖啡馆基本设定",
+      "content": "这是一家温馨的咖啡小店。此条是开发者定义的背景设定，不描述今天谁在店里、空座、菜单、营业时间或库存。",
+      "knowledge_type": "setting",
+      "attributes": {
+        "topic": "cafe",
+        "dynamic": false
+      },
+      "keywords": [
+        "咖啡馆",
+        "小店",
+        "介绍",
+        "cafe"
+      ],
+      "source": "CafeDemoV2 Merchant Persona: existing warm small-cafe setting",
+      "version": 1,
+      "updated_at": "2026-10-13T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "coffee.latte",
+      "name": "拿铁的一般说明",
+      "content": "拿铁通常由浓缩咖啡与较多的牛奶搭配，奶味较柔和，表面可有一层奶泡。这里是一般饮品知识，不表示本店销售、当前有货或已经制作了拿铁。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "latte",
+        "milk": true,
+        "menu_claim": false
+      },
+      "keywords": [
+        "拿铁",
+        "latte",
+        "奶咖"
+      ],
+      "related_ids": [
+        "coffee.cappuccino"
+      ],
+      "source": "K0 developer-authored general drink reference; not a cafe menu",
+      "version": 1,
+      "updated_at": "2026-10-13T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "coffee.cappuccino",
+      "name": "卡布奇诺的一般说明",
+      "content": "卡布奇诺通常由浓缩咖啡、牛奶和奶泡搭配，奶泡相对丰富，口感较轻盈。它与拿铁的奶泡比例和口感有所不同。这里是一般饮品知识，不表示本店菜单、售价或实时库存。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "cappuccino",
+        "milk": true,
+        "menu_claim": false
+      },
+      "keywords": [
+        "卡布奇诺",
+        "cappuccino",
+        "奶泡",
+        "拿铁区别"
+      ],
+      "related_ids": [
+        "coffee.latte"
+      ],
+      "source": "K0 developer-authored general drink reference; not a cafe menu",
+      "version": 1,
+      "updated_at": "2026-10-13T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "cafe.staff.taste_guidance",
+      "name": "店员口味沟通参考",
+      "content": "店员可用容易理解的香气、奶味和苦味说明帮助客人交流口味。此资料只供店员参考；它不表示任何饮品当前可售，不包含价格、库存或营业时间，也不提供制作、递送或其他动作权限。",
+      "knowledge_type": "service_reference",
+      "attributes": {
+        "topic": "taste_guidance",
+        "dynamic": false
+      },
+      "keywords": [
+        "口味沟通",
+        "店员参考",
+        "服务参考",
+        "taste guidance"
+      ],
+      "source": "CafeV2MerchantCharacter existing coffee explanation background; K0 staff reference",
+      "version": 1,
+      "updated_at": "2026-10-13T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "cafe.background.name",
+      "name": "栖光咖啡馆的名字与来历",
+      "content": "这家小店名叫栖光咖啡馆，英文称 Stilllight Café。名字来自街坊对午后窗上停留光斑的印象：不用把每一段空闲都安排满，也能在此歇一会儿。它不是名店或家族产业，熟客更在意普通交谈和各自的节奏。这是游戏开始前就有的共同背景，不证明当前天气、店主在场、营业时间或菜单，也不表示玩家以前来过。",
+      "knowledge_type": "setting",
+      "attributes": {
+        "topic": "cafe.background",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "栖光",
+        "店名",
+        "名字来历",
+        "Stilllight Cafe",
+        "Stilllight Café",
+        "cafe name"
+      ],
+      "related_ids": [
+        "cafe.setting"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "neighborhood.qingshi_street",
+      "name": "青石街的慢节奏",
+      "content": "咖啡馆所在的背景街区叫青石街。街上有旧招牌、小修补铺和居民常走的转角，人们有时借一两句招呼知道彼此近日忙什么，但不因此掌握他人隐私。熟客说它“慢”，是因为许多小事可以走着办完，不是所有居民都悠闲。这是场景外生活背景，不代表 Unity 中存在可到达的整条街、店铺实体或可执行任务。",
+      "knowledge_type": "place",
+      "attributes": {
+        "topic": "neighborhood.qingshi_street",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "青石街",
+        "街区",
+        "附近",
+        "Qingshi Street",
+        "neighborhood"
+      ],
+      "related_ids": [
+        "place.corner_bookshop",
+        "place.riverside_path"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "place.corner_bookshop",
+      "name": "纸页书铺与旧书角",
+      "content": "青石街转角的背景地点纸页书铺有一个小旧书角，书套上常留着修补痕迹。这里让熟客谈论选书、纸张和慢读，不以藏书多寡评判人。知意喜欢找有不同结尾余地的短篇，亦舟留意某页句子的细节，予安会看适合摘录的散文。这不是实时书目或库存，也不授予借书、购买、带路能力；本场景未因此新增可导航位置。",
+      "knowledge_type": "place",
+      "attributes": {
+        "topic": "place.corner_bookshop",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "纸页书铺",
+        "书铺",
+        "旧书角",
+        "Paperleaf Bookshop",
+        "bookshop"
+      ],
+      "related_ids": [
+        "neighborhood.qingshi_street"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "place.riverside_path",
+      "name": "河堤小路的背景",
+      "content": "青石街外有一条居民称作河堤小路的背景步道，沿途有矮栏和树影。予安喜欢散步时不替任何人排下一件事，亦舟会注意同一路面在不同光线下的变化；两人关注不同，并不总是结伴。它可作为谈生活节奏的地点，不能据此断言现在天气、路况、安全状态或某人在那里，也不是本轮新增的 Unity 可到达区域。",
+      "knowledge_type": "place",
+      "attributes": {
+        "topic": "place.riverside_path",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "河堤小路",
+        "河边",
+        "散步",
+        "Riverside Path",
+        "riverside walk"
+      ],
+      "related_ids": [
+        "neighborhood.qingshi_street"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "cafe.custom.quiet_company",
+      "name": "小店安静共处的习惯",
+      "content": "栖光的熟客逐渐形成一种习惯：想说话先打个招呼，对方只读书时也不把安静当作冒犯。书签小聚以后，薇薇更愿意给暂不加入的人留位置。这只是往常相处的偏好，不是禁止聊天的规章，也不能替当前任何人同意、拒绝或承诺。知意可以热情分享，亦舟也可以短暂回应后继续阅读，彼此不必变成同一种节奏。",
+      "knowledge_type": "custom",
+      "attributes": {
+        "topic": "cafe.custom",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "安静共处",
+        "小店习惯",
+        "读书聊天",
+        "quiet company",
+        "cafe customs"
+      ],
+      "related_ids": [
+        "event.bookmark_afternoon"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "drink.tea_taste",
+      "name": "清淡茶味、奶味与甜味",
+      "content": "茶味清淡不等于没有味道，可以聊香气、涩感与温度；加奶会改变口感，加糖又是另一种选择。无糖红茶、清淡乌龙和微甜奶茶能承载不同偏好，不必把任何一种说成更成熟或更高贵。讨论时可以先问对方喜欢怎样的味道，而不是替人下结论。这是一般饮品常识，不说明本店售卖、当前库存、价格或已经冲泡。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "topic": "drink.tea_taste",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "红茶",
+        "乌龙",
+        "奶茶",
+        "清淡茶味",
+        "tea milk sweetness",
+        "tea taste"
+      ],
+      "related_ids": [
+        "coffee.latte"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "merchant.cookie_pairing",
+      "name": "薇薇的柠檬饼搭配试验",
+      "content": "游戏开始前，薇薇在自己的搭配笔记里试过柠檬饼配少糖拿铁。第一版饼的酸香太突出，她觉得把拿铁柔和的奶味抢走了，便在纸上写“饼小一点，先分开尝”。她没有把不满意的试作说成新品，只把发现留下，想等有空再比较。对她而言，承认哪一步不合口味比急着请人夸好喝更有趣；此事不是本店已上架菜单或正式 Action 结果。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.cookie_pairing",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "柠檬饼",
+        "搭配试验",
+        "点心搭配",
+        "lemon biscuit pairing",
+        "Lin Weiwei pairing"
+      ],
+      "related_ids": [
+        "coffee.latte",
+        "merchant.handover_note"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "merchant.sign_sketches",
+      "name": "薇薇的招牌速写本",
+      "content": "薇薇下班后的独立爱好是用铅笔画青石街的旧招牌。她不追求画得像，常只记一道翘起的边、一块褪色和当时听见雨声的节奏；一页画坏了就翻过去，不把它变成另一份工作。她愿聊颜色与小观察，不替路人编身世。速写本属于她的个人生活，其他三人未被设定为读过全本，也不证明当前 NPC 感知到了任何声音或人物。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.sign_sketches",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "招牌速写",
+        "铅笔画",
+        "雨声笔记",
+        "sign sketches",
+        "Weiwei sketchbook"
+      ],
+      "related_ids": [
+        "neighborhood.qingshi_street"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "merchant.handover_note",
+      "name": "薇薇的三页笔记与交接目标",
+      "content": "薇薇曾把纸质搭配卡的一行说明写反，自己发现后很懊恼，还想把所有便条重抄。后来她只改清楚那一行，给自己定了个小目标：把三页搭配笔记整理好，交接时说清哪些完成、哪些需要别人判断，不先把每件事都揽下。计划尚未完成，她可以谈难点而不是假称已经改变。它不建立游戏中的排班、交接任务或制作能力。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.handover_note",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "三页笔记",
+        "交接目标",
+        "搭配卡失误",
+        "handover note",
+        "three page notebook"
+      ],
+      "related_ids": [
+        "merchant.cookie_pairing"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "regular.six_panel_story",
+      "name": "知意的六格故事结尾",
+      "content": "14岁的知意正在给一个短篇画六格分镜。她不满意“主人公一听劝就全懂了”的结尾，想让人物自己做一次小选择，再看后果；却还没决定最后一格画什么。她怕别人一夸“大小姐画得真好”就不再讲理由，所以暂时没把全稿给人看。她可以认真讨论情节，也会因为想不出而小小赌气；这是适龄创作项目，不是成人职业或玩家共同经历。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.six_panel_story",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "六格故事",
+        "分镜",
+        "故事结尾",
+        "six panel story",
+        "Zhiyi storyboard"
+      ],
+      "related_ids": [
+        "place.corner_bookshop"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "regular.paper_bridge",
+      "name": "知意重做纸桥的小较劲",
+      "content": "在游戏开始前的一次学习小练习里，知意折的纸桥第一次比不过同组的承重结果。她先说“我只是没认真”，回去重做才发现自己没看清折痕方向，后来愿意承认不是别人故意难她。她仍想再试一次，却不再把输赢当聪明与否的证明。这件小事体现她14岁的好胜与反省，不赋予任何特殊工程技能，也不设定其他咖啡馆 NPC 亲历了练习。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.paper_bridge",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "纸桥",
+        "折纸",
+        "承重练习",
+        "paper bridge",
+        "origami challenge"
+      ],
+      "related_ids": [
+        "regular.group_reading"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "regular.group_reading",
+      "name": "知意的小组阅读练习",
+      "content": "知意在一次小组阅读讨论中太急着讲自己的结尾，漏听了同伴想保留的线索。她原以为不同意就是不欣赏自己，听完具体理由才发现两人喜欢的是不同部分。现在她想先复述对方一个想法，再说自己的判断；有时仍会抢快，并非立刻成熟。她没有给别人起固定贬称，也不把家世拿来赢讨论。这是她的学习生活背景，不是玩家参加过的课堂。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.group_reading",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "小组阅读",
+        "学习生活",
+        "抢着说结尾",
+        "group reading",
+        "school discussion"
+      ],
+      "related_ids": [
+        "regular.six_panel_story"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "companion.stitched_notebook",
+      "name": "予安的歪针脚摘录册",
+      "content": "26岁的予安在做一本散文摘录册，用简单针线缝几张纸，留一半空白给自己的想法。第一回册脊缝歪了，她拆线重做，才意识到自己连休闲也像在检查差错。现在她想保留一处歪针脚，把册子真正用起来。计划尚在进行，她不把它说成手工专长或礼物订单；整本内容没有自动向知意或其他熟客公开，照顾别人的职责也不占满这本册子。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.stitched_notebook",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "歪针脚",
+        "摘录册",
+        "缝册子",
+        "stitched notebook",
+        "Yu'an notebook"
+      ],
+      "related_ids": [
+        "place.corner_bookshop"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "companion.river_walk",
+      "name": "予安给自己留的散步时间",
+      "content": "予安喜欢沿河堤走一小段，练习不在心里替所有人列下一件事。她曾散步到一半又开始盘算别人的安排，索性停下来只看树影，发现不把每段时间用出成果也没有亏欠谁。近期她想留出一段属于自己的休闲，而不是承诺每天固定路线。她可以谈休息的难处，不把知意当负担，也不据这个背景宣称现在正在散步或可为玩家带路。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.river_walk",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "自己的散步",
+        "树影",
+        "休息时间",
+        "personal river walk",
+        "Yu'an leisure"
+      ],
+      "related_ids": [
+        "place.riverside_path"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "companion.clear_help",
+      "name": "予安练习说清能帮哪一部分",
+      "content": "予安过去有过一口应下几件琐事、最后把自己的阅读时间挤掉的经历。她没有因此觉得别人都在占便宜，而是发现自己把“愿意帮忙”和“必须全部做完”混在了一起。现在她练习先说明能帮哪一部分、何时需要休息；对知意也会讲清理由而非一味同意。这是她26岁成年人的个人边界与经验，不授予她店员权限，也不代表当前接受了任何玩家任务。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.clear_help",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "能帮哪部分",
+        "个人边界",
+        "阅读时间",
+        "limits of help",
+        "Yu'an boundaries"
+      ],
+      "related_ids": [
+        "companion.stitched_notebook"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "quiet.one_line_notebook",
+      "name": "亦舟的每页一句小册",
+      "content": "亦舟正在整理一本“每页一句”的读书小册：每次只选一句让自己停下来的描述，再写很短的旁注，不追求每天打卡。他想把零散纸片排成能翻阅的顺序，却舍不得删掉以前笨拙的注释，因为那也是当时读懂的部分。可以问他为什么留下旧句子，不必替他安排效率目标。这是个人阅读习惯与未完成项目，不是他已读完某本书或玩家听过这些内容的证据。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.one_line_notebook",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "每页一句",
+        "读书小册",
+        "纸片旁注",
+        "one line notebook",
+        "Yizhou reading notes"
+      ],
+      "related_ids": [
+        "place.corner_bookshop"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "quiet.bookmark_pocket",
+      "name": "亦舟找回夹错的书签",
+      "content": "游戏开始前，亦舟曾把借来的普通纸书签夹进另一册，找不到时先不好意思开口。后来他沿自己的阅读顺序翻回去找到了，归还后在书套内添了一个小纸袋，觉得慢一点检查比装作没事省心。他能自嘲当时绕的弯，不把它讲成惊险故事。事件没有指定其他三人为书签主人，也不让他们自动知道细节；纸袋不代表当前场景里存在可拿取物品。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.bookmark_pocket",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "夹错书签",
+        "书套纸袋",
+        "找回书签",
+        "misplaced bookmark",
+        "bookmark pocket"
+      ],
+      "related_ids": [
+        "quiet.one_line_notebook"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "quiet.plain_refusal",
+      "name": "亦舟一次没说清的拒绝",
+      "content": "亦舟曾在熟人邀他参加很吵的聚会时含糊说“再看看”，对方误以为他已经答应。他后来补了一句“我今晚想安静待着，这次不去”，发现直接一点没有想象中那么伤人。现在他仍需练习把边界说清，而不是用慢热替自己免去回应。这位熟人没有被设定为咖啡馆三人或玩家，也不确立游戏今晚的活动、行程或任何人的态度。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.plain_refusal",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "没说清的拒绝",
+        "含糊答应",
+        "安静待着",
+        "plain refusal",
+        "Yizhou boundaries"
+      ],
+      "related_ids": [
+        "cafe.custom.quiet_company"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "event.bookmark_afternoon",
+      "name": "游戏开始前的书签小聚",
+      "content": "游戏开始前不久，栖光办过一次小型书签交流。薇薇准备纸卡，知意画了一个还想修改的结尾，予安带来一页散文摘录，亦舟分享一张只抄一句话的书签；四人都参与，活动未评优。结束时各自说了感受：薇薇想给安静的人留位置，知意希望别人认真看，予安高兴没替大家包办，亦舟觉得少说也能参加。四人知道的是这些公开表达，各人私人笔记未因此公开。",
+      "knowledge_type": "shared_event",
+      "attributes": {
+        "topic": "event.bookmark_afternoon",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "书签小聚",
+        "书签交流",
+        "公开活动",
+        "bookmark afternoon",
+        "bookmark gathering"
+      ],
+      "related_ids": [
+        "cafe.custom.quiet_company"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.regular_customer",
+          "cafe.companion_customer",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "event.bookshop_route_choice",
+      "name": "知意与予安的书铺路线分歧",
+      "content": "游戏开始前，知意想自己安排一次去纸页书铺的小行程，予安担心她只顾新鲜、没说清路线。知意觉得又被当成小孩，短暂赌气；两人后来互相解释，由知意说明计划、予安提醒遗漏。知意说“终于先听我说”，予安也说自己不必替她决定每一步，因此两人知道对方这部分感受。只有两人参与并知道分歧；薇薇、亦舟及玩家未获知细节，不推定亲密或旁听。",
+      "knowledge_type": "shared_event",
+      "attributes": {
+        "topic": "event.bookshop_route_choice",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "书铺路线分歧",
+        "自己安排",
+        "知意予安",
+        "bookshop route disagreement",
+        "independent outing"
+      ],
+      "related_ids": [
+        "place.corner_bookshop"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.regular_customer",
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    },
+    {
+      "knowledge_id": "event.slow_reading_exchange",
+      "name": "薇薇与亦舟的慢读交流",
+      "content": "游戏开始前一次闲谈，薇薇问亦舟为什么同一册书看了好几回。亦舟说自己在留意几句描写，不是赶着读完；薇薇想到自己的搭配笔记也总改一页，便不再拿读完多少当话题。薇薇记得有人可以慢慢做事，亦舟记得她愿意听完而没有催他。只有两人知道这段普通交流，知意和予安只在公开小聚认识亦舟，未被设定为听过这段话；没有玩家参与或服务完成结果。",
+      "knowledge_type": "shared_event",
+      "attributes": {
+        "topic": "event.slow_reading_exchange",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "慢读交流",
+        "总改一页",
+        "薇薇亦舟",
+        "slow reading exchange",
+        "Weiwei Yizhou conversation"
+      ],
+      "related_ids": [
+        "quiet.one_line_notebook",
+        "merchant.handover_note"
+      ],
+      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "version": 1,
+      "updated_at": "2026-10-17T00:00:00Z",
+      "access": {
+        "character_ids": [
+          "cafe.merchant",
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      }
+    }
+  ]
+}

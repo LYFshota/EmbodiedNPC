@@ -1,0 +1,28 @@
+{
+  "message_type": "experience_append_request",
+  "schema_version": "1.0",
+  "request_id": "experience-request-invalid",
+  "trace_id": "experience-trace-invalid",
+  "draft": {
+    "schema_version": "experience-draft/1.0",
+    "observer_id": "npc_ybot_01",
+    "event_type": "model_claimed_success",
+    "source_type": "dialogue",
+    "source_session_id": "session_test_01",
+    "clock_domain": "unity_realtime",
+    "source_event_id": "dialogue-request-invalid",
+    "source_observation_ids": [],
+    "actor_entity_id": "npc_ybot_01",
+    "target_entity_ids": ["player_01"],
+    "structured_payload": {},
+    "natural_language_payload": "I opened it.",
+    "occurred_at": 1,
+    "observed_at": 1,
+    "world_revision": 0,
+    "request_id": "dialogue-request-invalid",
+    "trace_id": "dialogue-trace-invalid",
+    "conversation_id": "player_01:npc_ybot_01:test",
+    "confidence": null,
+    "provenance": "EXECUTED_BY_SELF"
+  }
+}

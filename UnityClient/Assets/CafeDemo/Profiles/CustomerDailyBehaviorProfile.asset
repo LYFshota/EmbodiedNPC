@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b6641ef4d082ae4ab8f06ccebdc49f1, type: 3}
+  m_Name: CustomerDailyBehaviorProfile
+  m_EditorClassIdentifier: EmbodiedNPC::EmbodiedNPC.Routines.DailyBehaviorProfile
+  defaultMode: 2
+  allowedModes: 02000000
+  transitions: []
+  activities:
+  - mode: 2
+    activity: 2
+    objective: 保持已有座位自然待机。
+  - mode: 2
+    activity: 4
+    objective: 保持坐姿并低频观察周围环境。
+  minimumModeSeconds: 1
+  transitionCooldown: 1

@@ -1,0 +1,18 @@
+Ultimate Stylized Nature Pack (May 2022), by Quaternius
+License: CC0 1.0 Universal / Public Domain Dedication
+Official pack: https://quaternius.com/packs/ultimatestylizednature.html
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Verified: 2026-10-18. Official page identifies this 63-model pack as CC0,
+free for personal and commercial projects. CC0 permits modification and distribution.
+
+Selected original models: NormalTree_4.fbx, NormalTree_5.fbx, BirchTree_4.fbx,
+Bush_Small.fbx, Grass_Large.fbx.
+Derived 512px textures: NormalTree_Bark, NormalTree_Bark_Normal,
+NormalTree_Leaves (the supplied Bush_Leaves is byte-identical; shared instead),
+BirchTree_Bark, BirchTree_Bark_Normal, BirchTree_Leaves, Grass.
+Only these selected assets are imported. Original files remain in SceneResources.
+
+The local supplied License.txt says "Ultimate Platformer Pack" in its heading.
+Authorization for this Nature pack was independently confirmed on the author's
+specific official pack page above; the mismatched local heading was not used as
+the sole basis for permission. No endorsement by the author is implied.

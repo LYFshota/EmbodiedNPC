@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://embodiednpc.local/contracts/task-failure-report.schema.json",
+  "title": "EmbodiedNPC TaskFailureReport 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["message_type", "schema_version", "request_id", "trace_id", "world_revision", "proposal_id", "proposal_revision", "failure_stage", "failure_code", "detail", "failed_goal", "involved_entity_ids", "retryable", "allowed_alternatives"],
+  "properties": {
+    "message_type": { "const": "task_failure_report" },
+    "schema_version": { "const": "1.0" },
+    "request_id": { "type": "string", "minLength": 1 },
+    "trace_id": { "type": "string", "minLength": 1 },
+    "world_revision": { "type": "integer", "minimum": 0 },
+    "proposal_id": { "$ref": "#/$defs/protocolId" },
+    "proposal_revision": { "type": "integer", "minimum": 0, "maximum": 1 },
+    "failure_stage": { "enum": ["proposal_validation", "planning", "execution"] },
+    "failure_code": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "detail": { "type": "string", "maxLength": 240 },
+    "failed_goal": { "$ref": "#/$defs/goal" },
+    "involved_entity_ids": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/entityId" } },
+    "retryable": { "type": "boolean" },
+    "allowed_alternatives": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/alternative" } }
+  },
+  "$defs": {
+    "protocolId": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 120 },
+    "entityId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "goal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "target_entity_id", "destination_entity_id"],
+      "properties": {
+        "type": { "const": "bring_object" },
+        "target_entity_id": { "$ref": "#/$defs/entityId" },
+        "destination_entity_id": { "$ref": "#/$defs/entityId" }
+      }
+    },
+    "alternative": {
+      "type": "object", "additionalProperties": false,
+      "required": ["alternative_id", "description", "goal"],
+      "properties": {
+        "alternative_id": { "$ref": "#/$defs/protocolId" },
+        "description": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "goal": { "$ref": "#/$defs/goal" }
+      }
+    }
+  }
+}

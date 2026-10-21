@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33fcdadb5bdaa7a4f81c9e054a01e59d, type: 3}
+  m_Name: MerchantEventInterestProfile
+  m_EditorClassIdentifier: EmbodiedNPC::EmbodiedNPC.Events.EventInterestProfile
+  fallbackDecision: 0
+  rules:
+  - eventType: npc.dialogue_continue
+    areaEntityId:
+    relevance: 1
+    decision: 2
+    dailyModeId:
+  - eventType: player.entered_area
+    areaEntityId: area_cafe_counter
+    relevance: 0
+    decision: 1
+    dailyModeId:
+  - eventType: entity.became_visible
+    areaEntityId:
+    relevance: 1
+    decision: 1
+    dailyModeId:
+  - eventType: player.left_area
+    areaEntityId: area_cafe_counter
+    relevance: 0
+    decision: 1
+    dailyModeId:
+  - eventType: player.utterance
+    areaEntityId:
+    relevance: 1
+    decision: 2
+    dailyModeId:
+  - eventType: action.completed
+    areaEntityId:
+    relevance: 2
+    decision: 1
+    dailyModeId:
+  - eventType: action.failed
+    areaEntityId:
+    relevance: 2
+    decision: 2
+    dailyModeId:
+  - eventType: player.emote
+    areaEntityId:
+    relevance: 3
+    decision: 2
+    dailyModeId: 
+  - eventType: player.emote
+    areaEntityId:
+    relevance: 0
+    decision: 1
+    dailyModeId:
+  - eventType: player.dwelled_in_service_zone
+    areaEntityId: area_cafe_counter
+    relevance: 1
+    decision: 2
+    dailyModeId: rest
+  - eventType: counter.needs_cleaning
+    areaEntityId: area_cafe_counter
+    relevance: 1
+    decision: 2
+    dailyModeId: work

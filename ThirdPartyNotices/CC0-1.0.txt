@@ -1,0 +1,12 @@
+CC0 1.0 Universal - scoped notice
+
+LYFshota applies CC0 1.0 only to the exact assets expressly listed as adopted
+in Project_Art.md, to the extent of copyright and related rights actually
+owned and disposable by LYFshota. This does not apply CC0 to third-party or
+derived art, or to assets still marked pending. It makes no claim that
+AI-generated material necessarily has exclusive copyright.
+
+This notice identifies the standard CC0 legal tool; it is not a replacement
+or modification of the legal code. Full legal code:
+https://creativecommons.org/publicdomain/zero/1.0/legalcode
+Plain-text original: https://creativecommons.org/publicdomain/zero/1.0/legalcode.txt

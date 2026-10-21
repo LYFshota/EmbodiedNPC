@@ -1,0 +1,11 @@
+{
+  "message_type": "experience_append_result",
+  "schema_version": "1.0",
+  "request_id": "experience-request-01",
+  "trace_id": "experience-trace-01",
+  "event_id": "exp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "observer_id": "npc_ybot_01",
+  "experience_seq": 1,
+  "status": "inserted",
+  "reason": "STORED"
+}

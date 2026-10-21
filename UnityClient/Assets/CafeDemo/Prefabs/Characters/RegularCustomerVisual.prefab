@@ -1,0 +1,125 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4220017436808748559
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3049843914277556836}
+  - component: {fileID: 7661829527469086080}
+  - component: {fileID: 4172966340174497634}
+  - component: {fileID: 1885185024747076048}
+  - component: {fileID: 6210743631364156231}
+  m_Layer: 0
+  m_Name: RegularCustomerVisual
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3049843914277556836
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4220017436808748559}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7661829527469086080
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4220017436808748559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1520b73f11b709448bc85bb64d2038b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EmbodiedNPC::EmbodiedNPC.Animation.FacingController
+  visual: {fileID: 3049843914277556836}
+  actorRoot: {fileID: 0}
+  motionChannels: {fileID: 0}
+  maxVisualYawDegrees: 55
+  degreesPerSecond: 120
+--- !u!114 &4172966340174497634
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4220017436808748559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af504b1c47ba0b54fb797577df0cbe2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EmbodiedNPC::EmbodiedNPC.Animation.AttentionController
+  owner: {fileID: 0}
+  perceivedState: {fileID: 0}
+  registry: {fileID: 0}
+  dialogue: {fileID: 0}
+  expressive: {fileID: 0}
+  motionChannels: {fileID: 0}
+  visualBody: {fileID: 0}
+  acquireDistance: 4
+  maintainDistance: 5
+  acquireYaw: 45
+  releaseYaw: 55
+  acquireDelay: 0.3
+  releaseGrace: 0.3
+  idleLookPoints: []
+  idleLookInterval: {x: 12, y: 26}
+--- !u!114 &1885185024747076048
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4220017436808748559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0e84557105be7a418a0e26c2979e835, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EmbodiedNPC::EmbodiedNPC.Animation.HeadGazeController
+  attention: {fileID: 4172966340174497634}
+  animator: {fileID: 0}
+  visualBody: {fileID: 3049843914277556836}
+  actorRoot: {fileID: 0}
+  gesturePlayback: {fileID: 0}
+  fullYaw: 30
+  maxYaw: 50
+  combinedYawCap: 75
+  downPitch: 20
+  upPitch: 25
+  neckShare: 0.35
+  blendIn: 0.25
+  blendOut: 0.4
+  listeningDegreesPerSecond: 85
+  talkingDegreesPerSecond: 65
+--- !u!114 &6210743631364156231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4220017436808748559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2f3cc682dbf70844a9b27e59490de47, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EmbodiedNPC::EmbodiedNPC.Animation.DialogueAnimationPresenter
+  expressive: {fileID: 0}
+  motionChannels: {fileID: 0}
+  animator: {fileID: 0}
+  blendIn: 0.25
+  blendOut: 0.2

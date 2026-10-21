@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://embodiednpc.local/contracts/experience-append-result.schema.json",
+  "title": "ExperienceAppendResult 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["message_type", "schema_version", "request_id", "trace_id", "event_id", "observer_id", "experience_seq", "status", "reason"],
+  "properties": {
+    "message_type": { "const": "experience_append_result" },
+    "schema_version": { "const": "1.0" },
+    "request_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "minLength": 1, "maxLength": 160 },
+    "trace_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "minLength": 1, "maxLength": 160 },
+    "event_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 160 },
+    "observer_id": { "type": "string", "pattern": "^$|^[a-z][a-z0-9_]*$", "maxLength": 120 },
+    "experience_seq": { "type": "integer", "minimum": 0 },
+    "status": { "enum": ["inserted", "already_exists", "id_conflict", "rejected", "storage_failed"] },
+    "reason": { "type": "string", "maxLength": 120 }
+  }
+}

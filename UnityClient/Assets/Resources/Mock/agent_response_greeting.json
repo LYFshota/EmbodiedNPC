@@ -1,0 +1,8 @@
+{
+  "message_type": "agent_response",
+  "request_id": "mock-greeting-001",
+  "schema_version": "1.1",
+  "utterance": "你好，我是测试中的 NPC。",
+  "emotion": "happy",
+  "gesture": "wave"
+}

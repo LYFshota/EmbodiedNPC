@@ -1,0 +1,74 @@
+# Unity generated files
+UnityClient/[Ll]ibrary/
+UnityClient/[Tt]emp/
+UnityClient/[Ll]ogs/
+UnityClient/[Oo]bj/
+UnityClient/[Bb]uild/
+UnityClient/[Bb]uilds/
+UnityClient/[Uu]serSettings/
+Builds/
+BuildValidation/
+UnityClient/Assets/_Recovery/
+UnityClient/Assets/_Recovery.meta
+UnityClient/Assets/InitTestScene*.unity*
+UnityClient/.vs/
+UnityClient/*.csproj
+UnityClient/*.sln
+UnityClient/*.slnx
+
+# Python environments, secrets, and generated runtime data
+AIBackend/.venv/
+AIBackend/__pycache__/
+AIBackend/**/*.py[cod]
+AIBackend/.env
+AIBackend/.env.*
+!AIBackend/.env.example
+AIBackend/data/*.sqlite3
+AIBackend/data/*.sqlite3-wal
+AIBackend/data/*.sqlite3-shm
+AIBackend/data/runtime_settings.json
+AIBackend/data/.runtime_settings-*.tmp
+AIBackend/data/model_api_configs.json
+AIBackend/data/world_knowledge.json
+AIBackend/data/knowledge_admin_session.json
+AIBackend/data/knowledge_admin_session.lock
+AIBackend/data/context_capacity.key
+AIBackend/data/.model_api_configs-*.tmp
+
+# Local models and generated media/logs
+/Models/
+*.onnx
+*.gguf
+*.safetensors
+*.pth
+*.pt
+*.ckpt
+*.wav
+*.mp3
+*.ogg
+# Selected CafeDemo BGM; consult its SOURCE_AND_LICENSE.md before redistribution.
+!/UnityClient/Assets/CafeDemo/Audio/BGM/little_cafe.mp3
+*.mp4
+*.log
+.codex-remote-attachments/
+
+# IDE and OS files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
+
+# Local source asset library
+/SceneResources/
+
+# Open-source candidate: local model/data roots and evidence are never source assets.
+/AIBackend/models/
+/AIBackend/data/
+!AIBackend/.env.m3.example
+/UserData/
+/Captures/
+/Evidence/
+*.onnx_data

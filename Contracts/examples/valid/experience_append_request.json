@@ -1,0 +1,28 @@
+{
+  "message_type": "experience_append_request",
+  "schema_version": "1.0",
+  "request_id": "experience-request-01",
+  "trace_id": "experience-trace-01",
+  "draft": {
+    "schema_version": "experience-draft/1.0",
+    "observer_id": "npc_ybot_01",
+    "event_type": "observation",
+    "source_type": "observation",
+    "source_session_id": "session_test_01",
+    "clock_domain": "unity_realtime",
+    "source_event_id": "vision_cup_01",
+    "source_observation_ids": ["obs_npc_ybot_01_visual_cup_01"],
+    "actor_entity_id": null,
+    "target_entity_ids": ["cup_01"],
+    "structured_payload": {"perception_revision": 7, "lifecycle_state": "Tracked", "known_fields": {"entity_kind": "Item"}, "unknown_fields": []},
+    "natural_language_payload": null,
+    "occurred_at": 12.5,
+    "observed_at": 12.5,
+    "world_revision": 3,
+    "request_id": null,
+    "trace_id": null,
+    "conversation_id": null,
+    "confidence": 1.0,
+    "provenance": "WITNESSED"
+  }
+}

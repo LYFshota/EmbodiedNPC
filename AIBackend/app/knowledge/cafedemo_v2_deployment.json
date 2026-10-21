@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "deployment_id": "cafedemo-v2",
+  "scene_id": null,
+  "bindings": [
+    {"agent_entity_id":"npc_cafe_01","character_id":"cafe.merchant","identity_namespace":"npc","identity_type":"Character","persistent_id":"cafe.merchant.001"},
+    {"agent_entity_id":"npc_cafe_regular_01","character_id":"cafe.regular_customer","identity_namespace":"npc","identity_type":"Character","persistent_id":"cafe.regular_customer.001"},
+    {"agent_entity_id":"npc_cafe_companion_01","character_id":"cafe.companion_customer","identity_namespace":"npc","identity_type":"Character","persistent_id":"cafe.companion_customer.001"},
+    {"agent_entity_id":"npc_cafe_quiet_01","character_id":"cafe.quiet_customer","identity_namespace":"npc","identity_type":"Character","persistent_id":"cafe.quiet_customer.001"}
+  ]
+}

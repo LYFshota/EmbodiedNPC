@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://embodiednpc.local/contracts/experience-append-request.schema.json",
+  "title": "ExperienceAppendRequest 1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["message_type", "schema_version", "request_id", "trace_id", "draft"],
+  "properties": {
+    "message_type": { "const": "experience_append_request" },
+    "schema_version": { "const": "1.0" },
+    "request_id": { "$ref": "#/$defs/protocolId" },
+    "trace_id": { "$ref": "#/$defs/protocolId" },
+    "draft": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "observer_id", "event_type", "source_type", "source_session_id", "clock_domain", "source_event_id", "source_observation_ids", "actor_entity_id", "target_entity_ids", "structured_payload", "natural_language_payload", "occurred_at", "observed_at", "world_revision", "request_id", "trace_id", "conversation_id", "confidence", "provenance"],
+      "properties": {
+        "schema_version": { "enum": ["experience-draft/1.0", "experience-draft/1.1"] },
+        "observer_id": { "$ref": "#/$defs/entityId" },
+        "event_type": { "enum": ["observation", "reported_observation", "dialogue_input", "dialogue_response", "goal_succeeded", "goal_failed", "goal_cancelled", "goal_timed_out", "skill_succeeded", "skill_failed", "skill_cancelled", "skill_timed_out"] },
+        "source_type": { "enum": ["observation", "dialogue", "goal_outcome", "skill_result"] },
+        "source_session_id": { "$ref": "#/$defs/protocolId" },
+        "clock_domain": { "enum": ["unity_realtime", "backend_utc"] },
+        "source_event_id": { "oneOf": [{ "$ref": "#/$defs/protocolId" }, { "type": "null" }] },
+        "source_observation_ids": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/protocolId" } },
+        "actor_entity_id": { "oneOf": [{ "$ref": "#/$defs/entityId" }, { "type": "null" }] },
+        "target_entity_ids": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/entityId" } },
+        "persistent_participants": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/persistentParticipantIdentity" }
+        },
+        "structured_payload": { "type": "object", "maxProperties": 32 },
+        "natural_language_payload": { "type": ["string", "null"], "maxLength": 1000 },
+        "occurred_at": { "type": "number", "minimum": 0 },
+        "observed_at": { "type": "number", "minimum": 0 },
+        "world_revision": { "type": ["integer", "null"], "minimum": 0 },
+        "request_id": { "oneOf": [{ "$ref": "#/$defs/protocolId" }, { "type": "null" }] },
+        "trace_id": { "oneOf": [{ "$ref": "#/$defs/protocolId" }, { "type": "null" }] },
+        "conversation_id": { "type": ["string", "null"], "minLength": 1, "maxLength": 160 },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "provenance": { "enum": ["WITNESSED", "HEARD", "REPORTED", "INFERRED", "EXECUTED_BY_SELF", "SYSTEM_CONFIRMED"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "schema_version": { "const": "experience-draft/1.1" } } },
+          "then": { "required": ["persistent_participants"] }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "protocolId": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "minLength": 1, "maxLength": 160 },
+    "entityId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "maxLength": 120 },
+    "persistentParticipantIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entity_id", "identity_namespace", "identity_type", "persistent_id"],
+      "properties": {
+        "entity_id": { "$ref": "#/$defs/entityId" },
+        "identity_namespace": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "identity_type": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "persistent_id": { "type": "string", "minLength": 1, "maxLength": 160 }
+      }
+    }
+  }
+}

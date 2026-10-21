@@ -1,0 +1,8 @@
+{
+  "message_type": "agent_response",
+  "request_id": "mock-invalid-emotion-001",
+  "schema_version": "1.1",
+  "utterance": "这是一条用于测试的非法回复。",
+  "emotion": "excited",
+  "gesture": "wave"
+}
