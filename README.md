@@ -43,7 +43,7 @@ Unity 6 · Python / FastAPI · 长期记忆 · 本地 / 远程 LLM
 
 ## 下载试玩
 
-Windows x64 试玩包正在制作，本版下载链接将在实际发布后补充。试玩包内置 EmbeddingGemma-300M Q4 ONNX，用于记忆向量，不需要额外下载或配置 Embedding API；主模型（Main LLM，用于对话与决策）仍需自行配置。外部 Embedding 和关闭向量能力选项继续保留。
+[下载 Windows x64 试玩 ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.0-preview/EmbodiedNPC-Windows-x64-v0.1.0-preview.zip) · [Pre-release 说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.0-preview)。完整解压后运行 `Start.cmd`。试玩包内置 EmbeddingGemma-300M Q4 ONNX，用于记忆向量，不需要额外下载或配置 Embedding API；主模型（Main LLM，用于对话与决策）仍需自行配置。外部 Embedding 和关闭向量能力选项继续保留。
 
 ## 🚀 如何从源码运行？
 

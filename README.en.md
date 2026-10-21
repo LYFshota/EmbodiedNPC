@@ -57,7 +57,7 @@ These are research directions, not committed features or a release schedule.
 
 ## Download and try
 
-The Windows x64 preview is being prepared. A download link will be added after it is published. It bundles EmbeddingGemma-300M Q4 ONNX for memory vectors, so no extra Embedding download or API setup is normally needed. You must still configure your own Main LLM for dialogue and decisions. External Embedding and disabled-vector options remain available.
+[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.0-preview/EmbodiedNPC-Windows-x64-v0.1.0-preview.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.0-preview). Extract the complete archive and run `Start.cmd`. It bundles EmbeddingGemma-300M Q4 ONNX for memory vectors, so no extra Embedding download or API setup is normally needed. You must still configure your own Main LLM for dialogue and decisions. External Embedding and disabled-vector options remain available.
 
 ## Run from source
 
