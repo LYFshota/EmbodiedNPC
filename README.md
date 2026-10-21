@@ -14,6 +14,8 @@ Unity 6 · Python / FastAPI · 长期记忆 · 本地 / 远程 LLM
 
 
 
+![EmbodiedNPC 咖啡馆全景](Docs/Images/cafe-panorama.jpg)
+
 ## ✨ 目前实现了什么？
 
 - **💬 多角色独立对话**：四名 NPC 各有角色设定、对话风格和个人记忆，支持中文、英文回复。
