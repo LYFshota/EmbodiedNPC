@@ -14,7 +14,9 @@ and perform a limited set of actions. It explores how perception, memory,
 decisions and actions can connect a character's responses to its experiences
 and immediate surroundings. It is an early prototype, not a mature general-purpose NPC framework.
 
-![EmbodiedNPC cafe panorama](Docs/Images/cafe-panorama.jpg)
+<p align="center">
+  <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC cafe panorama" width="640">
+</p>
 
 ## What works today
 

@@ -14,7 +14,9 @@ Unity 6 · Python / FastAPI · 长期记忆 · 本地 / 远程 LLM
 
 
 
-![EmbodiedNPC 咖啡馆全景](Docs/Images/cafe-panorama.jpg)
+<p align="center">
+  <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC 咖啡馆全景" width="640">
+</p>
 
 ## ✨ 目前实现了什么？
 
