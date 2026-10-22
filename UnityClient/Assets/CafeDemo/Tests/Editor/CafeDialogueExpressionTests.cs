@@ -55,18 +55,19 @@ namespace CafeDemo.Tests
 
         [Test] public void Assets_StandaloneLoopAndHeadLegRootMaskExcluded()
         {
-            const string p = "Assets/CafeDemo/Animations/ThirdParty/Quaternius/Idle_Talking_Loop.anim";
+            const string p = "Assets/CafeDemo/Animations/ThirdParty/KayKit/Idle_Relaxed.anim";
             var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(p);
             Assert.That(clip.isHumanMotion && clip.isLooping, Is.True);
-            Assert.That(clip.length, Is.EqualTo(2.933333f).Within(.001f));
+            Assert.That(clip.length, Is.EqualTo(1.066667f).Within(.001f));
             Assert.That(clip.events, Is.Empty);
             Assert.That(AssetDatabase.GetDependencies(p, true), Is.EqualTo(new[] { p }));
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/CafeDemo/Animations/CafeExpressive.controller");
             Assert.That(controller.layers.Select(l => l.name), Is.EqualTo(new[] { "Base Layer", "Dialogue", "GestureUpperBody", CarryPresenter.LayerName }));
             var mask = controller.layers[1].avatarMask;
-            foreach (var part in new[] { AvatarMaskBodyPart.Root, AvatarMaskBodyPart.Head, AvatarMaskBodyPart.LeftLeg, AvatarMaskBodyPart.RightLeg })
+            Assert.That(controller.layers[1].stateMachine.defaultState.motion, Is.SameAs(clip));
+            foreach (var part in new[] { AvatarMaskBodyPart.Root, AvatarMaskBodyPart.Body, AvatarMaskBodyPart.Head, AvatarMaskBodyPart.LeftLeg, AvatarMaskBodyPart.RightLeg })
                 Assert.That(mask.GetHumanoidBodyPartActive(part), Is.False);
-            foreach (var part in new[] { AvatarMaskBodyPart.Body, AvatarMaskBodyPart.LeftArm, AvatarMaskBodyPart.RightArm })
+            foreach (var part in new[] { AvatarMaskBodyPart.LeftArm, AvatarMaskBodyPart.RightArm, AvatarMaskBodyPart.LeftFingers, AvatarMaskBodyPart.RightFingers })
                 Assert.That(mask.GetHumanoidBodyPartActive(part), Is.True);
             Assert.That(controller.parameters.Select(x => x.name), Is.EqualTo(new[] { "Speed" }));
         }

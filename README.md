@@ -27,6 +27,8 @@ Unity 6 · Python / FastAPI · 长期记忆 · 本地 / 远程 LLM
 - **📅 持久任务与见面约定**：支持保存有限的委托，在下次来访或空闲时考虑执行，也可以延期或取消；口头答应不等于已保存任务，保存也不保证立即执行。
 - **⚙️ 模型配置**：主模型与 Embedding 可以分别配置，支持接入本地或远程模型服务。
 
+本版改善基础待机、轻微呼吸、自然垂臂和放松手型，并让玩家挥手时的非挥手侧更安静、上半身更稳定。
+
 ## 🚧 当前还有哪些不足？
 
 目前的实现主要围绕固定的咖啡馆 Demo 展开，对场景的依赖较强，NPC 的自主性和行为丰富度也比较有限。
@@ -47,7 +49,7 @@ Unity 6 · Python / FastAPI · 长期记忆 · 本地 / 远程 LLM
 
 ## 下载试玩
 
-[下载 Windows x64 试玩 ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.1-preview/EmbodiedNPC-Windows-x64-v0.1.1-preview.zip) · [Pre-release 说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.1-preview)。完整解压后运行 `Start.cmd`。试玩包内置 EmbeddingGemma-300M Q4 ONNX，用于记忆向量，不需要额外下载或配置 Embedding API；主模型（Main LLM，用于对话与决策）仍需自行配置。外部 Embedding 和关闭向量能力选项继续保留。
+[下载 Windows x64 试玩 ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.2-preview/EmbodiedNPC-Windows-x64-v0.1.2-preview.zip) · [Pre-release 说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.2-preview)。完整解压后运行 `Start.cmd`。试玩包内置 EmbeddingGemma-300M Q4 ONNX，用于记忆向量，不需要额外下载或配置 Embedding API；主模型（Main LLM，用于对话与决策）仍需自行配置。外部 Embedding 和关闭向量能力选项继续保留。
 
 ## 🚀 如何从源码运行？
 

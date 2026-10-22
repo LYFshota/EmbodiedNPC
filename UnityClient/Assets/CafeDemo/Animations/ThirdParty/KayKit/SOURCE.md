@@ -113,3 +113,28 @@ drink-preparation and cleaning masks remain separate and unchanged.
 CafeV2Expressive Locomotion Foot IK is disabled: on Vivi's VRM 1 Avatar the
 solver widened the idle stance and distorted the existing walk. The Walk clips,
 blend thresholds, playback rates, locomotion speeds and movement code are unchanged.
+
+
+## v0.1.2-preview: accepted quiet idle and player wave
+
+Idle_Relaxed is a CC0 derivative of the existing KayKit Character Animations
+1.1 Idle_A. It adjusts relaxed arms, fingers/thumbs and standing legs, with
+130 Humanoid float curves, a 1.066667-second loop and no animation events.
+
+Idle_Quiet and Idle_Quiet_Vivi derive from Idle_Relaxed. Animated residuals
+are reduced to 18% and the loop is 3.2 seconds. The player pose brings the
+shoulder/elbow/wrist into a relaxed hanging position with palms near the
+trouser sides; the Vivi variant keeps clearance for her skirt. Fingers keep
+a light curl. Original VRM files, Walk clips/rates and seated base/foot IK
+remain unchanged. Dialogue uses Idle_Relaxed through the existing arms mask.
+
+Waving_PlayerRelaxed derives from the existing Waving clip. Its 29 left-side
+shoulder/arm/forearm/wrist/finger curves are Idle_Quiet rest + 0.15 *
+(source Wave - Idle_Quiet rest). The other 101 curves, including the complete
+main right waving arm, remain unchanged. Duration is 2.133333 seconds with no
+events. Player Wave uses its own arms layer; Cheer/Proud retain their authored
+torso motion. There is no runtime bone-forcing component or new animation framework.
+
+The owner accepted the final standing/wave behavior in the R4 Windows manual
+test package. Release-specific test/startup boundaries are linked from
+Docs/RELEASE_STATUS.md; automated posture checks are not a clean-machine certificate.

@@ -31,6 +31,7 @@ namespace CafeDemo.Tests
         protected WorldStateService world;
         protected Keyboard keyboard;
         private InputSettings.BackgroundBehavior backgroundBehavior;
+        private InputSettings.EditorInputBehaviorInPlayMode editorInputBehavior;
         private bool runInBackground;
         protected virtual bool UsesStartupPanel => true;
         protected virtual bool DisableDailyDemo => true;
@@ -79,6 +80,10 @@ namespace CafeDemo.Tests
             Application.runInBackground = true;
             backgroundBehavior = InputSystem.settings.backgroundBehavior;
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            editorInputBehavior = InputSystem.settings.editorInputBehaviorInPlayMode;
+            // Hidden Editor runs have no focused Game View; IgnoreFocus alone does not route keyboard actions.
+            if (!UsesStartupPanel) InputSystem.settings.editorInputBehaviorInPlayMode =
+                InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             keyboard = InputSystem.AddDevice<Keyboard>("P1TestKeyboard"); InputSystem.EnableDevice(keyboard);
             player = Object.FindAnyObjectByType<CafeDemoPlayerController>();
             emote = player.GetComponent<PlayerEmoteController>(); locomotion = player.GetComponent<PlayerLocomotionPresenter>();
@@ -88,12 +93,22 @@ namespace CafeDemo.Tests
             customer = entities.Single(e => e.EntityId == "npc_cafe_regular_01");
             var panel = Object.FindAnyObjectByType<CafeDemoDeveloperPanel>();
             if (UsesStartupPanel) { panel.ApplyStartupConfig(new ModelConfigView { configured = true }); panel.Close(); }
-            else Object.FindAnyObjectByType<DialogueController>().SetSetupReady(true);
+            else
+            {
+                // Offline presentation tests still need the current startup UI admission to release its locks.
+                // No socket is opened: the fixture disabled every network component before EnterPlayMode.
+                typeof(CafeDemoDeveloperPanel).GetField("startupTransportReady",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .SetValue(panel, (System.Func<bool>)(() => true));
+                panel.ApplyStartupConfig(new ModelConfigView { configured = true }); panel.Close();
+                Object.FindAnyObjectByType<DialogueController>().SetSetupReady(true);
+            }
         }
         [UnityTearDown] public IEnumerator TearDown()
         {
             if (keyboard != null) InputSystem.RemoveDevice(keyboard);
             InputSystem.settings.backgroundBehavior = backgroundBehavior;
+            InputSystem.settings.editorInputBehaviorInPlayMode = editorInputBehavior;
             Application.runInBackground = runInBackground;
             if (Application.isPlaying) yield return new ExitPlayMode();
         }

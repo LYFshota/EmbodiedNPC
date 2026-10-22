@@ -25,3 +25,24 @@ The Windows preview bundles the eight pinned EmbeddingGemma-300M Q4 ONNX runtime
 ## v0.1.0-preview checks
 
 The cleaned candidate produced a new Windows x64 Player (Unity 6000.5.10f1, zero build errors). The bundled Python launcher started its Backend and title screen, and the first-time model settings UI was opened; built-in Embedding was selected by default. The bundled model loaded and produced a valid 768-dimensional vector in one targeted check. The owner elected to perform subsequent cafe/gameplay testing; no completed cafe walkthrough or clean-machine certification is claimed for this release. Existing targeted animation/cold-start evidence is retained, not repeated.
+
+
+## v0.1.2-preview source scope
+
+The final owner-accepted Animation P0 state is integrated: quiet standing
+loops, naturally hanging relaxed arms/hands, an arms-only player Wave layer
+and a restrained non-waving arm. Vivi's skirt-specific idle and the customers'
+seated base/foot IK remain in place. Existing dialogue, task/world outcomes
+and long-term memory semantics are retained.
+
+This source has application/first-party runtime assembly version
+0.1.2-preview (numeric assembly/file version 0.1.2.0). Backend OpenAPI version
+0.3.0 remains the API version, not the application release version.
+The build entry point reads the committed application version.
+
+The owner completed visual playtesting of the final R4 posture package.
+Version-specific fresh build, test, extracted-ZIP startup and cleanup evidence
+is reported on the v0.1.2-preview Release page. It does not imply testing every
+model provider, a fresh physical Windows machine, or every possible gameplay path.
+The release retains the complete pinned EmbeddingGemma-300M Q4 ONNX resources
+and license bundle; a Main LLM is still configured by the player.

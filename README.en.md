@@ -18,6 +18,8 @@ and immediate surroundings. It is an early prototype, not a mature general-purpo
   <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC cafe panorama" width="640">
 </p>
 
+This preview improves relaxed idle posture, subtle breathing and hands, and keeps the player’s non-waving arm quiet with a stable upper body.
+
 ## What works today
 
 - **Independent character conversations:** four NPCs have distinct personas,
@@ -61,7 +63,7 @@ These are research directions, not committed features or a release schedule.
 
 ## Download and try
 
-[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.1-preview/EmbodiedNPC-Windows-x64-v0.1.1-preview.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.1-preview). Extract the complete archive and run `Start.cmd`. It bundles EmbeddingGemma-300M Q4 ONNX for memory vectors, so no extra Embedding download or API setup is normally needed. You must still configure your own Main LLM for dialogue and decisions. External Embedding and disabled-vector options remain available.
+[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.2-preview/EmbodiedNPC-Windows-x64-v0.1.2-preview.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.2-preview). Extract the complete archive and run `Start.cmd`. It bundles EmbeddingGemma-300M Q4 ONNX for memory vectors, so no extra Embedding download or API setup is normally needed. You must still configure your own Main LLM for dialogue and decisions. External Embedding and disabled-vector options remain available.
 
 ## Run from source
 

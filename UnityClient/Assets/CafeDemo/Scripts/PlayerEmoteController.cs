@@ -13,6 +13,7 @@ namespace CafeDemo
     public sealed class PlayerEmoteController : MonoBehaviour
     {
         public const string LayerName = "EmoteUpperBody";
+        public const string WaveLayerName = "EmoteWaveArms";
         private const string WaveState = LayerName + ".Wave";
         private const string EmptyState = LayerName + ".Empty";
         [SerializeField] private CafeDemoPlayerController movement;
@@ -25,6 +26,7 @@ namespace CafeDemo
         private float requestedAt;
         private string activeEmote = "wave";
         private string activeState = WaveState;
+        private string emptyState = EmptyState;
         private DialogueParticipant emoteFocus;
         private readonly RaycastHit[] socialHits = new RaycastHit[8];
         public bool IsActive { get; private set; }
@@ -42,13 +44,20 @@ namespace CafeDemo
         public bool TryWave() => TryPlay("wave");
         public bool TryPlay(string emoteId)
         {
-            string state = emoteId == "wave" ? WaveState : emoteId == "cheer" ? LayerName + ".Cheer" :
-                emoteId == "proud" || emoteId == "flex" ? LayerName + ".Proud" : null;
             if (!isActiveAndEnabled || IsActive || movement == null || !movement.isActiveAndEnabled ||
                 movement.IsInputSuspended || actor == null || !actor.IsAgent(AgentRole.Player) ||
                 string.IsNullOrWhiteSpace(actor.EntityId) || animator == null || !animator.isActiveAndEnabled ||
-                !animator.isInitialized || animator.speed <= 0 || layer < 0 || state == null ||
-                !animator.HasState(layer, Animator.StringToHash(state))) return false;
+                !animator.isInitialized || animator.runtimeAnimatorController == null || animator.speed <= 0) return false;
+            // V2 Wave excludes the torso; Cheer/Proud keep their authored body motion.
+            // Older controllers without this optional layer retain their existing playback path.
+            string playbackLayer = emoteId == "wave" && animator != null && animator.GetLayerIndex(WaveLayerName) >= 0
+                ? WaveLayerName : LayerName;
+            int playbackIndex = animator == null ? -1 : animator.GetLayerIndex(playbackLayer);
+            string state = emoteId == "wave" ? playbackLayer + ".Wave" : emoteId == "cheer" ? LayerName + ".Cheer" :
+                emoteId == "proud" || emoteId == "flex" ? LayerName + ".Proud" : null;
+            if (playbackIndex < 0 || state == null ||
+                !animator.HasState(playbackIndex, Animator.StringToHash(state))) return false;
+            layer = playbackIndex; emptyState = playbackLayer + ".Empty";
             activeEmote = emoteId; activeState = state;
             // Capture before the panel's activity lock clears the normal interaction focus.
             emoteFocus = GetComponent<PlayerDialogueInteractor>()?.CurrentCandidate;
@@ -144,7 +153,7 @@ namespace CafeDemo
             if (animator != null && animator.isInitialized && layer >= 0 && layer < animator.layerCount)
             {
                 animator.SetLayerWeight(layer, 0f);
-                animator.Play(EmptyState, layer, 0f);
+                animator.Play(emptyState, layer, 0f);
             }
             IsActive = false; published = false; emoteFocus = null;
             if (wasActive) ActivityChanged?.Invoke(false);

@@ -84,7 +84,7 @@ namespace CafeDemo.Tests
             Assert.That(resolved, Is.SameAs(cup));
         }
 
-        [Test] public void Assets_StandaloneLoopSharedMaskAndExplicitSceneWiring()
+        [Test] public void Assets_StandaloneLoopSeparateMaskAndExplicitSceneWiring()
         {
             const string path = "Assets/CafeDemo/Animations/ThirdParty/KayKit/Holding_B.anim";
             var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
@@ -96,7 +96,9 @@ namespace CafeDemo.Tests
             Assert.That(controller.layers.Select(l => l.name), Is.EqualTo(new[] { "Base Layer", "Dialogue", "GestureUpperBody", CarryPresenter.LayerName }));
             var layer = controller.layers.Last();
             Assert.That(layer.defaultWeight, Is.Zero); Assert.That(layer.blendingMode, Is.EqualTo(AnimatorLayerBlendingMode.Override));
-            Assert.That(layer.avatarMask, Is.SameAs(controller.layers[1].avatarMask));
+            // Carry may use the torso; conversational arms must not replace the base torso pose.
+            Assert.That(layer.avatarMask, Is.Not.SameAs(controller.layers[1].avatarMask));
+            Assert.That(controller.layers[1].avatarMask.GetHumanoidBodyPartActive(AvatarMaskBodyPart.Body), Is.False);
             Assert.That(layer.avatarMask.GetHumanoidBodyPartActive(AvatarMaskBodyPart.Root), Is.False);
             Assert.That(layer.avatarMask.GetHumanoidBodyPartActive(AvatarMaskBodyPart.Head), Is.False);
             Assert.That(layer.avatarMask.GetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftLeg), Is.False);
