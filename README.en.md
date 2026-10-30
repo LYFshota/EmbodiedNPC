@@ -18,34 +18,21 @@ and immediate surroundings. It is an early prototype, not a mature general-purpo
   <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC cafe panorama" width="640">
 </p>
 
-This version adds an editable complete world-knowledge catalog (108 default entries), hybrid knowledge and long-term memory retrieval, ten hot drinks, more varied dialogue motion and facial expressions, and four occasional emotion icons. Players can export a complete experience ZIP from Settings for voluntary feedback and analysis.
+## ✨ What works today
 
-## What works today
-
-- **Independent character conversations:** four NPCs have distinct personas,
-  dialogue styles and memories, with Chinese and English responses.
-- **Long-term memory:** eligible displayed dialogue and actual action results
-  can become experiences, which background processing turns into memories for later recall.
-- **Limited perception and overhearing:** NPCs receive local scene information
-  and can record nearby text speech subject to range and occlusion. Overhearing
-  does not automatically trigger an interruption or a free-form group conversation.
-- **Scene actions and feedback:** capable characters can deliver cups, prepare
-  drinks and clean counters. Unity validates and executes actions and returns actual results.
-- **Persistent tasks and meeting arrangements:** limited requests can persist
-  until a later visit or idle opportunity, be deferred or cancelled. A verbal promise
-  does not mean a task was saved, and a saved task is not guaranteed to run immediately.
-- **Model configuration:** Main and Embedding can be configured separately,
-  using local or remote services.
-
-## Highlights in v0.1.3-preview
-
-- Knowledge search/editing, public/restricted access, constant/retrieval usage, complete JSON import/export and reset to defaults. Existing player catalogs are not automatically overwritten by new defaults.
-- Automatic knowledge retrieval plus optional knowledge/memory reads, with at most two cognition calls. Historical plans and displayed conversations are distinguished more carefully, without guaranteeing error-free answers.
-- Latte, cappuccino, americano, espresso, flat white, mocha, caramel macchiato, hot chocolate, matcha latte and black tea share the existing preparation flow.
-- Character-specific dialogue pacing, expressions and four occasional happy/confused/surprised/thinking icons. Available expressions vary between VRM models.
-- Settings > General & controls > Support & diagnostics > Export all experience data. The local ZIP contains saved conversations, memories, personas, knowledge, relationships and task/action data. It may contain personal text: review it before choosing to share. Nothing is uploaded automatically; API credentials are excluded.
+- **💬 Independent character conversations:** The café has four NPCs with distinct personas, personalities and dialogue styles. They support Chinese and English conversations and can naturally continue a topic based on context.
+- **🧠 Long-term memory and experience processing:** NPCs can record actual conversations and experiences and process them into long-term memories in the background. Dialogue combines world-knowledge retrieval with on-demand memory recall, allowing characters to gradually get to know the player.
+- **🌍 World knowledge:** Includes 108 entries covering coffee, characters and the neighborhood. Players can search, edit, add, import and export knowledge, and configure which NPCs know it and how it is used.
+- **👂 Limited perception and overhearing:** NPCs perceive local scene information and can record nearby text speech when range and occlusion conditions permit, without automatically interrupting.
+- **☕ Scene actions and feedback:** NPCs with the appropriate capabilities can deliver items, prepare ten hot drinks and clean counters. The game validates and executes actions, then feeds actual results back into cognition and memory.
+- **📅 Persistent tasks and meeting arrangements:** NPCs can save a limited set of future requests to consider at the next meeting or another suitable opportunity, with support for deferral and cancellation.
+- **✨ Expressions and dialogue motion:** NPCs have varied dialogue motions, facial expressions and conversational rhythms, complemented by occasional happy, confused, surprised and thinking icons.
+- **⚙️ Model configuration:** The main model and vector-retrieval model can be configured separately, using local models or remote services.
+- **📦 Complete experience data export:** Players can export conversations, long-term memories, personas, world knowledge, relationships, tasks and other data from Settings for personal records or developer feedback. Exports may contain personal information: review them before sharing. The game does not upload them automatically.
 
 ## Current limitations
+
+Expression capabilities and visual results may vary between VRM models.
 
 The implementation is closely tied to the fixed café demo. NPC autonomy and the
 available actions are limited. Models can misunderstand, repeat questions or
