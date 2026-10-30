@@ -1,4 +1,4 @@
-"""Narrow 16K product-default / legacy-capacity / final-request checks, no model IO."""
+"""32K new profiles and explicit 16K/8K compatibility, no model IO."""
 import json
 import unittest
 from datetime import datetime, timezone
@@ -55,12 +55,12 @@ class MainContext16KTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(error.exception.allocation.input_hard_cap, 6400)
         self.assertEqual(str(error.exception), 'COGNITIVE_PROMPT_BUDGET_EXCEEDED')
 
-    def test_new_mock_slot_16k_but_existing_nullable_config_is_not_migrated(self):
+    def test_new_mock_slot_32k_but_existing_nullable_config_is_not_migrated(self):
         empty = ModelConfigV2Document(revision=1, updated_at=datetime.now(timezone.utc))
         config = dict(display_name='Test', provider_type='mock', model='fixed-greeting-v1')
         command = SaveProfileCommand(expected_revision=0, kind='main', profile_id='test-main', preset_id='custom',
                                      key_action='retain', config=config)
-        self.assertEqual(profile_connection(command, empty).context_length, 16384)
+        self.assertEqual(profile_connection(command, empty).context_length, 32768)
         legacy = MainModelConfig(**config)
         self.assertIsNone(legacy.context_length)  # Loading legacy JSON keeps its existing runtime fallback.
         active = empty.model_copy(update={'activation': ModelApiConfig(main_model=legacy, embedding=EmbeddingConfig())})

@@ -133,11 +133,12 @@ namespace EmbodiedNPC.Cognition
         private CognitiveRequest actionPresentationRequest;
         private CognitiveRequest settledActionPresentationRequest;
         private GoalOutcome? settledPresentationOutcome;
+        private GoalPlanPresentation? deferredActionPresentation;
         private string consumedPresentationOutcomeId;
         private DialogueController dialogueController;
-        private string actionConversationId, actionLifecycleReason;
 
         public CognitiveRequest PendingRequest => pendingRequest;
+        public string LastPresentationResult { get; private set; } = "none";
         /// <summary>The current Run's owned event, which Backend projects as CurrentTask. Never returns an old request.</summary>
         public string CurrentTaskEventType
         {
@@ -180,6 +181,7 @@ namespace EmbodiedNPC.Cognition
         private void OnDisable()
         {
             CancelServiceZoneConsideration("driver_disabled");
+            CancelPendingDialogueRequest("world_speaker_disabled");
             CancelContinuation(pendingRequest?.request_id);
             Unsubscribe();
         }
@@ -224,6 +226,7 @@ namespace EmbodiedNPC.Cognition
         public bool CancelServiceZoneConsideration(string reason) => CancelLowPrioritySystemConsideration(reason);
         public bool CancelLowPrioritySystemConsideration(string reason)
         {
+            if (pendingRequest?.action_feedback != null) return CancelPendingDialogueRequest(reason);
             var request = pendingRequest; var run = orchestrator?.CurrentRun;
             if (request == null || run == null || !run.IsLowPrioritySystemConsideration || run.State != CognitiveRunState.Running ||
                 pendingActionOutcome != null || request.run.run_id != run.RunId || request.run.agent_entity_id != owner?.EntityId ||
@@ -338,6 +341,9 @@ namespace EmbodiedNPC.Cognition
                 !string.Equals(response.trace_id, pendingRequest.trace_id, StringComparison.Ordinal) ||
                 !string.Equals(response.run_id, run.RunId, StringComparison.Ordinal) ||
                 !string.Equals(response.agent_entity_id, owner?.EntityId, StringComparison.Ordinal)) return false;
+            if (pendingRequest.action_feedback != null) return ConsumeOutcomeResponse(response);
+            if (response.decision.recovery_alternative_id != null)
+            { FailOwnedRun("COGNITIVE_RECOVERY_SOURCE_REQUIRED"); return false; }
             if (!TaskReceiptValidator.Matches(response, pendingRequest))
             { FailOwnedRun("COGNITIVE_TASK_RECEIPT_INVALID"); return false; }
             if (response.task_receipt != null && (!owner.TryGetPersistentIdentityKey(out var taskOwner) ||
@@ -386,7 +392,7 @@ namespace EmbodiedNPC.Cognition
             { FailOwnedRun("UTTERANCE_HARD_LIMIT_EXCEEDED"); return false; }
             if (IsContinuation(pendingRequest))
             {
-                if (response.decision.decision_kind == CognitiveDecisionKinds.ActionProposal || response.decision.target_daily_mode != null)
+                if (response.decision.decision_kind == CognitiveDecisionKinds.ActionProposal || response.decision.target_daily_mode != null || response.decision.action_control != null)
                 { FailOwnedRun(); return false; }
                 if (bufferedContinuation != null) return false;
                 // Every Update input path finishes before LateUpdate presentation. No input FIFO is needed.
@@ -396,37 +402,59 @@ namespace EmbodiedNPC.Cognition
             return ConsumeOwnedResponse(response);
         }
 
+        public string LastActionControlResult { get; private set; }
+
         private bool ConsumeOwnedResponse(CognitiveResponse response)
         {
             CognitiveRun run = orchestrator?.CurrentRun;
             if (pendingRequest == null || run == null || response.request_id != pendingRequest.request_id ||
                 response.trace_id != pendingRequest.trace_id || response.run_id != run.RunId) return false;
+            // A control is checked against the captured execution, then the current authoritative owner.
+            // Terminal races produce a truthful reply instead of applying the command to a replacement.
+            if (response.decision.action_control != null) return ConsumeActionControl(response);
+            if (pendingRequest.context?.runtime_state is { } captured)
+            {
+                if (!ExecutionRequestIdentitiesCurrent(pendingRequest))
+                { FailOwnedRun("EXECUTION_IDENTITY_CHANGED"); return false; }
+                var runner = GetComponent<GoalPlanRunner>();
+                var current = runner != null ? runner.CaptureExecutionState(captured.player_entity_id) :
+                    CognitiveExecutionState.Unknown(owner.EntityId, captured.player_entity_id,
+                        GoalPlanRunner.SceneInstance(this), captured.world_revision);
+                if (!captured.SameExecution(current))
+                { FailOwnedRun("EXECUTION_CONTEXT_CHANGED"); return false; }
+            }
             if (pendingRequest.context_diagnostics_version == 1 && response.context_status != null)
                 ContextCapacityFeedback.Current.Observe(response.context_status);
             if(response.task_receipt!=null) FindAnyObjectByType<TaskRuntimeBridge>()?.AcceptReceipt(pendingRequest,response);
+
+            // Accepted speech belongs to the original NPC/request, not the current input UI.
+            // Keep world lifetime and identity checks even when input is hidden or retargeted.
+            string presentationBlock = RequestWorldSpeechBlockReason(pendingRequest);
+            if (response.decision.decision_kind == CognitiveDecisionKinds.DirectResponse && presentationBlock != null)
+                return SuppressOwnedDialogueResponse(presentationBlock);
+
+            // Check world scope before either ordinary or combined mode/action commit.
+            // Accepted world actions keep their own lifetime; mode validation still uses the captured Run and revision.
+            if (response.decision.target_daily_mode != null && !RequestWorldSpeechScopeMatches(pendingRequest))
+            { FailOwnedRun("DIALOGUE_SCOPE_EXPIRED"); return false; }
 
             if (response.decision.decision_kind == CognitiveDecisionKinds.ActionProposal)
                 return ConsumeActionResponse(response, run);
 
             if (response.decision.target_daily_mode != null)
             {
+                // Life mode is an independent checked intent; its rejection must not
+                // consume a valid conversational answer or finish this chat early.
                 var daily = owner.GetComponent<DailyBehaviorController>();
                 string reason = "daily_mode_unavailable";
-                bool committed = daily != null && daily.TryCommitCognitiveMode(pendingRequest, run,
-                    response.decision.target_daily_mode, () => TryPresentOwnedUtterance(pendingRequest,
-                        ModeStatus(daily, true, false, pendingRequest.reply_language)), out reason);
+                if (daily != null)
+                    daily.TryCommitCognitiveMode(pendingRequest, run, response.decision.target_daily_mode, out reason);
                 LastDailyModeResult = reason;
-                if (!committed)
-                {
-                    if (reason == "presentation_unavailable") { FailOwnedRun(); return false; }
-                    var fallback = ModeStatus(daily, false, false, pendingRequest.reply_language);
-                    if (!TryPresentOwnedUtterance(pendingRequest, fallback)) { FailOwnedRun(); return false; }
-                }
             }
-            else if (response.decision.decision_kind == CognitiveDecisionKinds.DirectResponse &&
+            if (response.decision.decision_kind == CognitiveDecisionKinds.DirectResponse &&
                 !TryPresentOwnedUtterance(pendingRequest, response.decision))
             {
-                FailOwnedRun();
+                FailOwnedRun("PRESENTATION_UNAVAILABLE");
                 return false;
             }
             CognitiveRequest completed = pendingRequest;
@@ -438,7 +466,47 @@ namespace EmbodiedNPC.Cognition
             return settled;
         }
 
-        private static CognitiveDecision ModeStatus(DailyBehaviorController daily, bool changed, bool taskNotStarted, string language)
+        private bool ConsumeActionControl(CognitiveResponse response)
+        {
+            var request = pendingRequest;
+            var captured = request.context?.runtime_state;
+            var control = response.decision.action_control;
+            var input = request.context?.current_event;
+            if (captured == null || captured.status != "IN_PROGRESS" || captured.allowed_controls == null ||
+                Array.IndexOf(captured.allowed_controls, control.operation) < 0 || !control.Matches(captured) ||
+                !ExecutionRequestIdentitiesCurrent(request) || !RequestWorldSpeechScopeMatches(request) ||
+                input?.event_type != AgentEventTypes.PlayerUtterance || input.source_entity_id != captured.player_entity_id ||
+                input.target_entity_id != owner.EntityId || string.IsNullOrEmpty(GetEventPayload(input, AgentEventPayloadKeys.ConversationId)))
+            { LastActionControlResult = "scope_rejected"; FailOwnedRun("ACTION_CONTROL_SCOPE_INVALID"); return false; }
+            LastActionControlResult = goalPlanRunner == null ? "unconfirmed" : goalPlanRunner.CancelOwnedGoal(captured);
+            Debug.Log($"[ActionControl] request={request.request_id} run={request.run.run_id} proposal={control.proposal_id} " +
+                $"revision={control.proposal_revision} trace={control.trace_id} result={LastActionControlResult}", this);
+            var decision = CopyDecisionForPresentation(response.decision);
+            decision.dialogue_turn_policy = "WAIT_FOR_PLAYER";
+            if (LastActionControlResult != "cancelled")
+                decision.utterance = request.reply_language == "en-US" ? LastActionControlResult switch
+                {
+                    "already_cancelled" => "That task has already been cancelled. It won't resume on its own.",
+                    "already_completed" => "It finished before I could cancel it; the result is still there.",
+                    "already_ended" => "That task has already ended; there is nothing still running to cancel.",
+                    _ => "I couldn't confirm stopping that task. I haven't changed another task.",
+                } : LastActionControlResult switch
+                {
+                    "already_cancelled" => "刚才的任务已经取消了，不会自动继续。",
+                    "already_completed" => "没赶在完成前停下来，刚才的结果已经保留下来了。",
+                    "already_ended" => "刚才的任务已经结束了，现在没有继续执行。",
+                    _ => "这次没能确认停下原来的任务，我没有改动其他任务。",
+                };
+            if (!TryPresentOwnedUtterance(request, decision))
+            { FailOwnedRun("PRESENTATION_UNAVAILABLE"); return false; }
+            pendingRequest = null;
+            StopResponseTimeout();
+            bool settled = orchestrator.CompleteCurrentRun();
+            if (settled) PublishRequestFeedback(request, "response_received", "action_control:" + LastActionControlResult);
+            return settled;
+        }
+
+        private static CognitiveDecision ModeStatus(DailyBehaviorController daily, bool changed, string language)
         {
             // A committed mode does not validate free-text commitments or prove arrival.
             // Keep the existing factual fallback, expressed as a brief conversational reply.
@@ -454,7 +522,7 @@ namespace EmbodiedNPC.Cognition
                 daily.CurrentMode == DailyBehaviorMode.Rest ? "I'm still resting; I'll carry on as before." : "I'm still relaxing; I'll carry on as before.";
             return new CognitiveDecision { decision_kind = CognitiveDecisionKinds.DirectResponse,
                 dialogue_turn_policy = "WAIT_FOR_PLAYER",
-                utterance = text + (taskNotStarted ? (language == "en-US" ? " Your requested task hasn't started yet." : "不过，你刚才托我的事还没开始做。") : string.Empty) };
+                utterance = text + (language == "en-US" ? " Your requested task hasn't started yet." : "不过，你刚才托我的事还没开始做。") };
         }
 
         private bool ConsumeActionResponse(CognitiveResponse response, CognitiveRun run)
@@ -462,6 +530,14 @@ namespace EmbodiedNPC.Cognition
             CognitiveRequest actionRequest = pendingRequest;
             bool combined = response.decision.target_daily_mode != null;
             var daily = owner.GetComponent<DailyBehaviorController>();
+            // A new conversation Run cannot replace an execution's correlation, even
+            // before Runner admission (or commit a combined mode for a second action).
+            if (pendingActionOutcome != null || goalPlanRunner?.HasActiveTask == true)
+            {
+                LastActionHandoffResult = "action_busy";
+                FailOwnedRun("PLAN_ALREADY_EXECUTING");
+                return false;
+            }
             if (!WorldActionEligibility.MayProposeNewWorldAction(actionRequest, run, owner, response.decision.action_proposal))
             {
                 LastActionHandoffResult = "action_not_eligible";
@@ -473,7 +549,7 @@ namespace EmbodiedNPC.Cognition
                     out CognitiveActionOutcomeOwnership ownership))
             {
                 LastActionHandoffResult = "action_ownership_unavailable";
-                if (combined) TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, false, true, actionRequest.reply_language));
+                if (combined) TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, false, actionRequest.reply_language));
                 FailOwnedRun();
                 return false;
             }
@@ -485,21 +561,21 @@ namespace EmbodiedNPC.Cognition
                 {
                     LastDailyModeResult = reason;
                     LastActionHandoffResult = "mode_prevalidation_failed";
-                    TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, false, true, actionRequest.reply_language));
+                    TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, false, actionRequest.reply_language));
                     FailOwnedRun(); return false;
                 }
                 if (!actionHandoff.TryPrevalidate(actionRequest, response, out reason))
                 {
                     LastActionHandoffResult = "action_prevalidation_failed:" + reason;
-                    TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, false, true, actionRequest.reply_language));
+                    TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, false, actionRequest.reply_language));
                     FailOwnedRun(); return false;
                 }
-                if (!daily.TryCommitCognitiveModeForAction(actionRequest, run,
+                if (!daily.TryCommitCognitiveMode(actionRequest, run,
                         response.decision.target_daily_mode, out reason))
                 {
                     LastDailyModeResult = reason;
                     LastActionHandoffResult = "mode_commit_failed";
-                    TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, false, true, actionRequest.reply_language));
+                    TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, false, actionRequest.reply_language));
                     FailOwnedRun(); return false;
                 }
                 LastDailyModeResult = reason;
@@ -510,7 +586,7 @@ namespace EmbodiedNPC.Cognition
             if (!TryBeginActionWait(ownership))
             {
                 LastActionHandoffResult = "action_wait_failed";
-                if (combined) TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, true, true, actionRequest.reply_language));
+                if (combined) TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, true, actionRequest.reply_language));
                 FailOwnedRun();
                 return false;
             }
@@ -518,14 +594,14 @@ namespace EmbodiedNPC.Cognition
             {
                 LastActionHandoffResult = "action_handoff_failed";
                 FailUnacceptedActionWait(ownership);
-                if (combined) TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, true, true, actionRequest.reply_language));
+                if (combined) TryPresentOwnedUtterance(actionRequest, ModeStatus(daily, true, actionRequest.reply_language));
                 return false;
             }
             LastValidatedGoalProposal = response.validated_goal;
             LastActionHandoffResult = "action_accepted";
-            // A synchronous GoalOutcome subscriber may already have settled this accepted task.
-            if (!ReferenceEquals(pendingActionOutcome, ownership) ||
-                run.State != CognitiveRunState.WaitingActionResult)
+            CompleteAcceptedActionRun(ownership);
+            // A synchronous GoalOutcome may already have settled this execution.
+            if (!ReferenceEquals(pendingActionOutcome, ownership))
             {
                 PublishRequestFeedback(actionRequest, "response_received", null);
                 return true;
@@ -548,9 +624,7 @@ namespace EmbodiedNPC.Cognition
 
         private bool TryPresentAcceptedActionDecision(CognitiveRequest request, CognitiveDecision decision)
         {
-            CognitiveRun run = orchestrator == null ? null : orchestrator.CurrentRun;
-            if (request == null || pendingActionOutcome == null || run == null ||
-                run.State != CognitiveRunState.WaitingActionResult ||
+            if (request == null || pendingActionOutcome == null || pendingRequest != null ||
                 !string.Equals(request.run.run_id, pendingActionOutcome.RunId, StringComparison.Ordinal) ||
                 !string.Equals(request.run.agent_entity_id, pendingActionOutcome.AgentEntityId,
                     StringComparison.Ordinal) ||
@@ -562,7 +636,10 @@ namespace EmbodiedNPC.Cognition
 
         private bool TryPresentOwnedUtterance(CognitiveRequest request, CognitiveDecision decision, bool publishCognitiveEvidence = true)
         {
-            if (request == null || Presenter == null || decision == null) return false;
+            if (request == null || decision == null) return false;
+            string blocked = RequestWorldSpeechBlockReason(request);
+            if (blocked != null) { RecordPresentationResult(request, blocked); return false; }
+            if (Presenter == null) { RecordPresentationResult(request, "presenter_missing"); return false; }
             string utterance = decision.utterance;
             string episodeDirective = decision.episode_directive;
 
@@ -582,10 +659,12 @@ namespace EmbodiedNPC.Cognition
             }
             catch (Exception exception)
             {
+                RecordPresentationResult(request, "presenter_exception:" + exception.GetType().Name);
                 Debug.LogWarning($"[Cognition] presentation failed: {exception.GetType().Name}", this);
                 return false;
             }
-            if (!didPresent) return false;
+            if (!didPresent) { RecordPresentationResult(request, "presenter_rejected"); return false; }
+            LastPresentationResult = "presented";
             // Terminal Action presentation is already backed by GoalOutcome evidence. Do not
             // append a second model-response event with the original cognitive request ID.
             if (!publishCognitiveEvidence) return true;
@@ -605,7 +684,9 @@ namespace EmbodiedNPC.Cognition
         {
             decision_kind = decision.decision_kind, episode_directive = decision.episode_directive,
             dialogue_turn_policy = decision.dialogue_turn_policy,
-            utterance = decision.utterance, emotion = decision.emotion, gesture = decision.gesture,
+            recovery_alternative_id = decision.recovery_alternative_id,
+            utterance = decision.utterance, emotion = decision.emotion, expression_icon = decision.expression_icon,
+            gesture = decision.gesture,
             look_at = decision.look_at,
             action_proposal = decision.action_proposal == null ? null : new CognitiveActionProposal
             {
@@ -641,18 +722,16 @@ namespace EmbodiedNPC.Cognition
         internal bool TryBeginActionWait(CognitiveActionOutcomeOwnership ownership)
         {
             CognitiveRun run = orchestrator == null ? null : orchestrator.CurrentRun;
-            if (ownership == null || run == null || run.State != CognitiveRunState.Running ||
+            if (ownership == null || pendingActionOutcome != null || pendingRequest == null ||
+                run == null || run.State != CognitiveRunState.Running ||
                 string.IsNullOrWhiteSpace(ownership.ProposalId) ||
                 !string.Equals(ownership.RunId, run.RunId, StringComparison.Ordinal) ||
                 !string.Equals(ownership.AgentEntityId, owner?.EntityId, StringComparison.Ordinal) ||
                 !orchestrator.WaitForCurrentRunActionResult()) return false;
 
             actionPresentationRequest = pendingRequest;
-            actionConversationId = GetEventPayload(pendingRequest?.context?.current_event, AgentEventPayloadKeys.ConversationId);
-            if (string.IsNullOrEmpty(actionConversationId) && dialogueController?.SelectedTarget?.Entity == owner)
-                actionConversationId = dialogueController.CurrentConversationId;
-            actionLifecycleReason = dialogueController?.LastLifecycleReason;
             settledActionPresentationRequest = null; settledPresentationOutcome = null;
+            deferredActionPresentation = null;
             consumedPresentationOutcomeId = null; LastActionOutcomePresentationResult = "none";
             pendingRequest = null;
             StopResponseTimeout();
@@ -661,31 +740,42 @@ namespace EmbodiedNPC.Cognition
             return true;
         }
 
+        // WaitingActionResult is only the handoff boundary. Once Unity accepts,
+        // execution ownership survives independently of this foreground Run.
+        internal bool CompleteAcceptedActionRun(CognitiveActionOutcomeOwnership ownership)
+        {
+            if (ownership == null ||
+                (!ReferenceEquals(pendingActionOutcome, ownership) && !ReferenceEquals(lastSettledActionOutcome, ownership)) ||
+                orchestrator?.CurrentRun?.RunId != ownership.RunId ||
+                orchestrator.CurrentRun.State != CognitiveRunState.WaitingActionResult) return false;
+            bool completed = orchestrator.CompleteCurrentRun();
+            if (deferredActionPresentation.HasValue)
+            {
+                var presentation = deferredActionPresentation.Value;
+                deferredActionPresentation = null;
+                HandleGoalPresentation(presentation);
+            }
+            return completed;
+        }
+
         private bool FailUnacceptedActionWait(CognitiveActionOutcomeOwnership ownership)
         {
-            if (!ReferenceEquals(pendingActionOutcome, ownership)) return false;
+            if (!ReferenceEquals(pendingActionOutcome, ownership) && !ReferenceEquals(lastSettledActionOutcome, ownership)) return false;
             pendingActionOutcome = null;
             actionPresentationRequest = null;
+            deferredActionPresentation = null;
             LastValidatedGoalProposal = null;
-            return orchestrator != null && orchestrator.FailCurrentRun();
+            return orchestrator?.CurrentRun?.RunId == ownership.RunId && orchestrator.FailCurrentRun();
         }
 
         internal bool TryConsumeActionOutcome(GoalOutcome outcome)
         {
             CognitiveActionOutcomeOwnership ownership = pendingActionOutcome;
-            CognitiveRun run = orchestrator == null ? null : orchestrator.CurrentRun;
-            if (ownership == null || run == null || run.State != CognitiveRunState.WaitingActionResult ||
-                !Matches(outcome, ownership)) return false;
+            if (ownership == null || !Matches(outcome, ownership) || owner?.EntityId != ownership.AgentEntityId ||
+                outcome.Status is not (PlanExecutionStatus.Succeeded or PlanExecutionStatus.Cancelled or
+                    PlanExecutionStatus.Failed or PlanExecutionStatus.TimedOut)) return false;
 
-            bool settled = outcome.Status switch
-            {
-                PlanExecutionStatus.Succeeded => orchestrator.CompleteCurrentRun(),
-                PlanExecutionStatus.Cancelled => orchestrator.CancelCurrentRun(),
-                PlanExecutionStatus.Failed => orchestrator.FailCurrentRun(),
-                PlanExecutionStatus.TimedOut => orchestrator.FailCurrentRun(),
-                _ => false,
-            };
-            if (!settled) return false;
+            // Never finish CurrentRun here: it may now belong to an unrelated chat.
 
             lastSettledActionOutcome = ownership;
             settledActionPresentationRequest = actionPresentationRequest;
@@ -707,29 +797,220 @@ namespace EmbodiedNPC.Cognition
             bool succeeded = outcome.Status == PlanExecutionStatus.Succeeded;
             if (presentation.Kind != (succeeded ? GoalPlanPresentationKind.Succeeded : GoalPlanPresentationKind.Failed) ||
                 consumedPresentationOutcomeId == outcome.OutcomeId) return;
-            // Consume once even when the original UI is closed; a late replay must not reopen it.
+            if (orchestrator?.CurrentRun?.RunId == lastSettledActionOutcome.RunId &&
+                orchestrator.CurrentRun.State == CognitiveRunState.WaitingActionResult)
+            {
+                deferredActionPresentation = presentation;
+                return;
+            }
+            // Consume once; world speech never reopens the input UI.
             consumedPresentationOutcomeId = outcome.OutcomeId;
             if (pendingRequest != null || orchestrator.HasActiveRun || goalPlanRunner.HasActiveTask ||
                 !ActionPresentationScopeMatches())
             { LastActionOutcomePresentationResult = "lifecycle_unavailable"; return; }
+            if (!succeeded && TryStartOutcomeCognition(presentation)) return;
             var decision = new CognitiveDecision { decision_kind = CognitiveDecisionKinds.DirectResponse,
                 utterance = presentation.Message, dialogue_turn_policy = "WAIT_FOR_PLAYER" };
             LastActionOutcomePresentationResult = TryPresentOwnedUtterance(settledActionPresentationRequest, decision, false)
                 ? "displayed" : "presentation_unavailable";
         }
 
+        private bool TryStartOutcomeCognition(GoalPlanPresentation presentation)
+        {
+            var parent = settledActionPresentationRequest;
+            // Cancellation and persistent Tasks never re-enter ordinary recovery cognition.
+            var feedback = goalPlanRunner.BuildActionFeedback(presentation.Outcome.Value, parent);
+            if (feedback == null || backendClient?.IsConnected != true ||
+                !orchestrator.TryStartOutcomeRun(parent.run, out var run)) return false;
+            var request = Newtonsoft.Json.JsonConvert.DeserializeObject<CognitiveRequest>(parent.Serialize());
+            request.schema_version = "1.0"; request.task_runtime = null; request.task_consideration = null;
+            request.request_id = "outcome_request_" + Guid.NewGuid().ToString("N");
+            request.run = CognitiveRunDto.From(run); request.context.run_id = run.RunId;
+            request.action_feedback = feedback;
+            var source = request.context.current_event;
+            request.context.current_event = new CognitiveEventDto { event_id = feedback.outcome_id,
+                event_type = "action.failed", source_entity_id = owner.EntityId, target_entity_id = owner.EntityId, area_entity_id = "",
+                trace_id = feedback.trace_id, occurred_at = presentation.Outcome.Value.OccurredAt,
+                world_revision = feedback.world_revision, has_world_revision = true,
+                payload = (source?.payload ?? Array.Empty<CognitiveKeyValueDto>())
+                    .Where(p => p.key == AgentEventPayloadKeys.ConversationId).Concat(new[] {
+                        new CognitiveKeyValueDto { key = "parent_request_id", value = feedback.original_request_id },
+                        new CognitiveKeyValueDto { key = "parent_event_id", value = parent.action_feedback == null
+                            ? source?.event_id : source?.payload?.FirstOrDefault(p => p.key == "parent_event_id")?.value }
+                    }).ToArray() };
+            request.trigger = new CognitiveTriggerDto { trigger_id = run.TriggerId, trigger_type = "event",
+                agent_entity_id = owner.EntityId, source_event_id = feedback.outcome_id,
+                created_at = Time.realtimeSinceStartupAsDouble, reason = "trusted_goal_outcome" };
+            request.context.trigger = request.trigger;
+            request.context.runtime_state = goalPlanRunner.CaptureExecutionState(request.context.relevant_player?.player_entity_id);
+            request.recall_identity.requester_entity_id = null;
+            if (!request.IsValid)
+            { orchestrator.FailCurrentRun(); return false; }
+            deferredActionPresentation = presentation;
+            LastActionOutcomePresentationResult = "cognition_pending";
+            if (!composer.PublishOutcomeRequest(request))
+            { orchestrator.FailCurrentRun(); deferredActionPresentation = null; return false; }
+            return true;
+        }
+
+        private bool ConsumeOutcomeResponse(CognitiveResponse response)
+        {
+            var request = pendingRequest; var feedback = request.action_feedback; var decision = response.decision;
+            if (response.schema_version != request.schema_version || response.validated_goal != null ||
+                response.task_receipt != null || response.task_execution != null ||
+                decision.decision_kind != CognitiveDecisionKinds.DirectResponse || decision.action_control != null ||
+                decision.action_proposal != null || decision.target_daily_mode != null || decision.look_at != null ||
+                decision.episode_directive != null || decision.dialogue_turn_policy != "WAIT_FOR_PLAYER" ||
+                !ReplyUtteranceContract.Fits(decision.utterance, request.reply_language) ||
+                !RequestWorldSpeechScopeMatches(request) || !ExecutionRequestIdentitiesCurrent(request) ||
+                !goalPlanRunner.IsCurrentFeedback(feedback, request.context.relevant_player?.player_entity_id))
+            { FailOwnedRun("COGNITIVE_OUTCOME_CONTEXT_CHANGED"); return false; }
+            string selection = decision.recovery_alternative_id;
+            if (selection != null && !Array.Exists(feedback.allowed_alternatives, a => a.alternative_id == selection))
+            { FailOwnedRun("COGNITIVE_RECOVERY_SELECTION_INVALID"); return false; }
+            if (selection == null)
+            {
+                bool presented = TryPresentOwnedUtterance(request, decision);
+                if (!presented) { FailOwnedRun("PRESENTATION_UNAVAILABLE"); return false; }
+                pendingRequest = null; deferredActionPresentation = null; StopResponseTimeout();
+                LastActionOutcomePresentationResult = "displayed";
+                bool settled = orchestrator.CompleteCurrentRun();
+                if (settled) PublishRequestFeedback(request, "response_received", null);
+                return settled;
+            }
+            // Install the next ownership before Runner callbacks; never finish a newer unrelated run.
+            var ownership = new CognitiveActionOutcomeOwnership(request.run.run_id, feedback.proposal_id,
+                feedback.proposal_revision + 1, feedback.trace_id, owner.EntityId);
+            pendingActionOutcome = ownership; actionPresentationRequest = request;
+            var fallback = deferredActionPresentation;
+            pendingRequest = null; deferredActionPresentation = null; StopResponseTimeout();
+            orchestrator.WaitForCurrentRunActionResult();
+            if (!goalPlanRunner.TryRecover(feedback, selection, request.context.relevant_player?.player_entity_id, out _))
+            {
+                pendingActionOutcome = null; actionPresentationRequest = null;
+                orchestrator.FailCurrentRun(); LastActionOutcomePresentationResult = "recovery_rejected";
+                deferredActionPresentation = fallback; PresentOutcomeFallback(request);
+                PublishRequestFeedback(request, "failed", "COGNITIVE_RECOVERY_REJECTED"); return false;
+            }
+            consumedPresentationOutcomeId = null;
+            bool shown = TryPresentOwnedUtterance(request, decision);
+            LastActionOutcomePresentationResult = shown ? "displayed" : "presentation_unavailable";
+            CompleteAcceptedActionRun(ownership);
+            PublishRequestFeedback(request, "response_received", null);
+            return shown;
+        }
+
+        private void PresentOutcomeFallback(CognitiveRequest request)
+        {
+            if (request.action_feedback == null || !deferredActionPresentation.HasValue) return;
+            var presentation = deferredActionPresentation.Value; deferredActionPresentation = null;
+            var current = goalPlanRunner.CaptureExecutionState(request.context.relevant_player?.player_entity_id);
+            if (orchestrator.HasActiveRun || goalPlanRunner.HasActiveTask ||
+                !RequestWorldSpeechScopeMatches(request) || !ExecutionRequestIdentitiesCurrent(request) ||
+                current.status != "FAILED" || current.outcome_id != request.action_feedback.outcome_id ||
+                current.proposal_id != request.action_feedback.proposal_id || current.trace_id != request.action_feedback.trace_id) return;
+            LastActionOutcomePresentationResult = TryPresentOwnedUtterance(request, new CognitiveDecision {
+                decision_kind = CognitiveDecisionKinds.DirectResponse, utterance = request.reply_language == "en-US"
+                    ? "I couldn't complete that attempt. Please clarify what you would like."
+                    : presentation.Message,
+                dialogue_turn_policy = "WAIT_FOR_PLAYER" }, false) ? "displayed" : "presentation_unavailable";
+        }
+
         private bool ActionPresentationScopeMatches()
         {
-            if (dialogueController == null) return string.IsNullOrEmpty(actionConversationId);
-            if (!dialogueController.isActiveAndEnabled || dialogueController.IsChangingSession) return false;
-            if (!string.IsNullOrEmpty(actionConversationId))
-                return dialogueController.HasActiveSession && dialogueController.IsPresentationVisible &&
-                    dialogueController.CurrentConversationId == actionConversationId &&
-                    dialogueController.SelectedTarget?.Entity == owner &&
-                    dialogueController.ActiveSpeakerEntityId == settledActionPresentationRequest.context?.relevant_player?.player_entity_id;
-            // Preserve unbound local requests, but never overwrite a newly opened/switched session.
-            return !dialogueController.HasActiveSession && !dialogueController.IsPresentationVisible &&
-                dialogueController.SelectedTarget == null && dialogueController.LastLifecycleReason == actionLifecycleReason;
+            var request = settledActionPresentationRequest;
+            var ownership = lastSettledActionOutcome;
+            var captured = request?.context?.runtime_state;
+            // A terminal result keeps its original request/identity/world scope. Input selection and
+            // Conversation rotation cannot transfer or revoke that accepted execution's feedback.
+            return request?.run != null && ownership != null && captured?.IsValid == true &&
+                request.run.run_id == ownership.RunId && request.trace_id == ownership.TraceId &&
+                (request.action_feedback?.proposal_id ?? GoalPlanRunner.NormalizeProposalId(request.request_id)) == ownership.ProposalId &&
+                captured.actor_entity_id == ownership.AgentEntityId &&
+                captured.player_entity_id == request.context.relevant_player?.player_entity_id &&
+                captured.source_session_id == EmbodiedNPC.Memory.ClientSessionIdentity.Current &&
+                !string.IsNullOrEmpty(captured.scene_instance_id) &&
+                RequestWorldSpeechScopeMatches(request) && ExecutionRequestIdentitiesCurrent(request);
+        }
+
+        private bool RequestWorldSpeechScopeMatches(CognitiveRequest request) => RequestWorldSpeechBlockReason(request) == null;
+
+        private string RequestWorldSpeechBlockReason(CognitiveRequest request)
+        {
+            if (!isActiveAndEnabled || owner == null || !owner.isActiveAndEnabled ||
+                !owner.gameObject.scene.IsValid() || !owner.gameObject.scene.isLoaded)
+                return "WORLD_SPEAKER_UNAVAILABLE";
+            if (request?.run == null || request.run.agent_entity_id != owner.EntityId)
+                return "WORLD_SPEECH_OWNER_CHANGED";
+            var captured = request.context?.runtime_state;
+            if (captured != null && !string.IsNullOrEmpty(captured.scene_instance_id) &&
+                captured.scene_instance_id != GoalPlanRunner.SceneInstance(this))
+                return "WORLD_SPEECH_SCENE_CHANGED";
+            // Request/Run/Trace ingress and persistent identities are validated separately.
+            // The bubble presenter always uses this owner and the request's original Conversation.
+            // Neither the input focus nor its visibility grants or revokes world speech.
+            return null;
+        }
+
+        /// <summary>Explicitly end a pending directed exchange; hiding/retargeting input never calls this.</summary>
+        public bool CancelPendingDialogueRequest(string reason = "explicit_cancel")
+        {
+            var request = pendingRequest;
+            if ((request?.context?.current_event?.event_type != AgentEventTypes.PlayerUtterance && request?.action_feedback == null) ||
+                orchestrator?.CurrentRun?.RunId != request.run.run_id) return false;
+            RecordPresentationResult(request, reason);
+            if (request.action_feedback != null) deferredActionPresentation = null;
+            pendingRequest = null;
+            StopResponseTimeout();
+            bool settled = orchestrator.CancelCurrentRun();
+            if (backendClient != null) _ = backendClient.SendCognitiveCancelAsync(request);
+            if (settled) PublishRequestFeedback(request, "cancelled", "cancelled");
+            return settled;
+        }
+
+        private bool SuppressOwnedDialogueResponse(string reason)
+        {
+            var request = pendingRequest;
+            if (request == null || orchestrator?.CurrentRun?.RunId != request.run.run_id) return false;
+            RecordPresentationResult(request, reason);
+            if (request.action_feedback != null) deferredActionPresentation = null;
+            pendingRequest = null;
+            StopResponseTimeout();
+            bool settled = orchestrator.CompleteCurrentRun();
+            if (settled) PublishRequestFeedback(request, "response_suppressed", reason);
+            return false; // Nothing was presented; duplicate ingress cannot replay this reply.
+        }
+
+        private void RecordPresentationResult(CognitiveRequest request, string reason)
+        {
+            LastPresentationResult = reason;
+            Debug.Log($"[Cognition] PRESENTATION time={Time.realtimeSinceStartupAsDouble:F3} result={reason} request={request?.request_id} trace={request?.trace_id} " +
+                $"run={request?.run?.run_id} npc={owner?.EntityId} expected_conversation=" +
+                $"{GetEventPayload(request?.context?.current_event, AgentEventPayloadKeys.ConversationId)} " +
+                $"expected_player={request?.context?.relevant_player?.player_entity_id ?? request?.context?.current_event?.source_entity_id} " +
+                $"current_conversation={dialogueController?.CurrentConversationId} player={dialogueController?.ActiveSpeakerEntityId} " +
+                $"current_npc={dialogueController?.SelectedTarget?.Entity?.EntityId} visible={dialogueController?.IsPresentationVisible} " +
+                $"hide_reason={dialogueController?.LastPresentationHideReason}", this);
+        }
+
+        private bool ExecutionRequestIdentitiesCurrent(CognitiveRequest request)
+        {
+            bool MatchesIdentity(CognitiveRecallSubjectIdentityDto expected, WorldEntity entity)
+            {
+                var current = CognitiveRecallSubjectIdentityDto.From(entity);
+                return expected != null && current != null && expected.entity_id == current.entity_id && expected.kind == current.kind &&
+                    expected.identity_namespace == current.identity_namespace && expected.identity_type == current.identity_type &&
+                    expected.persistent_id == current.persistent_id;
+            }
+            var identity = request.recall_identity;
+            if (identity == null || !MatchesIdentity(identity.observer, owner)) return false;
+            string player = request.context.runtime_state.player_entity_id;
+            if (string.IsNullOrEmpty(player)) return true;
+            foreach (var registry in FindObjectsByType<EntityRegistry>(FindObjectsInactive.Include))
+                if (registry.TryGetEntity(owner.EntityId, out var registeredOwner) && registeredOwner == owner &&
+                    registry.TryGetEntity(player, out var currentPlayer))
+                    return MatchesIdentity(Array.Find(identity.current_subjects, p => p.entity_id == player), currentPlayer);
+            return false;
         }
 
         internal bool OwnsActionOutcome(AgentEvent agentEvent)
@@ -771,7 +1052,7 @@ namespace EmbodiedNPC.Cognition
         {
             if (!TryOwnRequest(request)) return;
             bool sent = backendClient != null && await backendClient.SendCognitiveRequestAsync(request);
-            if ((IsContinuation(request) || request.task_consideration!=null || (request.context?.current_event?.event_type == AgentEventTypes.PlayerDwelledInServiceZone || request.context?.current_event?.event_type == AgentEventTypes.CounterNeedsCleaning)) && pendingRequest != request)
+            if ((request.action_feedback != null || IsContinuation(request) || request.task_consideration!=null || (request.context?.current_event?.event_type == AgentEventTypes.PlayerDwelledInServiceZone || request.context?.current_event?.event_type == AgentEventTypes.CounterNeedsCleaning)) && pendingRequest != request)
             {
                 // The request send can complete after local invalidation. Retire it again on the wire.
                 if (backendClient != null) await backendClient.SendCognitiveCancelAsync(request);
@@ -785,6 +1066,13 @@ namespace EmbodiedNPC.Cognition
             if (!sent && this != null && pendingRequest == request) FailOwnedRun("SEND_FAILED");
             else if (this != null && pendingRequest == request)
                 timeoutCoroutine = StartCoroutine(FailAfterTimeout(request));
+        }
+
+        private void HandleConnectionStatus(string status)
+        {
+            if (pendingRequest?.action_feedback != null && backendClient?.IsConnected != true &&
+                status is "DISCONNECTED" or "OFFLINE" or "CONNECTION_FAILED" or "SEND_FAILED")
+                FailOwnedRun("CONNECTION_LOST");
         }
 
         private void HandleResponse(CognitiveResponse response) => TryConsumeResponse(response);
@@ -825,6 +1113,8 @@ namespace EmbodiedNPC.Cognition
                 if (backendClient != null) _ = backendClient.SendCognitiveCancelAsync(failed);
                 ContinuationSettled?.Invoke(failed, "failed");
             }
+            if (failed.action_feedback != null && backendClient != null) _ = backendClient.SendCognitiveCancelAsync(failed);
+            if (settled) PresentOutcomeFallback(failed);
             if (settled) PublishRequestFeedback(failed, "failed", diagnosticCategory ?? reason);
             return settled;
         }
@@ -871,6 +1161,7 @@ namespace EmbodiedNPC.Cognition
                 composer.CognitiveRequestCreated += HandleRequestCreated;
                 backendClient.CognitiveResponseReceived += HandleResponse;
                 backendClient.CognitiveRequestFailed += HandleFailure;
+                backendClient.ConnectionStatusChanged += HandleConnectionStatus;
                 subscribed = true;
             }
             SubscribeGoalOutcomes();
@@ -893,6 +1184,7 @@ namespace EmbodiedNPC.Cognition
                 {
                     backendClient.CognitiveResponseReceived -= HandleResponse;
                     backendClient.CognitiveRequestFailed -= HandleFailure;
+                    backendClient.ConnectionStatusChanged -= HandleConnectionStatus;
                 }
                 subscribed = false;
             }

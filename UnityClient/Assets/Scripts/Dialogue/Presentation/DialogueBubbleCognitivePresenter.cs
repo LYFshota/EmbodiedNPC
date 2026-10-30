@@ -13,6 +13,7 @@ namespace EmbodiedNPC.Dialogue.Presentation
         [SerializeField] private DialogueBubbleManager manager;
         [SerializeField] private SpeechPresentationLifecycle speech;
         [SerializeField] private ExpressiveController expressive;
+        private DialogueEmotionIconPresenter emotionIcon;
 
         public string SpeakerEntityId => owner == null ? string.Empty : owner.EntityId;
 
@@ -22,6 +23,7 @@ namespace EmbodiedNPC.Dialogue.Presentation
             if (speech == null) speech = GetComponent<SpeechPresentationLifecycle>();
             if (expressive == null) expressive = GetComponent<ExpressiveController>();
             if (manager == null) manager = DialogueBubbleManager.Active ?? FindAnyObjectByType<DialogueBubbleManager>();
+            ConfigureIcon();
         }
 
         public void Configure(WorldEntity entity, DialogueBubbleManager bubbleManager)
@@ -30,11 +32,20 @@ namespace EmbodiedNPC.Dialogue.Presentation
             manager = bubbleManager;
             speech = GetComponent<SpeechPresentationLifecycle>();
             expressive = GetComponent<ExpressiveController>();
+            ConfigureIcon();
+        }
+
+        private void ConfigureIcon()
+        {
+            if (expressive == null) return;
+            emotionIcon = GetComponent<DialogueEmotionIconPresenter>() ?? gameObject.AddComponent<DialogueEmotionIconPresenter>();
+            emotionIcon.Configure(owner, expressive, speech, manager, FindAnyObjectByType<DialogueController>());
         }
 
         public bool TryPresentCognitiveUtterance(string utterance)
         {
             if (!TryShow(utterance)) return false;
+            emotionIcon?.ClearPresentation();
             speech?.BeginPresentedText(utterance, Time.unscaledTimeAsDouble);
             return true;
         }
@@ -45,6 +56,7 @@ namespace EmbodiedNPC.Dialogue.Presentation
                 !TryShow(decision.utterance, context)) return false;
             expressive?.ReceivePresentedDecision(decision, context);
             speech?.BeginPresentedText(decision.utterance, Time.unscaledTimeAsDouble);
+            emotionIcon?.TryPresent(decision.expression_icon, context, Time.unscaledTimeAsDouble);
             return true;
         }
 
@@ -56,6 +68,6 @@ namespace EmbodiedNPC.Dialogue.Presentation
                 ? manager.PushReply(owner.EntityId, utterance, context.Value.RequestId, context.Value.TraceId, context.Value.ConversationId).IsValid
                 : manager.PushMessage(owner.EntityId, utterance, DialogueSpeakerKind.Npc).IsValid;
         }
-        private void OnDisable() => speech?.Cancel();
+        private void OnDisable() { emotionIcon?.ClearPresentation(); speech?.Cancel(); }
     }
 }

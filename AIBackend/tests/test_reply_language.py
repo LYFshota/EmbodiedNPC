@@ -16,9 +16,8 @@ from app.language_projection import english_character, semantic_hash
 from app.local_model_scheduler import PrioritizedModelExecutor
 from app.providers import MockProvider, ModelResult
 from tests.test_cognitive_request import _event_request
-from tests.test_m72f_failure_service import make_report
-from app.failure_service import TaskFailureResponseService
 from tests.app_test_isolation import import_isolated_app
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def request(language="en-US"):
@@ -49,7 +48,7 @@ class ReplyLanguageTests(unittest.IsolatedAsyncioTestCase):
             req = request().model_copy(update={"context": request().context.model_copy(update={
                 "character": type(request().context.character).model_validate(source)})})
             before = req.model_dump_json()
-            model = CognitiveModelRequestFactory.create_event(req, knowledge_context_limit=16384)
+            model = CognitiveModelRequestFactory.create_event(req, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
             profile = json.loads(next(l.split(": ", 1)[1] for l in model.messages[-1].content.splitlines()
                 if l.startswith("Cognitive context JSON: ")))["character"]
             self.assertEqual(projected, profile)
@@ -86,7 +85,7 @@ class ReplyLanguageTests(unittest.IsolatedAsyncioTestCase):
                 text = "a" * size
                 provider = Mock(generate=AsyncMock(return_value=ModelResult(text=json.dumps(dict(
                     decision_kind="DIRECT_RESPONSE", utterance=text)))))
-                entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=16384)
+                entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
                 if size <= hard_limit(locale):
                     self.assertEqual(text, (await entry.run(request(locale))).decision.utterance)
                 else:
@@ -101,7 +100,7 @@ class ReplyLanguageTests(unittest.IsolatedAsyncioTestCase):
                 "semantic_query": "reported preference"}) if len(models) == 1 else dict(
                 decision_kind="DIRECT_RESPONSE", utterance="x" * 220)))
         req = request()
-        entry = CognitiveBackendEntry(Mock(generate=generate), PrioritizedModelExecutor(), context_length=16384)
+        entry = CognitiveBackendEntry(Mock(generate=generate), PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         result = await entry.run(req)
         self.assertEqual(220, len(result.decision.utterance))
         for model in models:
@@ -121,19 +120,6 @@ class ReplyLanguageTests(unittest.IsolatedAsyncioTestCase):
             return v
         self.assertEqual(neutralize(en), neutralize(zh))
 
-    async def test_failure_locale_length_and_localized_fallback(self):
-        for locale in ("zh-CN", "en-US"):
-            report = make_report().model_copy(update={"reply_language": locale})
-            for size in (hard_limit(locale), hard_limit(locale) + 1):
-                text = "x" * size
-                provider = Mock(generate=AsyncMock(return_value=ModelResult(text=json.dumps(dict(
-                    resolution="explain", utterance=text, emotion="neutral", gesture="none")))))
-                result = await TaskFailureResponseService(provider).respond(report)
-                if size <= hard_limit(locale): self.assertEqual(text, result.utterance)
-                else:
-                    self.assertEqual("clarify", result.resolution)
-                    self.assertTrue(result.utterance.startswith("I cannot" if locale == "en-US" else "当前方案"))
-                self.assertEqual(1, provider.generate.await_count)
 
     def test_formal_websocket_length_contract_preserves_full_reply_or_errors(self):
         from fastapi.testclient import TestClient
@@ -143,7 +129,7 @@ class ReplyLanguageTests(unittest.IsolatedAsyncioTestCase):
                                       ("zh-CN", 151, False), ("en-US", 251, False)):
             text = "a" * size
             entry = CognitiveBackendEntry(MockProvider(responder=lambda _: ModelResult(text=json.dumps(
-                dict(decision_kind="DIRECT_RESPONSE", utterance=text)))), PrioritizedModelExecutor(), context_length=16384)
+                dict(decision_kind="DIRECT_RESPONSE", utterance=text)))), PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
             # Retain private identity metadata (excluded from ordinary model_dump).
             wire = _event_request()
             wire.update(reply_language=locale)

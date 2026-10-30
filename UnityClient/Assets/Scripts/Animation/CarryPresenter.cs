@@ -24,6 +24,8 @@ namespace EmbodiedNPC.Animation
         public float TargetWeight => IsCarrying ? 1f : 0f;
         public float CurrentWeight { get; private set; }
 
+        public void RebindAnimator(Animator character) => Configure(owner, registry, character);
+
         public void Configure(WorldEntity actor, EntityRegistry entities, Animator character)
         {
             ResetPresentation(); owner = actor; registry = entities; animator = character;

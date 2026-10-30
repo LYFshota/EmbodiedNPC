@@ -6,6 +6,7 @@ import unittest
 from app.cognitive_step_models import RecallOutcome, MemoryRecallPlan
 from app.model_requests import CognitiveModelRequestFactory
 from tests.test_memory_d2_cognitive_steps import cognitive_request
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 class ContextualRecallPromptTests(unittest.TestCase):
@@ -14,8 +15,8 @@ class ContextualRecallPromptTests(unittest.TestCase):
         if continuation:
             event = request.context.current_event.model_copy(update={"event_type": "npc.dialogue_continue"})
             request = request.model_copy(update={"context": request.context.model_copy(update={"current_event": event})})
-        return CognitiveModelRequestFactory.create_event(request, recall_outcome=outcome,
-                                                         knowledge_context_limit=16384)
+        return CognitiveModelRequestFactory.create_event(request, cognition_phase=1 if outcome else 0, recall_outcome=outcome,
+                                                         knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
 
     def test_step0_allows_optional_topic_benefit_without_extra_step(self):
         request = self.prompt()
@@ -48,6 +49,33 @@ class ContextualRecallPromptTests(unittest.TestCase):
         self.assertEqual(plan["properties"]["semantic_query"]["maxLength"], 512)
         with self.assertRaises(ValueError):
             MemoryRecallPlan(semantic_query="旧偏好", attribute_key="favorite_color")
+
+    def test_step0_selects_stated_facts_by_answer_target_including_npc_history(self):
+        policy = self.prompt().messages[0].content
+        for rule in ("Select memory_type by the evidence needed for the answer",
+                     "not time words or Player/NPC identity",
+                     "preserving negation, conditions, changes and corrections even from past conversations",
+                     "For old NPC self-accounts, recall the NPC subject with concrete anchors: "
+                     "SEMANTIC_FACT for stated facts or preferences, EPISODIC for concrete experiences"):
+            self.assertIn(rule, policy)
+        self.assertNotIn("recall the NPC subject with EPISODIC", policy)
+        self.assertIn("NPC_SELF_STATEMENT is not direct Player evidence", policy)
+
+    def test_step0_retains_action_location_insight_and_mixed_type_boundaries(self):
+        request = self.prompt()
+        policy = request.messages[0].content
+        for rule in ("EPISODIC experiences cover concrete events, actions, interactions and outcomes",
+                     "including where an object was placed; a location answer can require an action experience",
+                     "DERIVED_INSIGHT supplies tentative patterns across experiences, "
+                     "not direct facts or a substitute for stated preferences",
+                     "Omit memory_type only when the answer needs multiple evidence types"):
+            self.assertIn(rule, policy)
+        memory_type = request.response_schema["$defs"]["MemoryRecallPlan"]["properties"]["memory_type"]
+        self.assertEqual(memory_type["anyOf"], [
+            {"enum": ["EPISODIC", "SEMANTIC_FACT", "DERIVED_INSIGHT"], "type": "string"},
+            {"type": "null"},
+        ])
+        self.assertIsNone(memory_type["default"])
 
     def test_step1_natural_use_is_optional_and_current_wishes_win(self):
         request = self.prompt(outcome=RecallOutcome(status="OK"))

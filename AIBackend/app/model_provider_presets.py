@@ -25,7 +25,9 @@ class ProviderPreset:
 
 MAIN_PRESETS = (
     ProviderPreset("deepseek", "DeepSeek", "cloud", "deepseek_official_responses", "https://api.deepseek.com", default_context_length=32768),
-    ProviderPreset("qwen", "Qwen / Alibaba Cloud", "cloud", "openai_compatible", "https://dashscope.aliyuncs.com/compatible-mode/v1", thinking_parameter="enable_thinking"),
+    # Model Studio's JSON Schema mode requires strict=true and rejects patternProperties.
+    # Reuse our reversible strict transport subset; model support is still model-specific.
+    ProviderPreset("qwen", "Qwen / Alibaba Cloud", "cloud", "openai_compatible", "https://dashscope.aliyuncs.com/compatible-mode/v1", schema_profile="openai_strict", thinking_parameter="enable_thinking"),
     ProviderPreset("glm", "Zhipu GLM", "cloud", "openai_compatible", "https://open.bigmodel.cn/api/paas/v4", discovery="manual", thinking_parameter="thinking", health_strategy="generation_once"),
     ProviderPreset("kimi", "Kimi / Moonshot", "cloud", "openai_compatible", "https://api.moonshot.cn/v1", thinking_parameter="thinking"),
     ProviderPreset("openai", "OpenAI", "cloud", "openai_compatible", "https://api.openai.com/v1", schema_profile="openai_strict", token_parameter="max_completion_tokens"),

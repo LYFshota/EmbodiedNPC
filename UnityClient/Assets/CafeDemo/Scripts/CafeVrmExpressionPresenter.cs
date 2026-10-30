@@ -11,13 +11,14 @@ namespace CafeDemo
     {
         [SerializeField] private ExpressiveController expressive;
         [SerializeField] private Animator animator;
-        [SerializeField, Range(0, .3f)] private float smileWeight = .14f;
+        [SerializeField, Range(0, .3f)] private float smileWeight = .23f;
         [SerializeField, Range(0, .1f)] private float relaxedWeight = .035f;
+        [SerializeField, Range(0, 1)] private float expressionStrength = 1f;
         [SerializeField, Min(1f)] private float minimumBlinkInterval = 3f;
         [SerializeField, Min(1f)] private float maximumBlinkInterval = 6f;
         private Vrm10Instance model;
         private Vrm10RuntimeExpression mixer;
-        private OwnedWeight blink, happy, relaxed;
+        private OwnedWeight blink, happy, relaxed, sad, surprised;
         private System.Random random;
         private float blinkWait, blinkTime;
         private bool blinking;
@@ -28,6 +29,12 @@ namespace CafeDemo
         public float BlinkWeight => blink == null ? 0 : blink.Value;
         public float HappyWeight => happy == null ? 0 : happy.Value;
         public float RelaxedWeight => relaxed == null ? 0 : relaxed.Value;
+        public bool HasSad => sad != null && sad.Available;
+        public bool HasSurprised => surprised != null && surprised.Available;
+        public float SadWeight => sad == null ? 0 : sad.Value;
+        public float SurprisedWeight => surprised == null ? 0 : surprised.Value;
+
+        public void RebindAnimator(Animator character) => Configure(expressive, character);
 
         public void Configure(ExpressiveController presentation, Animator character)
         {
@@ -51,6 +58,8 @@ namespace CafeDemo
             blink = Own(ExpressionPreset.blink, model.Vrm.Expression.Blink, false);
             happy = Own(ExpressionPreset.happy, model.Vrm.Expression.Happy, true);
             relaxed = Own(ExpressionPreset.relaxed, model.Vrm.Expression.Relaxed, true);
+            sad = Own(ExpressionPreset.sad, model.Vrm.Expression.Sad, true);
+            surprised = Own(ExpressionPreset.surprised, model.Vrm.Expression.Surprised, true);
             random = new System.Random(Guid.NewGuid().GetHashCode());
             blinkWait = NextInterval(); blinkTime = 0; blinking = false;
         }
@@ -107,18 +116,32 @@ namespace CafeDemo
             blink?.Write(blinkTarget);
             var channels = expressive == null ? null : expressive.MotionChannels;
             bool allowed = expressive != null && expressive.isActiveAndEnabled && channels != null &&
-                !channels.IsEmergencyMotionActive && !channels.IsTaskMotionActive;
+                channels.isActiveAndEnabled && !channels.IsEmergencyMotionActive && !channels.IsTaskMotionActive;
             bool talking = allowed && expressive.State == DialoguePresentationState.Talking;
-            float smile = talking && expressive.ExpressionHint == "happy" ? smileWeight : 0;
-            happy?.Blend(smile, deltaTime, .45f);
-            relaxed?.Blend(allowed && expressive.ExpressionHint == "neutral" && !talking ? relaxedWeight : 0,
-                deltaTime, .65f);
+            string tone = talking ? expressive.ExpressionHint : "neutral";
+            float smile = 0, sadness = 0, surprise = 0;
+            switch (tone)
+            {
+                case "happy": smile = smileWeight; break;
+                case "curious": surprise = .10f; break;
+                case "thoughtful": sadness = .025f; break;
+                case "concerned": sadness = .10f; smile = smileWeight * .18f; break;
+                case "surprised": surprise = .24f; break;
+                case "fear": surprise = .15f; sadness = .10f; break;
+            }
+            // Missing presets remain absent; the bounded head accent still conveys delivery tone.
+            float strength = allowed ? Mathf.Clamp01(expressionStrength) : 0;
+            happy?.Blend(smile * strength, deltaTime, .45f);
+            sad?.Blend(sadness * strength, deltaTime, .55f);
+            surprised?.Blend(surprise * strength, deltaTime, .35f);
+            relaxed?.Blend(allowed && (tone == "neutral" || tone == "thoughtful" || tone == "concerned") ?
+                relaxedWeight * strength : 0, deltaTime, .65f);
         }
         public void ResetPresentation() => Release();
         private void Release()
         {
-            blink?.Release(); happy?.Release(); relaxed?.Release();
-            blink = happy = relaxed = null; mixer = null; model = null;
+            blink?.Release(); happy?.Release(); relaxed?.Release(); sad?.Release(); surprised?.Release();
+            blink = happy = relaxed = sad = surprised = null; mixer = null; model = null;
             pendingInitialization = false;
             blinking = false; blinkTime = 0;
         }

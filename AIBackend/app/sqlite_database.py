@@ -11,9 +11,10 @@ from .semantic_memory_schema import SEMANTIC_FOUNDATION_SCHEMA_VERSION, migrate_
 from .memory_maintenance_schema import MAINTENANCE_SCHEMA_VERSION, migrate_memory_maintenance
 from .memory_reflection_schema import migrate_memory_reflection
 from .task_schema import TASK_SCHEMA_VERSION, migrate_tasks
+from .relationship_state_schema import RELATIONSHIP_STATE_SCHEMA_VERSION, migrate_relationship_state
 
 LEGACY_RETIREMENT_SCHEMA_VERSION = 15
-LATEST_SCHEMA_VERSION = TASK_SCHEMA_VERSION
+LATEST_SCHEMA_VERSION = RELATIONSHIP_STATE_SCHEMA_VERSION
 
 
 class SQLiteDatabase:
@@ -87,7 +88,9 @@ class SQLiteDatabase:
             migrate_semantic_foundation(connection)
             migrate_memory_maintenance(connection)
             migrate_memory_reflection(connection)
-            migrate_tasks(connection)
+            if current < TASK_SCHEMA_VERSION:
+                migrate_tasks(connection)
+            migrate_relationship_state(connection)
 
     def _migrate_historical(self) -> None:
         with closing(self._connect()) as connection:

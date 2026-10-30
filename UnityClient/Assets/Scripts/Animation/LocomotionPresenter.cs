@@ -19,9 +19,12 @@ namespace EmbodiedNPC.Animation
         public float NormalizedSpeed { get; private set; }
         public bool NavigationActive { get; private set; }
         public bool HasSpeedParameter { get; private set; }
+        public string SpeedParameter => speedParameter;
 
         private void Awake() => InspectAnimator();
         private void OnEnable() => InspectAnimator();
+        public void RebindAnimator(Animator character) => Configure(agent, motionChannels, character);
+
         public void Configure(NavMeshAgent source, MotionChannelCoordinator channels, Animator playback = null)
         { ClearProjection(); agent = source; motionChannels = channels; animator = playback; InspectAnimator(); }
         internal static float ProjectSpeed(Vector3 velocity, float referenceSpeed, float deadzone)

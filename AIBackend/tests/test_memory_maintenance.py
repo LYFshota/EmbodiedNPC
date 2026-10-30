@@ -12,7 +12,7 @@ from app.canonical_memory_read_repository import CanonicalMemoryReadRepository
 from app.canonical_memory_retrieval import CanonicalMemoryRetrieval
 from app.canonical_recall_models import CanonicalReadFilter
 from app.local_model_scheduler import PrioritizedModelExecutor
-from app.memory_maintenance_models import MaintenancePolicy, MaintenanceResponse, MaintenanceOperation, MaintenanceStale, MaintenanceAdmissionError
+from app.memory_maintenance_models import MaintenancePolicy, MaintenanceResponse, MaintenanceOperation, MaintenanceStale, MaintenanceAdmissionError, MaintenanceDecisionResponse
 from app.memory_maintenance_repository import MemoryMaintenanceRepository
 from app.memory_maintenance_worker import MemoryMaintenanceWorker, maintenance_request, parse_maintenance_response, MaintenanceOutputError
 from app.memory_reflection_models import ReflectionPolicy
@@ -27,9 +27,13 @@ class Provider:
     context_length=8192
     def __init__(self):
         self.calls=[]
-        self.output='{"operations":[]}'
+        self.output=None
     async def generate(self,request):
         self.calls.append(request)
+        if self.output is None:
+            pairs=json.loads(request.messages[-1].content.split('\n',1)[1])['pairs']
+            return ModelResult(text=json.dumps({'decisions':[dict(pair_ref=p['pair_ref'],relation='NO_RELATION',
+                direction='LEFT_TO_RIGHT',reason='independent claims') for p in pairs]}))
         return ModelResult(text=self.output)
 
 
@@ -83,8 +87,8 @@ class MemoryMaintenanceTests(unittest.TestCase):
         request=maintenance_request(context)
         def handle(wire):
             sent=json.loads(wire.content)
-            self.assertEqual(sent['response_format']['json_schema']['schema'],MaintenanceResponse.model_json_schema())
-            self.assertEqual(sent['response_format']['json_schema']['schema']['required'],['operations'])
+            self.assertEqual(sent['response_format']['json_schema']['schema'],MaintenanceDecisionResponse.model_json_schema())
+            self.assertEqual(sent['response_format']['json_schema']['schema']['required'],['decisions'])
             self.assertEqual(sent['max_tokens'],1600)
             return httpx.Response(200,json={'choices':[{'message':{'content':body},'finish_reason':'stop'}],
                                           'usage':{'completion_tokens':100}})
@@ -111,7 +115,7 @@ class MemoryMaintenanceTests(unittest.TestCase):
         self.assertTrue(all(r['processed_at'] is None for r in self.f.rows('SELECT * FROM memory_maintenance_items')))
         job=self.f.rows('SELECT * FROM memory_maintenance_jobs')[0]
         self.assertEqual(job['error_code'],'MAINTENANCE_SCHEMA_INVALID')
-        p.output='{"operations":[]}'
+        p.output=None
         self.now+=100
         self.assertTrue(asyncio.run(worker.process_once()))
         self.assertEqual(before,self.f.rows('SELECT * FROM memory_records ORDER BY memory_id'))
@@ -146,7 +150,7 @@ class MemoryMaintenanceTests(unittest.TestCase):
         self.assertEqual(job['status'],'FAILED')
         self.assertEqual(len(p.calls),4)  # one prior NO_CHANGE and three bounded failures
         self.assertTrue(self.repo.retry_failed(job['job_id'],self.now))
-        p.output='{"operations":[]}'
+        p.output=None
         self.assertTrue(asyncio.run(worker.process_once()))
         self.assertFalse(asyncio.run(worker.process_once()))
 
@@ -209,7 +213,7 @@ class MemoryMaintenanceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             MaintenanceResponse.model_validate(dict(relation='COEXISTS',new_memory_id=b,old_memory_id=a,reason='bare'))
         prompt=maintenance_request(context)
-        self.assertIn('REQUIRED operations array',prompt.messages[0].content)
+        self.assertIn('REQUIRED decisions array',prompt.messages[0].content)
         self.assertEqual(prompt.inference_options.max_output_tokens,1600)
         self.assertEqual(set(r['memory_id'] for r in context.records),{a,b})
         bad=MaintenanceOperation(relation='DUPLICATE',new_memory_id=b,old_memory_id=foreign,reason='bad scope')

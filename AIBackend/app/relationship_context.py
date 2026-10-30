@@ -9,18 +9,19 @@ from pydantic import BaseModel, ConfigDict
 
 from .contracts import CognitiveRecallSubjectIdentity, CognitiveRequest
 from .memory_consolidation_context import TrustedPersistentIdentity
-from .relationship_summary_reader import RelationshipSummaryReader
+from .relationship_summary_reader import RelationshipCurrentStateContext, RelationshipSummaryReader
 
 
 logger = logging.getLogger("embodiednpc.backend.relationship_context")
 
 
 class RelationshipContext(BaseModel):
-    """Historical interpretation only; no identity or action authority fields."""
+    """Pair-scoped social cognition; no identity or action authority fields."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     interpretations: tuple[str, ...]
+    current_state: RelationshipCurrentStateContext | None = None
     sources: tuple[dict[str, str | float], ...] = ()
     truncated: bool
     policy_version: str
@@ -87,12 +88,23 @@ class RelationshipContextResolver:
             return None
         private_ids = (wire.observer.persistent_id,
                        *(value.persistent_id for value in wire.current_subjects))
-        if any(private_id in text for text in summary.interpretations
-               for private_id in private_ids if private_id):
+        visible = summary.model_dump_json(exclude_none=True)
+        if any(private_id in visible for private_id in private_ids if private_id):
             logger.warning("relationship_context_private_identity_in_summary")
             return None
+        state = summary.current_state
+        session = (request.task_runtime.client_session_id if request.task_runtime is not None else
+                   request.context.runtime_state.source_session_id if request.context.runtime_state is not None else None)
+        if state is not None and session:
+            def scoped(item):
+                sources = set(item.source_sessions)
+                relation = ("unknown" if not sources else "current_session" if sources == {session}
+                            else "mixed_sessions" if session in sources else "earlier_session")
+                return item.model_copy(update={"session_scope": relation})
+            state = state.model_copy(update={"items": tuple(scoped(item) for item in state.items)})
         return RelationshipContext(
             interpretations=summary.interpretations,
+            current_state=state,
             sources=summary.sources,
             truncated=summary.truncated,
             policy_version=summary.policy_version,

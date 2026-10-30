@@ -184,7 +184,7 @@ namespace EmbodiedNPC.Dialogue.Input
         public void EndDialogue()
         {
             if (dialogueController != null && dialogueController.IsPresentationVisible)
-                dialogueController.HideDialoguePresentation();
+                dialogueController.HideDialoguePresentation("cancel_input");
         }
 
         private DialogueParticipant FindBestCandidate()

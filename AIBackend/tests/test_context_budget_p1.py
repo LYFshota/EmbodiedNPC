@@ -328,28 +328,53 @@ class ContextBudgetP1Tests(unittest.IsolatedAsyncioTestCase):
             "PRIOR DIALOGUE TURNS JSON: ", 1)[1])[0]
         self.assertEqual(2, messages(turns))
 
-    async def test_16k_pressure_whole_recall_omission_keeps_current_perception_and_rejects_stale_action(self):
+    async def test_16k_high_output_pressure_rejects_before_model_inference(self):
         from tests.test_memory_d2_cognitive_steps import MemoryD2Tests, cognitive_request
         from tests.test_action_proposal_validation import _decision
-        from app.action_proposal_validator import ActionProposalValidationError
         fixture = MemoryD2Tests()
         entry = fixture.entry([recall, _decision({"target": "cup_99", "destination": "player_01"}).model_dump()])
-        # The shared D2 fixture is 16K, not 8K. Explicit output pressure leaves
-        # the mandatory request intact but excludes this complete evidence item.
+        # Preserve the original 16K/6144 pressure case. The type-selection
+        # clarification raises mandatory input above this cap: this is a known
+        # compatibility loss, not an ordinary 16K/1024 Cafe request. Fail closed
+        # before inference rather than removing policy or weakening reserves.
         entry = CognitiveBackendEntry(fixture.provider, fixture.executor, memory_recall=fixture.adapter,
             context_length=16384, inference_options=InferenceOptions(max_output_tokens=6144))
         fixture.rows.summary = "历史记录提到 cup_99，但它已不在当前可见范围"
-        with self.assertRaises(ActionProposalValidationError):
+        with self.assertRaises(ContextBudgetExceeded) as error:
             await entry.run(cognitive_request("把以前见过的杯子拿给我"))
-        self.assertEqual(2, len(fixture.provider.requests))
-        prompt = fixture.provider.requests[1].messages[-1].content
-        self.assertIn('"entity_id":"cup_01"', prompt)
-        self.assertNotIn('"entity_id":"cup_99"', prompt)
-        outcome = json.JSONDecoder().raw_decode(prompt.split(
-            "HISTORICAL MEMORY EVIDENCE / RecallOutcome JSON: ", 1)[1])[0]
-        self.assertEqual("EVIDENCE_BUDGET_EXHAUSTED", outcome["status"])
-        self.assertEqual([], outcome["evidence"]["items"])
-        self.assertTrue(outcome["evidence"]["not_action_authorization"])
+        allocation = error.exception.allocation
+        policy = ContextBudgetPolicy.cognition(16384, 6144)
+        self.assertEqual(policy.input_hard_cap, allocation.input_hard_cap)
+        self.assertEqual(6144, allocation.reserved_output_tokens)
+        self.assertEqual(policy.estimation_reserve, allocation.reserved_estimation_tokens)
+        self.assertGreater(allocation.estimated_total, allocation.input_hard_cap)
+        self.assertTrue(allocation.safe_failure)
+        self.assertEqual([], fixture.provider.requests)
+        self.assertEqual([], fixture.rows.calls)
+
+    async def test_normal_16k_and_32k_recall_cannot_authorize_stale_action(self):
+        from tests.test_memory_d2_cognitive_steps import MemoryD2Tests, cognitive_request
+        from tests.test_action_proposal_validation import _decision
+        from app.action_proposal_validator import ActionProposalValidationError
+        for capacity in (16384, 32768):
+            with self.subTest(capacity=capacity):
+                fixture = MemoryD2Tests()
+                fixture.entry([recall, _decision({"target": "cup_99", "destination": "player_01"}).model_dump()])
+                entry = CognitiveBackendEntry(fixture.provider, fixture.executor, memory_recall=fixture.adapter,
+                    context_length=capacity, inference_options=InferenceOptions(max_output_tokens=1024))
+                fixture.rows.summary = "历史记录提到 cup_99，但它已不在当前可见范围"
+                with self.assertRaises(ActionProposalValidationError):
+                    await entry.run(cognitive_request("把以前见过的杯子拿给我"))
+                self.assertEqual(2, len(fixture.provider.requests))
+                prompt = fixture.provider.requests[1].messages[-1].content
+                context = CognitiveModelRequestFactory.context_from(fixture.provider.requests[1])
+                self.assertIn('cup_01', context.model_dump_json())
+                self.assertNotIn('cup_99', context.model_dump_json())
+                outcome = json.JSONDecoder().raw_decode(prompt.split(
+                    "HISTORICAL MEMORY EVIDENCE / RecallOutcome JSON: ", 1)[1])[0]
+                self.assertEqual("OK", outcome["status"])
+                self.assertIn('cup_99', outcome['evidence']['items'][0]['summary'])
+                self.assertTrue(outcome["evidence"]["not_action_authorization"])
 
     def test_capacity_policy_keeps_output_and_uncertainty_reserves_separate(self):
         for cap, output in ((8192, 512), (16384, 512), (16384, 2048)):

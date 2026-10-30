@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -232,6 +233,12 @@ namespace EmbodiedNPC.Tests.Editor
 
     public sealed class TaskExecutionTests
     {
+        [SetUp] public void IsolateScene()
+        {
+            // Scene-based neighbours leave authored registries/bridges loaded in EditMode.
+            // Synthetic identities must never resolve through those ambient objects.
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        }
         [Test] public void FormalAdmissionPreservesTaskOwnershipAcrossActionWait()
         {
             using var f = new TaskConsiderationFixture(); Offer(f);
@@ -326,6 +333,11 @@ namespace EmbodiedNPC.Tests.Editor
             var receiver=root.GetComponent<EmbodiedNPC.Events.AgentEventReceiver>();receiver.Configure(f.Owner,profile:interest);
             TaskConsiderationFixture.Set(receiver,"dailyBehavior",daily);
             var world=f.Make("counter_fact_world").AddComponent<WorldStateService>();
+            // EditMode AddComponent does not run the Runner's PlayMode Awake wiring.
+            TaskConsiderationFixture.Set(runner,"actor",f.Owner);
+            TaskConsiderationFixture.Set(runner,"entityRegistry",f.Registry);
+            TaskConsiderationFixture.Set(runner,"worldState",world);
+            Assert.That(runner.CaptureExecutionState(null).IsValid,Is.True);
             var target=f.Make("counter_fact_target");var entity=target.AddComponent<WorldEntity>();entity.Configure("counter_cafe_clean_01","counter.synthetic",EntityKind.Environment);
             TaskConsiderationFixture.Set(f.Registry,"entities",new List<WorldEntity>{f.Owner,f.Player,entity});f.Registry.RebuildRegistry();
             var station=target.AddComponent<CounterCleaningStation>();station.Configure(target.transform,target.transform,world,f.Registry);
@@ -367,19 +379,19 @@ namespace EmbodiedNPC.Tests.Editor
             f.Visible(false);f.Tick();f.Visible(true);f.Tick();Assert.That(f.Backend.SyncCount,Is.EqualTo(1),"New valid perception can offer the task without forcing an action.");
             UnityEngine.Object.DestroyImmediate(profile);UnityEngine.Object.DestroyImmediate(interest);
         }
-        internal static CognitiveResponse Proposal(TaskConsiderationFixture f)
+        internal static CognitiveResponse Proposal(TaskConsiderationFixture f,string drink="latte")
         {
             var response=f.NoAction();var req=f.Backend.Sent;
             response.decision=new CognitiveDecision {decision_kind="ACTION_PROPOSAL",action_proposal=new CognitiveActionProposal {
-                action_id="prepare_drink",bindings=new Dictionary<string,string>{{"drink_type","latte"}}}};
-            response.validated_goal=new GoalProposal {type="prepare_drink",drink_type="latte"};
+                action_id="prepare_drink",bindings=new Dictionary<string,string>{{"drink_type",drink}}}};
+            response.validated_goal=new GoalProposal {type="prepare_drink",drink_type=drink};
             response.task_execution=new TaskExecutionTicketDto {schema_version="1.1",request_id=req.request_id,trace_id=req.trace_id,
                 run_id=req.run.run_id,agent_entity_id=f.Owner.EntityId,command_id=req.task_runtime.command_id,
                 owner=new TaskIdentityDto {identity_namespace="npc",identity_type="Character",persistent_id=f.Owner.PersistentIdentity.PersistentId},
                 player=new TaskIdentityDto {identity_namespace="player",identity_type="Player",persistent_id="synthetic-task-player"},
                 visit_id=req.task_runtime.visit_id,scene_instance_id=req.task_runtime.scene_instance_id,
                 task_id="task_synthetic",attempt_id="attempt_synthetic",task_version=3,
-                goal=new JObject { ["kind"]="serve_drink",["drink_type"]="latte"},
+                goal=new JObject { ["kind"]="serve_drink",["drink_type"]=drink},
                 execution_request=new TaskExecutionRequestDto {expected_version=2,world_revision=req.context.current_event.world_revision,
                     scene_instance_id=req.task_runtime.scene_instance_id,proposal_id=GoalPlanRunner.NormalizeProposalId(req.request_id),
                     trace_id=req.trace_id,actor_entity_id=f.Owner.EntityId,player_entity_id=f.Player.EntityId}};
@@ -446,6 +458,32 @@ namespace EmbodiedNPC.Tests.Editor
             Assert.That(f.Backend.ProcessIncomingJson(result.ToString()),Is.True);
             Assert.That(bridge.LastStatus,Is.EqualTo("blocked:failed"));
             Assert.That(f.Backend.ExecutionControls.Count,Is.EqualTo(1));Assert.That(runner.HasActiveTask,Is.False);
+        }
+
+        [TestCase("latte")][TestCase("cappuccino")][TestCase("americano")]
+        [TestCase("espresso")][TestCase("flat_white")][TestCase("mocha")]
+        [TestCase("caramel_macchiato")][TestCase("hot_chocolate")][TestCase("matcha_latte")][TestCase("black_tea")]
+        public void RegisteredDrinkKeepsTicketGoalAndReceiptBindings(string drink)
+        {
+            using var f=new TaskConsiderationFixture();Offer(f);var response=Proposal(f,drink);
+            var ticket=response.task_execution;var e=ticket.execution_request;
+            Assert.That(ticket.IsValid,Is.True);
+            Assert.That(ticket.Matches(f.Backend.Sent,response),Is.True);
+            Assert.That(response.validated_goal.drink_type,Is.EqualTo(drink));
+            var outcome=new GoalOutcome("synthetic_outcome",e.proposal_id,0,e.trace_id,"prepare_drink",
+                e.actor_entity_id,null,null,PlanExecutionStatus.Succeeded,"",e.world_revision+1,0);
+            foreach(string mismatch in new[]{"none","actor","proposal","trace","player","drink","old_revision","future_revision"})
+            {
+                // Native synthetic receipts test correlation, not world authority or an actual delivery.
+                var receipt=new DrinkReceipt("synthetic_drink",mismatch=="actor"?"other_npc":e.actor_entity_id,
+                    mismatch=="proposal"?"other_proposal":e.proposal_id,mismatch=="trace"?"other_trace":e.trace_id,
+                    mismatch=="player"?"other_player":e.player_entity_id,
+                    mismatch=="drink"?(drink=="latte"?"americano":"latte"):drink,
+                    e.world_revision+(mismatch=="old_revision"?0:mismatch=="future_revision"?2:1));
+                Assert.That(ticket.MatchesWorldReceipt(outcome,receipt,null),Is.EqualTo(mismatch=="none"),drink+":"+mismatch);
+            }
+            e.world_revision++;
+            Assert.That(ticket.Matches(f.Backend.Sent,response),Is.False,"The ticket cannot change the request's world revision.");
         }
 
         [Test] public void WholeGoalAndGoalSpecificReceiptMustBothMatch()

@@ -16,6 +16,8 @@ namespace EmbodiedNPC.Animation
         public bool IsReady => animator != null && animator.isActiveAndEnabled && rightHand != null &&
             holdPoint != null && holdPoint != rightHand && !rightHand.IsChildOf(holdPoint);
 
+        public void RebindAnimator(Animator character) => Configure(character, holdPoint, positionOffset, rotationOffset);
+
         public void Configure(Animator character, Transform anchor, Vector3 position, Vector3 rotation)
         {
             animator = character; holdPoint = anchor; positionOffset = position; rotationOffset = rotation;

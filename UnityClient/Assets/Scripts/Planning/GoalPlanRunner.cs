@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using EmbodiedNPC.Actions;
+using EmbodiedNPC.Cognition;
 using EmbodiedNPC.Animation;
 using EmbodiedNPC.Communication;
 using EmbodiedNPC.Interaction;
@@ -11,7 +12,7 @@ using UnityEngine.AI;
 namespace EmbodiedNPC.Planning
 {
     /// <summary>Adapts validated backend Goals to PlanExecutor and owns presentation only.</summary>
-    public sealed class GoalPlanRunner : MonoBehaviour
+    public sealed partial class GoalPlanRunner : MonoBehaviour
     {
         public event System.Action<GoalPlanPresentation> PresentationReady;
         public event System.Action<GoalOutcome> GoalOutcomePublished;
@@ -31,7 +32,6 @@ namespace EmbodiedNPC.Planning
         }
 
         [Header("Goal input and authority")]
-        [SerializeField] private BackendWebSocketClient backendClient;
         [SerializeField] private GoalValidator goalValidator;
         [SerializeField] private EntityRegistry entityRegistry;
         [SerializeField] private ResourceReservationService reservations;
@@ -54,7 +54,6 @@ namespace EmbodiedNPC.Planning
         private PlanExecutor executor;
         private GoalProposal activeGoal;
         private string activeProposalId;
-        private string pendingFailureRequestId;
         private int activeProposalRevision;
         private string activeTraceId;
         private int activeSubmittedWorldRevision;
@@ -67,10 +66,10 @@ namespace EmbodiedNPC.Planning
         private string activeActorEntityId;
         private long feedbackSequence;
         private bool shuttingDown;
+        private int completedActionCount;
 
         public bool IsExecuting => awaitingRediscovery || executor != null && executor.IsExecuting;
-        public bool HasActiveTask => IsExecuting || activeGoal != null ||
-                                     !string.IsNullOrEmpty(pendingFailureRequestId) || awaitingRediscovery;
+        public bool HasActiveTask => IsExecuting || activeGoal != null;
         public bool IsRediscovering => awaitingRediscovery || executor != null && executor.IsRediscovering;
         public string RediscoveryFailureCode => rediscovery?.FailureCode ?? string.Empty;
         public string ActivePlanHash => executor?.ActivePlanHash ?? string.Empty;
@@ -105,11 +104,6 @@ namespace EmbodiedNPC.Planning
         private void OnEnable()
         {
             shuttingDown = false;
-            if (backendClient != null)
-            {
-                backendClient.ValidatedTaskFailureResponseReceived += HandleTaskFailureResponse;
-                backendClient.TaskFailureRequestInvalidated += HandleTaskFailureRequestInvalidated;
-            }
             if (executor == null) return;
             executor.Recovering += HandleRecovering;
             executor.Completed += HandleCompleted;
@@ -123,11 +117,6 @@ namespace EmbodiedNPC.Planning
             InterruptCurrentPlan("RUNNER_DISABLED");
             rediscovery?.Cancel("RUNNER_DISABLED");
             awaitingRediscovery = false;
-            if (backendClient != null)
-            {
-                backendClient.ValidatedTaskFailureResponseReceived -= HandleTaskFailureResponse;
-                backendClient.TaskFailureRequestInvalidated -= HandleTaskFailureRequestInvalidated;
-            }
             if (executor != null)
             {
                 executor.Recovering -= HandleRecovering;
@@ -187,15 +176,12 @@ namespace EmbodiedNPC.Planning
 
         private void InvalidateProposal()
         {
-            backendClient?.CancelPendingFailureRequest(pendingFailureRequestId);
-            pendingFailureRequestId = null;
             activeProposalId = string.Empty;
             activeProposalRevision = 0;
             activeTraceId = string.Empty;
             activeSubmittedWorldRevision = 0;
             activeGoal = null;
             activeAuthorization = null;
-            activeReplyLanguage = "zh-CN";
             feedbackPlayerId = string.Empty;
             CurrentTaskFeedback = null;
         }
@@ -204,10 +190,9 @@ namespace EmbodiedNPC.Planning
         /// Runtime-v2 entry for an already schema-validated high-level proposal. Unity admission,
         /// planning and execution remain authoritative.
         /// </summary>
-        private string activeReplyLanguage = "zh-CN";
 
         public bool TrySubmitGoal(GoalProposal proposal, string traceId, string proposalId,
-            int proposalRevision, int worldRevision, string initiatingPlayerEntityId = null, string replyLanguage = "zh-CN")
+            int proposalRevision, int worldRevision, string initiatingPlayerEntityId = null)
         {
             if (proposal != null && proposal.type == "prepare_drink")
                 proposal.RequestingPlayerId = initiatingPlayerEntityId;
@@ -219,7 +204,6 @@ namespace EmbodiedNPC.Planning
             }
 
             InvalidateProposal();
-            activeReplyLanguage = EmbodiedNPC.Cognition.ReplyUtteranceContract.IsLanguage(replyLanguage) ? replyLanguage : "zh-CN";
             activeProposalId = NormalizeProposalId(proposalId);
             activeProposalRevision = System.Math.Max(0, proposalRevision);
             activeTraceId = traceId ?? string.Empty;
@@ -312,8 +296,6 @@ namespace EmbodiedNPC.Planning
                 activeGoal = null;
                 string code = validation.FailureCode.ToString();
                 Reject(code, proposal);
-                _ = SendSemanticFailureAsync(proposal, proposalId, proposalRevision, "proposal_validation",
-                    code, validation.Detail, null);
                 return false;
             }
 
@@ -334,7 +316,6 @@ namespace EmbodiedNPC.Planning
                 Reject(code, proposal);
                 activeGoal = null;
                 motionChannels?.EndTaskMotion();
-                _ = SendSemanticFailureAsync(proposal, proposalId, proposalRevision, "planning", code, code, null);
                 return false;
             }
 
@@ -346,90 +327,65 @@ namespace EmbodiedNPC.Planning
             return true;
         }
 
-        private void HandleTaskFailureResponse(ValidatedTaskFailureResponse response)
+        internal bool IsCurrentFeedback(CognitiveActionFeedback feedback, string player)
         {
-            if (response == null || response.RequestId != pendingFailureRequestId ||
-                string.IsNullOrEmpty(activeProposalId) || response.ProposalId != activeProposalId ||
-                response.ProposalRevision != activeProposalRevision + 1) return;
+            var state = CaptureExecutionState(player);
+            return feedback?.IsValid == true && !HasActiveTask && state.status == "FAILED" &&
+                state.outcome_id == feedback.outcome_id && state.proposal_id == activeProposalId &&
+                state.proposal_id == feedback.proposal_id && state.proposal_revision == feedback.proposal_revision &&
+                activeProposalRevision == feedback.proposal_revision && state.trace_id == feedback.trace_id &&
+                state.world_revision == feedback.world_revision;
+        }
 
-            pendingFailureRequestId = null; // The inbox already consumed this exact ticket.
-            activeProposalRevision = response.ProposalRevision;
-            if (response.Resolution == "revise" && response.SelectedGoal != null)
-            {
-                if (IsExecuting || motionChannels != null && motionChannels.IsEmergencyMotionActive)
+        internal CognitiveActionFeedback BuildActionFeedback(GoalOutcome outcome, CognitiveRequest parent)
+        {
+            if (parent == null || outcome.Status is not (PlanExecutionStatus.Failed or PlanExecutionStatus.TimedOut) ||
+                outcome.ProposalRevision >= 2 || executionOutcome?.Equals(outcome) != true ||
+                (GetComponent<EmbodiedNPC.Cognition.TaskExecutionBridge>()?.Owns(outcome.ProposalId, outcome.TraceId) ?? false) ||
+                !ActionFeedbackPolicy.ShouldRequestCognition(outcome.FailureCode, outcome.Status)) return null;
+            var goal = new GoalProposal { type = outcome.GoalType,
+                target_entity_id = string.IsNullOrEmpty(outcome.TargetEntityId) ? null : outcome.TargetEntityId,
+                destination_entity_id = string.IsNullOrEmpty(outcome.DestinationEntityId) ? null : outcome.DestinationEntityId,
+                drink_type = string.IsNullOrEmpty(executionFeedback?.DrinkType) ? null : executionFeedback.DrinkType };
+            var feedback = new CognitiveActionFeedback { original_request_id = parent.action_feedback?.original_request_id ?? parent.request_id,
+                original_run_id = parent.action_feedback?.original_run_id ?? parent.run.run_id,
+                outcome_id = outcome.OutcomeId, proposal_id = outcome.ProposalId, proposal_revision = outcome.ProposalRevision,
+                trace_id = outcome.TraceId, world_revision = worldState.WorldRevision, completed_actions = completedActionCount,
+                failure_code = outcome.FailureCode, failed_goal = goal,
+                detail = "The attempt ended with " + outcome.Status + ". Completed executor steps: " + completedActionCount +
+                    ". Already committed world effects remain committed; the code does not establish a physical cause." };
+            feedback.allowed_alternatives = FeedbackAlternatives(feedback);
+            return IsCurrentFeedback(feedback, parent.context.relevant_player?.player_entity_id) ? feedback : null;
+        }
+
+        private CognitiveActionAlternative[] FeedbackAlternatives(CognitiveActionFeedback feedback)
+        {
+            // Replan only a different originally-authorized target; never replay the completed steps or widen Exact scope.
+            if (ActionFeedbackPolicy.IsSpatialEvidenceFailure(feedback.failure_code) ||
+                activeAuthorization == null || !BuiltInActionCatalog.Instance.TryGet(feedback.failed_goal.type, out var registration))
+                return System.Array.Empty<CognitiveActionAlternative>();
+            return ActionFeedbackPolicy.BuildAlternatives(registration, new ActionCandidateContext(activeAuthorization,
+                BuildObserverLocalCandidateIds(Time.unscaledTimeAsDouble), entityRegistry, actor,
+                StableRecoverySeed(feedback.proposal_id, feedback.proposal_revision)), feedback.failed_goal);
+        }
+
+        internal bool TryRecover(CognitiveActionFeedback feedback, string alternativeId, string player, out GoalProposal selected)
+        {
+            selected = null;
+            if (!IsCurrentFeedback(feedback, player) || feedback.proposal_revision >= 2 ||
+                motionChannels?.IsEmergencyMotionActive == true) return false;
+            foreach (var candidate in FeedbackAlternatives(feedback))
+                if (candidate.alternative_id == alternativeId && System.Array.Exists(feedback.allowed_alternatives,
+                    a => a.alternative_id == alternativeId && a.goal.type == candidate.goal.type &&
+                         a.goal.target_entity_id == candidate.goal.target_entity_id &&
+                         a.goal.destination_entity_id == candidate.goal.destination_entity_id))
                 {
-                    Reject("REVISION_EXECUTION_NOT_ALLOWED", response.SelectedGoal);
-                    return;
+                    if (!TryPrevalidateGoal(candidate.goal, feedback.world_revision, out _)) return false;
+                    selected = candidate.goal;
+                    activeProposalRevision++;
+                    return TryStartProposal(selected, feedback.trace_id, feedback.proposal_id, activeProposalRevision);
                 }
-                TryStartProposal(response.SelectedGoal, response.TraceId, response.ProposalId,
-                    response.ProposalRevision);
-                return;
-            }
-
-            Publish(CreateActionPresentation(ActionExecutionStatus.Clarification,
-                "TASK_" + response.Resolution.ToUpperInvariant(), activeGoal, response.Utterance));
-            InvalidateProposal();
-        }
-
-        private void HandleTaskFailureRequestInvalidated(string requestId)
-        {
-            if (requestId == pendingFailureRequestId) pendingFailureRequestId = null;
-        }
-
-        private async System.Threading.Tasks.Task SendSemanticFailureAsync(GoalProposal failedGoal,
-            string proposalId, int proposalRevision, string stage, string failureCode, string detail,
-            PlanExecutionStatus? status)
-        {
-            // Persistent task attempts settle through their trusted receipt path;
-            // a failure must not start the ordinary semantic recovery model loop.
-            if(GetComponent<EmbodiedNPC.Cognition.TaskExecutionBridge>()?.Owns(proposalId,activeTraceId)??false) return;
-            if (backendClient == null || !backendClient.IsConnected || failedGoal == null ||
-                proposalId != activeProposalId || proposalRevision != activeProposalRevision ||
-                proposalRevision >= 2 || !TaskFailurePolicy.ShouldReport(stage, failureCode, status)) return;
-            if (!BuiltInActionCatalog.Instance.TryGet(failedGoal.type, out ActionRegistration registration) ||
-                !registration.ReportsTaskFailures) return;
-
-            // Failed search is not permission to enumerate unseen replacement objects.
-            TaskAlternative[] alternatives = System.Array.Empty<TaskAlternative>();
-            if (!TaskFailurePolicy.IsSpatialEvidenceFailure(failureCode) && activeAuthorization != null &&
-                registration.CandidateProvider != null && registration.RecoveryPolicy != null)
-            {
-                ActionCandidateContext candidateContext = new(activeAuthorization,
-                    BuildObserverLocalCandidateIds(Time.unscaledTimeAsDouble), entityRegistry, actor,
-                    StableRecoverySeed(proposalId, proposalRevision));
-                alternatives = TaskFailurePolicy.BuildAlternatives(registration, candidateContext, failedGoal);
-            }
-            TaskFailureReport report = new()
-            {
-                request_id = $"task-failure-{System.Guid.NewGuid():N}",
-                trace_id = $"failure-trace-{System.Guid.NewGuid():N}",
-                world_revision = worldState == null ? 0 : worldState.WorldRevision,
-                proposal_id = proposalId,
-                proposal_revision = proposalRevision,
-                reply_language = activeReplyLanguage,
-                character = actor?.GetComponent<EmbodiedNPC.Cognition.CognitiveContextComposer>()?.CaptureCharacterProfile(),
-                failure_stage = stage,
-                failure_code = failureCode,
-                detail = detail ?? string.Empty,
-                failed_goal = new GoalProposal
-                {
-                    type = failedGoal.type,
-                    target_entity_id = failedGoal.target_entity_id,
-                    destination_entity_id = failedGoal.destination_entity_id,
-                },
-                involved_entity_ids = failedGoal.target_entity_id == failedGoal.destination_entity_id
-                    ? new[] { failedGoal.target_entity_id }
-                    : new[] { failedGoal.target_entity_id, failedGoal.destination_entity_id },
-                retryable = alternatives.Length > 0,
-                allowed_alternatives = alternatives,
-            };
-            backendClient.CancelPendingFailureRequest(pendingFailureRequestId);
-            pendingFailureRequestId = report.request_id;
-            bool sent = await backendClient.SendTaskFailureReportAsync(report);
-            if (!sent && pendingFailureRequestId == report.request_id) pendingFailureRequestId = null;
-            Debug.Log($"[GoalPlan] TASK_FAILURE_REPORT code={failureCode}; stage={stage}; " +
-                      $"proposal={proposalId}; revision={proposalRevision}; alternatives={alternatives.Length}; sent={sent}",
-                this);
+            return false;
         }
 
         private void EnsureExactAuthorization(GoalProposal proposal, int proposalRevision, string resolvedTargetId = null)
@@ -492,6 +448,7 @@ namespace EmbodiedNPC.Planning
             if (CurrentTaskFeedback != null || activeGoal == null) return;
             activeActorEntityId = actor == null ? activeActorEntityId : actor.EntityId;
             CurrentTaskFeedback = CreateFeedback(progress);
+            BindExecutionContext();
             PublishFeedback(TaskStarted, CurrentTaskFeedback);
         }
 
@@ -508,6 +465,7 @@ namespace EmbodiedNPC.Planning
         {
             if (CurrentTaskFeedback == null || activeGoal == null) return;
             CurrentTaskFeedback = CreateFeedback(progress);
+            executionFeedback = CurrentTaskFeedback;
             PublishFeedback(TaskPhaseChanged, CurrentTaskFeedback);
         }
 
@@ -531,6 +489,8 @@ namespace EmbodiedNPC.Planning
             int proposalRevision = activeProposalRevision;
             string traceId = activeTraceId;
             GoalOutcome? outcome = BuildGoalOutcome(completedGoal, proposalId, proposalRevision, traceId, result);
+            executionOutcome = outcome;
+            completedActionCount = result.CompletedActions;
             GoalPlanPresentation presentation = CreateActionPresentation(
                 ToActionExecutionStatus(result.Status), result.FailureCode, completedGoal);
             presentation = new GoalPlanPresentation(presentation.Kind, presentation.Code, presentation.Message, outcome);
@@ -551,10 +511,7 @@ namespace EmbodiedNPC.Planning
             PublishGoalOutcome(outcome);
             Publish(presentation);
 
-            if (result.Status != PlanExecutionStatus.Succeeded && result.Status != PlanExecutionStatus.Cancelled &&
-                !(GetComponent<EmbodiedNPC.Cognition.TaskExecutionBridge>()?.Owns(proposalId,traceId)??false))
-                _ = SendSemanticFailureAsync(completedGoal, proposalId, proposalRevision, "execution",
-                    result.FailureCode, result.FailureCode, result.Status);
+
         }
 
         private GoalOutcome? BuildGoalOutcome(GoalProposal completedGoal, string proposalId, int proposalRevision,

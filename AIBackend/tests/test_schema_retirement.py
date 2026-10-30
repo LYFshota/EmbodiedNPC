@@ -172,6 +172,7 @@ class SchemaRetirementTests(unittest.TestCase):
         maintenance = connection.execute("SELECT 1 FROM schema_migrations WHERE version=17").fetchone()
         reflection = connection.execute('SELECT 1 FROM schema_migrations WHERE version=18').fetchone()
         tasks = connection.execute('SELECT 1 FROM schema_migrations WHERE version=19').fetchone()
+        pair_state = connection.execute('SELECT 1 FROM schema_migrations WHERE version=20').fetchone()
         self.assertEqual(objects(connection, "table"), KEEP_TABLES | ({"memory_semantic_facts"} if semantic else set()) | ({
             "memory_maintenance_jobs", "memory_maintenance_items", "memory_maintenance_runs", "memory_relations"
         } if maintenance else set()) | ({'memory_reflection_items','memory_derived_insights',
@@ -180,14 +181,16 @@ class SchemaRetirementTests(unittest.TestCase):
         self.assertEqual(objects(connection, "index"), KEEP_INDEXES | ({
             "idx_maintenance_pending", "idx_maintenance_jobs", "idx_memory_relations_new", "idx_memory_relations_old"
         } if maintenance else set()) | ({'idx_reflection_pending'} if reflection else set()) |
-            ({'npc_tasks_active_dedup', 'npc_tasks_lookup', 'npc_task_commands_by_task'} if tasks else set()))
+            ({'npc_tasks_active_dedup', 'npc_tasks_lookup', 'npc_task_commands_by_task'} if tasks else set()) |
+            ({'idx_relationship_pair_revision'} if pair_state else set()))
         self.assertEqual(objects(connection, "trigger"), KEEP_TRIGGERS | ({
             "memory_semantic_facts_type_insert", "memory_semantic_facts_type_update",
             "memory_records_semantic_type_update",
         } if semantic else set()) | ({'memory_insight_type_insert','memory_insight_source_insert',
             'memory_records_insight_type_update'} if reflection else set()) |
             ({'npc_task_commands_immutable_update', 'npc_task_commands_immutable_delete',
-              'npc_tasks_identity_immutable'} if tasks else set()))
+              'npc_tasks_identity_immutable'} if tasks else set()) |
+            ({'relationship_snapshot_immutable_update','relationship_snapshot_immutable_delete'} if pair_state else set()))
         self.assertFalse(any("fts" in name for name in objects(connection, "table")))
         self.assertEqual(connection.execute("PRAGMA foreign_key_check").fetchall(), [])
 

@@ -25,6 +25,7 @@ namespace EmbodiedNPC.Dialogue.Presentation
 
         public DialogueBubbleMessage Message { get; private set; }
         public bool CanPresentText => messageText != null;
+        public TMP_FontAsset Font => messageText == null ? null : messageText.font;
         public RectTransform RectTransform => (RectTransform)transform;
         public Rect ScreenRect { get; internal set; }
 

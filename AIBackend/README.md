@@ -1,6 +1,6 @@
 # AIBackend
 
-> **当前修复范围**：S01 本机 HTTP/WS 准入、S02 Episode 可靠性、S03 失败解释异步调度及配套 Unity S05 生命周期修复已纳入源码。专项验证和未执行的运行验收见 InternalDocs/Reports/Stable_Fixes_2026-10-20.md；不据此宣称 Windows Player 或完整回归通过。
+> **当前修复范围**：S01 本机 HTTP/WS 准入、S02 Episode 可靠性、S03 失败解释异步调度及配套 Unity S05 生命周期修复已纳入源码。版本与验收范围见 [发布状态](../Docs/RELEASE_STATUS.md)；不据此宣称 Windows Player 或完整回归通过。
 
 > **2026-10-19 当前入口**：本页保留 Backend 启动、接口和协议边界。当前产品还有受限行为模式、咖啡动作、第三方旁听、世界知识、独立双语输出合同和 Portable/Standalone 相关代码；整体状态、Candidate 与验证限制请见 [CURRENT_STATUS](../Docs/RELEASE_STATUS.md)。测试/项目阶段日期不能代替当前运行时配置。
 
@@ -11,7 +11,8 @@ Backend 提供 Runtime v2 认知、Experience/Episode、canonical Memory、Relat
 ```text
 AgentEvent → CognitiveRun → CognitiveRequest (/ws)
 → CognitiveBackendEntry → CognitiveDecision
-→ optional canonical MEMORY_RECALL / Relationship Context
+→ automatic knowledge retrieval + optional CONTEXT_READ / MEMORY_RECALL / TASK_READ
+→ at most one final Step 1 / Relationship Context
 → ActionProposalValidator → Unity admission / presentation
 ```
 

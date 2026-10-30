@@ -182,7 +182,7 @@ class RecallSubjectCatalogBuilder:
 
         by_ref = MappingProxyType({candidate.subject_ref: candidate for candidate in candidates})
         requester = next((candidate.subject_ref for candidate in candidates
-                          if candidate.current_entity_id == requester_id), None)
+                          if requester_id is not None and candidate.current_entity_id == requester_id), None)
         return RecallSubjectCatalog(owner, requester, tuple(candidates), by_ref, frozenset(non_durable))
 
     @staticmethod

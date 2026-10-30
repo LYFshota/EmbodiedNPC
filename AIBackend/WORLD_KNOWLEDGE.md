@@ -1,11 +1,13 @@
-# 世界知识与开发者配置
+# 世界知识与管理
 
-世界知识是开发者提供的场景与设定资料，与玩家对话产生的 Experience、Episode、长期记忆及 NPC 主观关系分开。知识检索不能将模型输出或主观解释变成已经发生的世界事实；Unity 仍决定实际动作结果。
+当前默认模板 `app/knowledge/cafedemo_v2.json` 有 108 条知识；真实合同以 `world_knowledge.py` 和可信部署配置为准。
 
-本工程包含结构化知识存储、独立 Hybrid RAG 及受保护的本机知识管理接口。具体接口以 [Backend](README.md) 和现有 `app/knowledge_management_api.py`、`app/world_knowledge_store.py` 为准；本页是公开源码入口摘要，不复制私人研发报告。
+- 默认模板只读。首次初始化或旧覆盖格式显式迁移后，玩家的 `data/world_knowledge.json` 是 `schema_version=2` 的完整目录；游戏更新不合并新默认内容。
+- `access.mode=public` 面向部署/场景条件匹配的可信注册角色；`restricted` 只允许明确 CharacterId。缺失字段按旧 restricted 范围解释。
+- `usage=constant` 经权限过滤后计入上下文预算；`retrieval` 使用现有词法 + Embedding + RRF、Top-K=3。仅语义投影改变才重算向量。
+- 认知自动预检索必要世界知识，模型可在 Step 0 用 `CONTEXT_READ` 补查知识/Memory/合法 Task Read，Step 1 必须终态；最多两次推理。
+- Unity 设置提供搜索、类型/使用模式/访问范围/NPC 筛选、编辑、完整 JSON 导入导出和恢复系统默认。导入是完整替换，预览后 revision 变化会拒绝提交。
+- 复用跨进程写锁、revision 校验、备份和原子写入。知识专用 JSON 上限 16 MiB；无目录级 128 条限制。
+- 知识内容不是实时世界状态，不授予制作权限，也不是玩家真实经历。Memory、Relationship、Persona 和世界事务独立。
 
-运行数据默认在本 checkout 的 `AIBackend/data`，不会随源码提供。多个 checkout 或测试时，应在导入应用前设置全部数据、索引、模型配置及会话路径；参见 [隔离说明](../Docs/OPERATIONS.md)。不要把私人知识文件、对话、Key、数据库或会话复制进发布树。
-
-Embedding 与 Main 独立配置。关闭或缺少向量资源时，不应声称向量检索已启用；按现有错误提示与降级行为处理，不放宽准入、容量或业务校验。配置 Main/Embedding、保存重启和模型资源取得步骤见 [SOURCE_SETUP](../Docs/SOURCE_SETUP.md)。
-
-既有技术验收与其未验证部分见 [发布状态](../Docs/RELEASE_STATUS.md)。本轮没有运行知识、模型或 Backend 测试。
+本地 CLI：从 AIBackend 运行 `python -m tools.manage_world_knowledge --help`。测试必须用独立 `--file`，先显式 initialize；普通读取不产生迁移或写入。运行和会话配置见 [SOURCE_SETUP](../Docs/SOURCE_SETUP.md)。

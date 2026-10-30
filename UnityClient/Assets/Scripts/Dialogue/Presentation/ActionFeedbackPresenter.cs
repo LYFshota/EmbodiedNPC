@@ -168,7 +168,7 @@ namespace EmbodiedNPC.Dialogue.Presentation
                     if (!entry.Runner.TryGetDrinkReceipt(key, out var receipt) || receipt.Player != player.EntityId ||
                         receipt.DrinkType != task.DrinkType || receipt.WorldRevision <= task.WorldRevision ||
                         receipt.WorldRevision > outcome.WorldRevision || !drinkReceiptIds.Add(receipt.Id)) return;
-                    result = EmbodiedNPC.Actions.DrinkTypes.Name(receipt.DrinkType) + " +1";
+                    result = EmbodiedNPC.Actions.DrinkTypes.Name(receipt.DrinkType, SettingsUiLanguage.IsEnglish) + " +1";
                 }
                 else result = outcome.Status switch
                 {
@@ -345,10 +345,10 @@ namespace EmbodiedNPC.Dialogue.Presentation
             var progress = value.Progress;
             if (value.ActionId == "prepare_drink")
             {
-                string name = EmbodiedNPC.Actions.DrinkTypes.Name(value.DrinkType);
-                if (progress.Kind == PlanProgressKind.Accepted) return $"正在准备{name}…";
+                string name = EmbodiedNPC.Actions.DrinkTypes.Name(value.DrinkType, SettingsUiLanguage.IsEnglish);
+                if (progress.Kind == PlanProgressKind.Accepted) return T($"正在准备{name}…", $"Preparing {name}…");
                 if (progress.Action == PlannerActionType.WalkTo) return T("前往吧台制作区…", "Going to drink station…");
-                if (progress.Action == PlannerActionType.PrepareDrink) return $"正在制作{name}…";
+                if (progress.Action == PlannerActionType.PrepareDrink) return T($"正在制作{name}…", $"Making {name}…");
             }
             if (value.ActionId == "clean_counter")
                 return progress.Action == PlannerActionType.CleanCounter ? T("正在擦拭柜台…", "Wiping counter…") : T("前往柜台…", "Going to counter…");

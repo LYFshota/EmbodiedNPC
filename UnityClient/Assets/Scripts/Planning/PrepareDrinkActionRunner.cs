@@ -12,11 +12,19 @@ namespace EmbodiedNPC.Planning
         // CafePrepareDrink is a non-looping 2.5-second clip, played at .83x.
         // Commit only after its complete presentation, keeping the same transaction boundary.
         public const float PreparationSeconds = 2.5f / .83f;
+        private readonly float preparationSeconds;
         private PlanActionExecutionContext context;
         private MotionChannelCoordinator motion;
         private float elapsed;
         public PlannerActionType ActionType => PlannerActionType.PrepareDrink;
         public bool IsRunning { get; private set; }
+        // Instance-only timing seam for isolated acceptance; production callers retain the clip duration.
+        public PrepareDrinkActionRunner(float preparationSeconds = PreparationSeconds)
+        {
+            if (float.IsNaN(preparationSeconds) || float.IsInfinity(preparationSeconds) || preparationSeconds <= 0)
+                throw new System.ArgumentOutOfRangeException(nameof(preparationSeconds));
+            this.preparationSeconds = preparationSeconds;
+        }
         public static bool Validate(ValidatedActionBindings bindings, EntityRegistry registry, ActionInstance action) =>
             bindings != null && DrinkTypes.ValidateRuntime(registry, bindings.Actor, bindings.Target, bindings.Destination) &&
             action.Bindings.TryGetValue("drink_type", out var drink) && DrinkTypes.IsValid(drink) &&
@@ -47,7 +55,7 @@ namespace EmbodiedNPC.Planning
                 return Stop(SkillStatus.Failed, "STATION_UNAVAILABLE");
             if (float.IsNaN(deltaTime) || float.IsInfinity(deltaTime)) return Stop(SkillStatus.Failed, "INVALID_TICK");
             elapsed += Mathf.Max(0, deltaTime);
-            if (elapsed < PreparationSeconds) return PlanActionRunResult.Running();
+            if (elapsed < preparationSeconds) return PlanActionRunResult.Running();
             context.Action.Bindings.TryGetValue("drink_type", out var drink);
             var result = context.WorldState.TryCommitDrink(context.ProposalId, context.TraceId, context.EntityRegistry,
                 context.Actor, context.Target, context.Bindings.Destination, drink);

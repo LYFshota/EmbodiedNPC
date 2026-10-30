@@ -225,7 +225,7 @@ namespace CafeDemo.Tests
                 var a = Rig(actor); var reference = Reference(a);
                 Assert.That(Present(actor), Is.True); yield return Frames(20);
                 var talking = actor.GetComponentInChildren<DialogueAnimationPresenter>();
-                Assert.That(talking.CurrentWeight, Is.GreaterThan(.9f));
+                Assert.That(talking.ActivationWeight, Is.GreaterThan(.9f));
                 Assert.That(TorsoDifference(a, reference), Is.LessThan(.25f), actor.EntityId + " talking moved torso");
                 Record(a, actor.EntityId, "talking");
                 Assert.That(Present(actor, "wave"), Is.True); yield return Frames(20);
@@ -241,7 +241,7 @@ namespace CafeDemo.Tests
                 Assert.That(TorsoDifference(a, reference), Is.LessThan(.25f), actor.EntityId + " nod moved torso");
                 yield return Frames(45);
                 Assert.That(actor.GetComponent<MotionChannelCoordinator>().ActiveGestureId, Is.Zero);
-                dialogue.HideDialoguePresentation(); yield return Frames(20);
+                dialogue.HideDialoguePresentation(); actor.GetComponent<ExpressiveController>().Speech.Cancel(); yield return Frames(20);
                 Assert.That(talking.CurrentWeight, Is.Zero.Within(.001f));
                 Assert.That(actor.GetComponent<ExpressiveController>().State, Is.EqualTo(DialoguePresentationState.Idle));
             }

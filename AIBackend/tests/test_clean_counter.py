@@ -8,6 +8,7 @@ from app.contracts import CognitiveContextSnapshot, CognitiveDecision, Cognitive
 from app.cognitive_entry import CognitiveBackendEntry
 from app.local_model_scheduler import PrioritizedModelExecutor
 from tests.test_prepare_drink import context as drink_context, request as drink_request, ScriptedDrinkProvider
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def context():
@@ -38,7 +39,7 @@ class CleanCounterTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_player_proposal_shared_manifest_validator_and_provider(self):
         provider = ScriptedDrinkProvider(decision())
-        result = await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=16384).run(request())
+        result = await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(request())
         self.assertEqual(GoalProposal(type="clean_counter", target_entity_id="counter_cafe_clean_01"), result.validated_goal)
         self.assertEqual(1, len(provider.requests))
 
@@ -93,7 +94,7 @@ class AutonomousCounterTests(unittest.IsolatedAsyncioTestCase):
             output["decision_kind"]=kind
             provider=ScriptedDrinkProvider(output); current=system_request()
             self.assertFalse(may_propose_new_world_action(current))
-            result=await CognitiveBackendEntry(provider,PrioritizedModelExecutor(),context_length=16384).run(current)
+            result=await CognitiveBackendEntry(provider,PrioritizedModelExecutor(),context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(current)
             response=CognitiveResponse(request_id=current.request_id,trace_id=current.trace_id,run_id=current.run.run_id,
                 agent_entity_id=current.run.agent_entity_id,decision=result.decision,validated_goal=result.validated_goal)
             self.assertEqual(response,CognitiveResponse.model_validate_json(response.model_dump_json()))
@@ -144,7 +145,6 @@ class AutonomousCounterTests(unittest.IsolatedAsyncioTestCase):
         from collections import OrderedDict
         from starlette.websockets import WebSocketDisconnect
         from app.contracts import CognitiveResponse, SERVICE_ZONE_EVENT, is_service_zone_consideration
-        from app.failure_service import TaskFailureReport
         from app.experience_models import ExperienceAppendRequest
         from app.canonical_memory_read_repository import player_identity_allowed, mentions_player, event_player_scope_allowed
         from app.world_action_eligibility import WorldActionNotEligibleError
@@ -157,12 +157,12 @@ class AutonomousCounterTests(unittest.IsolatedAsyncioTestCase):
         ns=dict(__name__="app.counter_endpoint_isolated",__package__="app",asyncio=asyncio,json=json,time=time,
             OrderedDict=OrderedDict,logger=logging.getLogger("counter-test"),WebSocketDisconnect=WebSocketDisconnect,
             CognitiveRequest=CognitiveRequest,CognitiveResponse=CognitiveResponse,ValidationError=ValidationError,
-            TaskFailureReport=TaskFailureReport,ExperienceAppendRequest=ExperienceAppendRequest,
+            ExperienceAppendRequest=ExperienceAppendRequest,
             player_identity_allowed=player_identity_allowed,mentions_player=mentions_player,event_player_scope_allowed=event_player_scope_allowed,
             demo_player_uid="counter-test",SERVICE_ZONE_EVENT=SERVICE_ZONE_EVENT,is_service_zone_consideration=is_service_zone_consideration,
             ActionProposalValidationError=ActionProposalValidationError,WorldActionNotEligibleError=WorldActionNotEligibleError,
             MAX_CONNECTION_COGNITIONS=32,COGNITIVE_INPUT_COMMIT_TIMEOUT_SECONDS=20,MAX_EARLY_COMMITTED_INPUTS=128,
-            cognitive_entry=CognitiveBackendEntry(provider,PrioritizedModelExecutor(),context_length=16384))
+            cognitive_entry=CognitiveBackendEntry(provider,PrioritizedModelExecutor(),context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH))
         exec(compile(ast.Module(body=nodes,type_ignores=[]),"m3_main.counter_endpoint","exec",flags=__future__.annotations.compiler_flag),ns)
         socket=SocketHarness();task=asyncio.create_task(ns["websocket_endpoint"](socket.socket))
         value=system_request().model_dump();value["context"]["perception"]["entities"]=[]

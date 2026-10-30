@@ -9,11 +9,19 @@ namespace EmbodiedNPC.Settings
     public sealed class SettingsDropdownClickToggle : MonoBehaviour, IPointerClickHandler
     {
         [SerializeField] private TMP_Dropdown dropdown;
+        private float maximumHeight;
+        public float MaximumHeight => maximumHeight;
         private void Awake() { if (dropdown == null) dropdown = GetComponentInParent<TMP_Dropdown>(); }
 
-        public static void Ensure(TMP_Dropdown target)
+        public static void Ensure(TMP_Dropdown target, float maximumHeight = 0)
         {
-            if (target == null || target.transform.Find("SettingsDropdownHitTarget") != null) return;
+            if (target == null) return;
+            var existing = target.transform.Find("SettingsDropdownHitTarget")?.GetComponent<SettingsDropdownClickToggle>();
+            if (existing != null)
+            {
+                if (maximumHeight > 0) existing.maximumHeight = maximumHeight;
+                return;
+            }
             var hit = new GameObject("SettingsDropdownHitTarget", typeof(RectTransform), typeof(Image),
                 typeof(SettingsDropdownClickToggle));
             hit.transform.SetParent(target.transform, false);
@@ -23,6 +31,7 @@ namespace EmbodiedNPC.Settings
             rect.offsetMin = rect.offsetMax = Vector2.zero;
             hit.GetComponent<Image>().color = Color.clear;
             hit.GetComponent<SettingsDropdownClickToggle>().dropdown = target;
+            hit.GetComponent<SettingsDropdownClickToggle>().maximumHeight = maximumHeight;
         }
 
         public void OnPointerClick(PointerEventData eventData)

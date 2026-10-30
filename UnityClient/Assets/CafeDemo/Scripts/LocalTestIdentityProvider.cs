@@ -1,5 +1,6 @@
 using System;
 using EmbodiedNPC.Identity;
+using EmbodiedNPC.Settings;
 using UnityEngine;
 
 namespace CafeDemo
@@ -13,8 +14,38 @@ namespace CafeDemo
         [SerializeField] private long profileRevision = 1;
         [SerializeField] private long updatedAtUnixMilliseconds;
 
+        private bool useSavedProfile = true;
+        private void OnEnable()
+        {
+            PlayerNameSettings.Changed += RefreshSavedProfile;
+            if (useSavedProfile && PlayerNameSettings.Current.Revision > 1 && GetComponent<PlayerIdentityBinding>()?.CurrentIdentity != null)
+                RefreshSavedProfile();
+        }
+        private void OnDisable() => PlayerNameSettings.Changed -= RefreshSavedProfile;
+        private void RefreshSavedProfile()
+        {
+            var saved = PlayerNameSettings.Current;
+            if (displayName != saved.DisplayName && profileRevision < long.MaxValue)
+                profileRevision = Math.Max(profileRevision + 1, saved.Revision);
+            useSavedProfile = true;
+            var binding = GetComponent<PlayerIdentityBinding>();
+            if (binding != null && !binding.TryApplyIdentity(out string error))
+                Debug.LogError("[LocalTestIdentityProvider] Profile refresh failed: " + error, this);
+        }
+
         public bool TryGetCurrentIdentity(out PlayerIdentitySnapshot snapshot)
         {
+            if (useSavedProfile)
+            {
+                var saved = PlayerNameSettings.Current;
+                // Missing preference retains the scene's existing effective default.
+                if (saved.Revision > 1)
+                {
+                    displayName = saved.DisplayName;
+                    profileRevision = Math.Max(profileRevision, saved.Revision);
+                    updatedAtUnixMilliseconds = saved.UpdatedAtMs;
+                }
+            }
             DateTimeOffset updatedAt;
             try
             {
@@ -32,6 +63,7 @@ namespace CafeDemo
 
         public void Configure(string uid, string currentDisplayName, long revision, DateTimeOffset updatedAt)
         {
+            useSavedProfile = false;
             playerUid = uid;
             displayName = currentDisplayName;
             profileRevision = revision;
@@ -40,7 +72,8 @@ namespace CafeDemo
 
         public bool TrySetDisplayName(string currentDisplayName, long revision, DateTimeOffset updatedAt)
         {
-            if (string.IsNullOrWhiteSpace(currentDisplayName) || revision < 0) return false;
+            if (!PlayerNameSettings.TryValidate(currentDisplayName, out currentDisplayName) || revision < 0) return false;
+            useSavedProfile = false;
             displayName = currentDisplayName;
             profileRevision = revision;
             updatedAtUnixMilliseconds = Math.Max(0, updatedAt.ToUnixTimeMilliseconds());

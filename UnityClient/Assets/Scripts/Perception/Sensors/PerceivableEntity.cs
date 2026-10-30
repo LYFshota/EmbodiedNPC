@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using EmbodiedNPC.Interaction;
 using EmbodiedNPC.World;
+using EmbodiedNPC.Identity;
 using UnityEngine;
 
 namespace EmbodiedNPC.Perception
@@ -23,6 +24,19 @@ namespace EmbodiedNPC.Perception
         private Transform rightEye;
 
         public WorldEntity Entity => entity;
+        public string AppearanceDescription { get; private set; }
+        public void SetAppearanceDescription(string value) => AppearanceDescription = value;
+        public void RebindAnimator(Animator animator)
+        {
+            if (animator == null || !animator.isHuman) return;
+            // Preserve authored anchor semantics; only a direct Humanoid Head binding follows replacement.
+            bool followsHead = head != null && visualAnchor == head;
+            head = animator.GetBoneTransform(HumanBodyBones.Head);
+            neck = animator.GetBoneTransform(HumanBodyBones.Neck);
+            leftEye = animator.GetBoneTransform(HumanBodyBones.LeftEye);
+            rightEye = animator.GetBoneTransform(HumanBodyBones.RightEye);
+            if (followsHead) visualAnchor = head;
+        }
         public Transform VisualAnchor => visualAnchor == null ? transform : visualAnchor;
         // Humanoid Head is a joint at the base of the skull, not the visible face.
         // Sample the eyes (or a scale-relative upper-face point) when that joint is the
@@ -38,20 +52,15 @@ namespace EmbodiedNPC.Perception
             }
         }
         public Collider VisibilityCollider => visibilityCollider;
-        public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? gameObject.name : displayName;
+        public string DisplayName => TryGetComponent<PlayerIdentityBinding>(out var player) && player.CurrentIdentity != null
+            ? player.CurrentIdentity.DisplayName : string.IsNullOrWhiteSpace(displayName) ? gameObject.name : displayName;
 
         private void Awake()
         {
             if (entity == null) entity = GetComponent<WorldEntity>();
             if (visibilityCollider == null) visibilityCollider = GetComponent<Collider>();
             Animator animator = GetComponentInChildren<Animator>();
-            if (animator != null && animator.isHuman)
-            {
-                head = animator.GetBoneTransform(HumanBodyBones.Head);
-                neck = animator.GetBoneTransform(HumanBodyBones.Neck);
-                leftEye = animator.GetBoneTransform(HumanBodyBones.LeftEye);
-                rightEye = animator.GetBoneTransform(HumanBodyBones.RightEye);
-            }
+            RebindAnimator(animator);
         }
 
         public void WriteVisibleFields(IDictionary<string, string> fields)

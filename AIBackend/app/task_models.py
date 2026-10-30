@@ -10,6 +10,7 @@ import json
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from .drink_types import DrinkType
 
 
 Identifier = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]+$", min_length=1, max_length=160)]
@@ -21,7 +22,6 @@ Timestamp = Annotated[float, Field(ge=0, allow_inf_nan=False)]
 GoalKind = Literal["serve_drink", "clean_assigned_counter"]
 TriggerKind = Literal["next_visit", "when_idle"]
 TaskStatus = Literal["waiting", "executing", "blocked", "completed", "cancelled"]
-DrinkType = Literal["latte", "cappuccino", "americano"]
 
 
 class TaskError(ValueError):

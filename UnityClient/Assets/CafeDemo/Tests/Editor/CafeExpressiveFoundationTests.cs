@@ -119,7 +119,7 @@ namespace CafeDemo.Tests
                 bindings = new Dictionary<string,string> { ["target"]="cup_01", ["destination"]="player_01" } };
             var run = merchant.GetComponent<AgentOrchestrator>().CurrentRun;
             Assert.That(driver.TryConsumeResponse(response), Is.True);
-            Assert.That(run.State, Is.EqualTo(CognitiveRunState.WaitingActionResult));
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
             Assert.That(a.State, Is.EqualTo(DialoguePresentationState.Talking)); Assert.That(a.ExpressionHint, Is.EqualTo("happy"));
             Assert.That(a.PresentationContext.RequestId, Is.EqualTo(request.request_id));
             Assert.That(a.MotionChannels.ActiveGestureId, Is.Zero);

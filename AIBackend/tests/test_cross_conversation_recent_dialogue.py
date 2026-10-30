@@ -23,6 +23,7 @@ from app.relationship_context import RelationshipContext
 from app.world_knowledge import KnowledgeContext
 from app.model_requests import CognitiveModelRequestFactory
 from app.action_proposal_validator import ActionProposalValidationError
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 OWNER = ('npc', 'Character', 'merchant.private')
 PLAYER = ('player', 'Player', 'cafe-local-player-001')
@@ -31,7 +32,7 @@ PLAYER = ('player', 'Player', 'cafe-local-player-001')
 class ScriptedProvider:
     name = 'scripted'
     model = 'e1-no-network'
-    context_length = 16384
+    context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
     def __init__(self, scripts=None):
         self.requests = []
@@ -353,7 +354,7 @@ class CrossConversationRecentDialogueTests(unittest.IsolatedAsyncioTestCase):
         req = CognitiveRequest.model_validate(self.current())
         entry = CognitiveBackendEntry(provider,PrioritizedModelExecutor(),experience_ledger=self.ledger,
             memory_recall=adapter,relationship_context_resolver=social_resolver,
-            knowledge_resolver=knowledge_resolver,context_length=16384)
+            knowledge_resolver=knowledge_resolver,context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         await entry.run(req)
         for request in provider.requests:
             self.assertEqual(req.context,CognitiveModelRequestFactory.context_from(request))

@@ -9,6 +9,7 @@ from app.context_token_estimator import ContextTokenEstimator
 from app.deepseek_provider import DeepSeekOfficialResponsesProvider
 from app.providers import InferenceOptions
 from tests.test_memory_d2_cognitive_steps import cognitive_request
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 def request_dict():
     original = cognitive_request("可以坐你对面吗？")
@@ -36,10 +37,10 @@ class SceneFactsTests(unittest.TestCase):
 
     def test_occupied_seat_reaches_real_factory_without_private_identity(self):
         request = CognitiveRequest.model_validate(request_dict())
-        prompt = '\n'.join(m.content for m in CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384).messages)
+        prompt = '\n'.join(m.content for m in CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH).messages)
         self.assertIn('"occupancy":"occupied"', prompt)
         self.assertIn('"occupant_entity_id":"npc_b"', prompt)
-        self.assertIn('A companion present now and a longstanding companionship do not prove joint arrival today', prompt)
+        self.assertIn('Its established identity and background relationships between characters are valid setting.', prompt)
         self.assertNotIn('persistent_id', prompt)
 
     def test_empty_and_unknown_do_not_disclose_an_occupant(self):
@@ -93,7 +94,7 @@ class SceneFactsTests(unittest.TestCase):
                     'evidence_status': 'paired'}]
         original_history = copy.deepcopy(history)
         model_request = CognitiveModelRequestFactory.create_event(
-            request, recent_dialogue=history, knowledge_context_limit=16384)
+            request, recent_dialogue=history, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         decoded = CognitiveModelRequestFactory.context_from(model_request)
         self.assertEqual(request.context.scene_facts, decoded.scene_facts)
         self.assertEqual('座位', decoded.perception.entities[0].display_name)
@@ -118,7 +119,7 @@ class SeatAvailabilityProjectionTests(unittest.TestCase):
              'evidence_status': 'paired'}]
         original_history = copy.deepcopy(history)
         model_request = CognitiveModelRequestFactory.create_event(
-            request, recent_dialogue=history, knowledge_context_limit=16384, **kwargs)
+            request, recent_dialogue=history, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH, **kwargs)
         self.assertEqual(request.context, CognitiveModelRequestFactory.context_from(model_request))
         self.assertEqual(before, request.model_dump_json())
         self.assertEqual(original_history, history)

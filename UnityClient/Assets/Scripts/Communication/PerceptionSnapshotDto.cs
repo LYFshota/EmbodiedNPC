@@ -27,12 +27,15 @@ namespace EmbodiedNPC.Communication
         public string entity_id;
         public string kind;
         public string display_name;
+        public string appearance_description;
         public string[] aliases = Array.Empty<string>();
         public string[] semantic_tags = Array.Empty<string>();
         public string visibility;
         public string[] capabilities = Array.Empty<string>();
 
         public bool IsValid => !string.IsNullOrWhiteSpace(entity_id) && !string.IsNullOrWhiteSpace(kind) &&
-                               aliases != null && semantic_tags != null && capabilities != null;
+                               aliases != null && semantic_tags != null && capabilities != null &&
+                               (appearance_description == null || (kind == "player" && visibility == "current_visible" &&
+                                EmbodiedNPC.Settings.PortablePreferenceFile.TryValidateAppearanceDescription(appearance_description, out var text) && text != null));
     }
 }

@@ -120,7 +120,7 @@ namespace CafeDemo
 
         private static bool IsErrorEntry(string kind, JToken data)
         {
-            if (kind == "cognitive_transport_failure" || kind == "task_failure_invalidated") return true;
+            if (kind == "cognitive_transport_failure") return true;
             if (kind != "goal_outcome" && kind != "skill_result" &&
                 kind != "experience_append_result" && kind != "connection_status") return false;
             string status = Value(data, "status").ToLowerInvariant();

@@ -28,6 +28,11 @@ class MemoryRecallPlan(BaseModel):
     semantic_query: str = Field(min_length=1, max_length=512, description=(
         "The historical information requested by the current speaker, preserving changes and conditions. "
         "The wording of this query does not change whose history subject_ref selects."))
+    subject_role: Literal["requester", "observer", "shared", "catalog"] | None = Field(default=None, description=(
+        "Semantic subject intent. requester: what the current Player said, preferred or promised, including "
+        "what we agreed to discuss. observer: the NPC's own statements/experiences. shared: directly evidenced "
+        "interactions of this NPC and current Player. catalog: another authorized subject selected by subject_ref. "
+        "Use a role for new plans; Backend binds identities. A query written in first person does not choose the NPC."))
     subject_ref: str | None = Field(default=None, min_length=1, max_length=64, description=(
         "Whose information is requested, not the NPC who owns the memory. Select from the trusted catalog: "
         "requester_ref for the current speaker's preferences or experiences; the observer entry for the "
@@ -45,6 +50,8 @@ class MemoryRecallPlan(BaseModel):
     @model_validator(mode="after")
     def supported_filters(self):
         CanonicalReadFilter(memory_type=self.memory_type)
+        if self.subject_role == "catalog" and self.subject_ref is None:
+            raise ValueError("RECALL_CATALOG_SUBJECT_REQUIRED")
         return self
 
 
@@ -53,6 +60,37 @@ class MemoryRecallStep(BaseModel):
 
     decision_kind: Literal["MEMORY_RECALL"]
     recall_plan: MemoryRecallPlan
+
+
+class KnowledgeReadPlan(BaseModel):
+    """Semantic intent only: identity, Top-K and budgets remain host inputs."""
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    semantic_query: str = Field(min_length=1, max_length=512)
+
+    @field_validator("semantic_query")
+    @classmethod
+    def nonblank_query(cls, value):
+        if not value.strip():
+            raise ValueError("KNOWLEDGE_QUERY_EMPTY")
+        return value
+
+
+class ContextReadStep(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    decision_kind: Literal["CONTEXT_READ"]
+    knowledge_plan: KnowledgeReadPlan | None = None
+    memory_plan: MemoryRecallPlan | None = None
+
+    @model_validator(mode="after")
+    def nonempty(self):
+        if not any(getattr(self, field, None) is not None
+                   for field in ("knowledge_plan", "memory_plan", "task_plan")):
+            raise ValueError("CONTEXT_READ_EMPTY")
+        return self
+
+
+class TaskContextReadStep(ContextReadStep):
+    task_plan: TaskReadPlan | None = None
 
 
 class DirectResponseStep(CognitiveDecision):
@@ -67,6 +105,7 @@ class NoActionStep(CognitiveDecision):
     decision_kind: Literal["NO_ACTION"]
     utterance: None = None
     emotion: None = None
+    expression_icon: None = None
     gesture: None = None
     look_at: None = None
     action_proposal: None = None
@@ -81,6 +120,7 @@ class ActionProposalStep(CognitiveDecision):
 
 class ContinuationDirectResponseStep(DirectResponseStep):
     target_daily_mode: None = None
+    action_control: None = None
 
 
 class TerminalCognitiveStep(RootModel[
@@ -91,7 +131,7 @@ class TerminalCognitiveStep(RootModel[
 
 
 class CognitiveStepResult(RootModel[
-    Annotated[DirectResponseStep | NoActionStep | ActionProposalStep | MemoryRecallStep,
+    Annotated[DirectResponseStep | NoActionStep | ActionProposalStep | MemoryRecallStep | ContextReadStep,
               Field(discriminator="decision_kind")]
 ]):
     """Step 0 only. Step 1 validates CognitiveDecision directly, never this union."""
@@ -104,6 +144,14 @@ class DialogueContinuationStep(RootModel[
     model_config = ConfigDict(title="CognitiveDecision")
 
 
+class SelfStatementDelivery(BaseModel):
+    """Read-only source qualification, not a new persistent Memory fact."""
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    memory_id: str
+    status: Literal["PRESENTED_TO_REQUESTER", "UNKNOWN"]
+    verified_event_ids: tuple[str, ...] = ()
+
+
 class RecallOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -111,6 +159,7 @@ class RecallOutcome(BaseModel):
                     "UNKNOWN_SUBJECT", "SUBJECT_NOT_DURABLE", "SUBJECT_NOT_AUTHORIZED",
                     "RECALL_UNAVAILABLE"]
     evidence: CanonicalEvidenceSet | None = None
+    self_statement_delivery: tuple[SelfStatementDelivery, ...] = ()
 
 
 class TaskDirectResponseStep(DirectResponseStep):
@@ -121,6 +170,8 @@ class TaskDirectResponseStep(DirectResponseStep):
 
     @model_validator(mode="after")
     def commitment(self):
+        if self.action_control is not None and (self.task_operation is not None or self.future_commitment):
+            raise ValueError("COGNITIVE_ACTION_CONTROL_TASK_COMBINATION_FORBIDDEN")
         if self.future_commitment and self.task_operation is None:
             raise ValueError("TASK_UNSAVED_COMMITMENT")
         if self.task_operation is not None and self.target_daily_mode is not None:
@@ -164,7 +215,7 @@ class TaskTerminalStep(RootModel[
 
 
 class TaskCognitiveStep(RootModel[
-    Annotated[TaskDirectResponseStep | NoActionStep | TaskActionProposalStep | MemoryRecallStep | TaskReadStep,
+    Annotated[TaskDirectResponseStep | NoActionStep | TaskActionProposalStep | MemoryRecallStep | TaskReadStep | TaskContextReadStep,
               Field(discriminator="decision_kind")]
 ]):
     model_config = ConfigDict(title="CognitiveStepResult")

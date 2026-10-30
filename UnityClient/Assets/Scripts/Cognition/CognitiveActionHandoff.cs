@@ -67,7 +67,7 @@ namespace EmbodiedNPC.Cognition
             {
             if (!goalPlanRunner.TrySubmitGoal(response.validated_goal, response.trace_id,
                     response.request_id, proposalRevision, worldRevision,
-                    request.context?.relevant_player?.player_entity_id, request.reply_language))
+                    request.context?.relevant_player?.player_entity_id))
             { if(request.task_consideration!=null) taskExecution.NotStarted();return false; }
             }
             catch(System.Exception)

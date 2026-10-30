@@ -18,7 +18,7 @@ and immediate surroundings. It is an early prototype, not a mature general-purpo
   <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC cafe panorama" width="640">
 </p>
 
-This preview improves relaxed idle posture, subtle breathing and hands, and keeps the player’s non-waving arm quiet with a stable upper body.
+This version adds an editable complete world-knowledge catalog (108 default entries), hybrid knowledge and long-term memory retrieval, ten hot drinks, more varied dialogue motion and facial expressions, and four occasional emotion icons. Players can export a complete experience ZIP from Settings for voluntary feedback and analysis.
 
 ## What works today
 
@@ -36,6 +36,14 @@ This preview improves relaxed idle posture, subtle breathing and hands, and keep
   does not mean a task was saved, and a saved task is not guaranteed to run immediately.
 - **Model configuration:** Main and Embedding can be configured separately,
   using local or remote services.
+
+## Highlights in v0.1.3-preview
+
+- Knowledge search/editing, public/restricted access, constant/retrieval usage, complete JSON import/export and reset to defaults. Existing player catalogs are not automatically overwritten by new defaults.
+- Automatic knowledge retrieval plus optional knowledge/memory reads, with at most two cognition calls. Historical plans and displayed conversations are distinguished more carefully, without guaranteeing error-free answers.
+- Latte, cappuccino, americano, espresso, flat white, mocha, caramel macchiato, hot chocolate, matcha latte and black tea share the existing preparation flow.
+- Character-specific dialogue pacing, expressions and four occasional happy/confused/surprised/thinking icons. Available expressions vary between VRM models.
+- Settings > General & controls > Support & diagnostics > Export all experience data. The local ZIP contains saved conversations, memories, personas, knowledge, relationships and task/action data. It may contain personal text: review it before choosing to share. Nothing is uploaded automatically; API credentials are excluded.
 
 ## Current limitations
 
@@ -63,7 +71,7 @@ These are research directions, not committed features or a release schedule.
 
 ## Download and try
 
-[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.2-preview/EmbodiedNPC-Windows-x64-v0.1.2-preview.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.2-preview). Extract the complete archive and run `Start.cmd`. It bundles EmbeddingGemma-300M Q4 ONNX for memory vectors, so no extra Embedding download or API setup is normally needed. You must still configure your own Main LLM for dialogue and decisions. External Embedding and disabled-vector options remain available.
+[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.3-preview/EmbodiedNPC-Windows-x64-v0.1.3-preview.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.3-preview). Extract the complete archive and run `Start.cmd`. No Unity Editor or separate Python installation is needed. Personal settings and memories persist in the package-local `UserData`; shut down normally and back it up before updating. It bundles EmbeddingGemma-300M Q4 ONNX for memory vectors, so no extra Embedding download or API setup is normally needed. You must still configure your own Main LLM for dialogue and decisions. External Embedding and disabled-vector options remain available.
 
 ## Run from source
 

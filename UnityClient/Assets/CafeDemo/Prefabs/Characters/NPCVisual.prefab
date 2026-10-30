@@ -53,6 +53,7 @@ MonoBehaviour:
   motionChannels: {fileID: 0}
   maxVisualYawDegrees: 55
   degreesPerSecond: 120
+  bodyDegreesPerSecond: 90
 --- !u!114 &7505366203123087779
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -142,3 +143,7 @@ MonoBehaviour:
   animator: {fileID: 0}
   blendIn: 0.25
   blendOut: 0.2
+  gestureStrength: 0.36
+  phraseSeconds: 1.8
+  restSeconds: 2.2
+  headAccentDegrees: 1.6

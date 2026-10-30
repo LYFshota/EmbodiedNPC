@@ -20,6 +20,7 @@ from app.providers import ModelResult, ProviderError
 from app.recall_subjects import RecallSubjectCatalogBuilder
 from tests.test_action_proposal_validation import _context, _decision
 from tests.test_cognitive_websocket import SocketHarness
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 OWNER = TrustedPersistentIdentity("npc", "Character", "merchant.private")
@@ -89,6 +90,7 @@ class RecordingExecutor(PrioritizedModelExecutor):
 class ScriptedProvider:
     name = "scripted"
     model = "d2-test"
+    context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
     def __init__(self, scripts):
         self.scripts = scripts
@@ -110,7 +112,7 @@ class MemoryD2Tests(unittest.IsolatedAsyncioTestCase):
                                              CanonicalMemoryRetrieval(self.rows))
         self.provider = ScriptedProvider(scripts)
         self.executor = RecordingExecutor()
-        return CognitiveBackendEntry(self.provider, self.executor, memory_recall=self.adapter, context_length=16384)
+        return CognitiveBackendEntry(self.provider, self.executor, memory_recall=self.adapter, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
 
     async def test_terminal_path_one_inference_zero_retrieval(self):
         entry = self.entry([TERMINAL])
@@ -213,7 +215,7 @@ class MemoryD2Tests(unittest.IsolatedAsyncioTestCase):
         entry = self.entry([recall, stale_action])
         # Keep stale evidence present to exercise the authority boundary itself.
         # P1 tests separately cover whole-evidence omission under 8K pressure.
-        entry._context_length = 16384
+        entry._context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
         self.rows.summary = "历史记录提到 cup_99，但它已不在当前可见范围"
         request = cognitive_request("把以前见过的杯子拿给我")
         with self.assertRaises(ActionProposalValidationError):

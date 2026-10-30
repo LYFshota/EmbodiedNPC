@@ -93,7 +93,8 @@ namespace CafeDemo
             }
             agentEvent = new AgentEvent($"{performed.EventId}:{observer.EntityId}", AgentEventTypes.PlayerEmote,
                 performed.ActorEntityId, targetVisible ? performed.TargetEntityId : string.Empty, string.Empty, fields,
-                performed.OccurredAt, worldState == null ? null : worldState.WorldRevision,
+                // AgentEvent and execution snapshots use Unity realtime. Keep the source UTC in observation history below.
+                Time.realtimeSinceStartupAsDouble, worldState == null ? null : worldState.WorldRevision,
                 performed.TraceId, $"{performed.EventId}:visual:{observer.EntityId}");
             return true;
         }

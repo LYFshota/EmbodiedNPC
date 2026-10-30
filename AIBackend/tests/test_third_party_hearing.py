@@ -67,10 +67,10 @@ class ThirdPartyHearingTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual([i['actor_entity_id'] for i in hearing], ['player_01', 'npc_cafe_01'])
             self.assertTrue(all(i['observer_entity_id'] == evidence['observer'] for i in hearing))
             self.assertTrue(all('历史旁听' in i['history_description'] and i['model_content_is_not_world_truth'] for i in hearing))
-            self.assertEqual(user.count(evidence['reply']), 2)  # Raw text + quotation in the same record.
+            self.assertEqual(user.count(evidence['reply']), 1)
             actual_input = local[0].structured_payload['known_fields']['text']
             self.assertIn('一杯拿铁', actual_input)
-            self.assertEqual(user.count(actual_input), 2)
+            self.assertEqual(user.count(actual_input), 1)
             self.assertEqual(len({i['occurrence_id'] for i in hearing}), 2)
             self.assertFalse(any(i['kind'] == 'speech' for i in items))
             size = sum(len(json.dumps([i], ensure_ascii=False, separators=(',', ':'))) for i in hearing)

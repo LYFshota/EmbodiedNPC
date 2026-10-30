@@ -199,6 +199,9 @@ namespace EmbodiedNPC.Perception
                 ["last_seen_position"] = FormatPosition(target)
             };
             perceivable.WriteVisibleFields(knownFields);
+            // This field is visual-only; ProximitySensor also uses WriteVisibleFields.
+            if (perceivable.Entity.IsAgent(AgentRole.Player))
+                knownFields["appearance_description"] = perceivable.AppearanceDescription ?? string.Empty;
             if (perceivable.TryGetComponent(out FixedSeatBinding seatBinding))
                 seatBinding.WriteObservedFields(knownFields, visibleThisScan);
             int revision = worldState == null ? Math.Max(0, stateStore.Aggregator.LatestWorldRevision) : worldState.WorldRevision;

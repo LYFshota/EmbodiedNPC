@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .action_catalog import BUILT_IN_ACTION_CATALOG, ActionCatalog
+from .action_contracts import binding_contract_signature
 from .contracts import CognitiveContextSnapshot, CognitiveDecision, GoalProposal
 
 
@@ -34,14 +35,8 @@ class ActionProposalValidator:
         if runtime_action is None or supported is None or not supported.descriptor.available:
             raise ActionProposalValidationError()
 
-        supported_bindings = {
-            binding.name: (binding.kind, binding.required, tuple(binding.enum_values))
-            for binding in supported.descriptor.binding_schema
-        }
-        runtime_bindings = {
-            binding.name: (binding.kind, binding.required, tuple(binding.enum_values))
-            for binding in runtime_action.bindings
-        }
+        supported_bindings = binding_contract_signature(supported.descriptor.binding_schema)
+        runtime_bindings = binding_contract_signature(runtime_action.bindings)
         if runtime_bindings != supported_bindings:
             raise ActionProposalValidationError()
 

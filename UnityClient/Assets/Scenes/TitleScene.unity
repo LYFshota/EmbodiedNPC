@@ -1324,7 +1324,6 @@ MonoBehaviour:
   maxConnectAttempts: 3
   retryDelaySeconds: 1
   connectTimeoutSeconds: 5
-  responseTimeoutSeconds: 30
 --- !u!114 &1808857396
 MonoBehaviour:
   m_ObjectHideFlags: 0

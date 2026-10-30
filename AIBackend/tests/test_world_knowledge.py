@@ -27,6 +27,7 @@ from tests.test_cognitive_request import _event_request
 from tests import test_memory_d2_cognitive_steps as memory_fixtures
 from tests.test_memory_d2_cognitive_steps import cognitive_request, ScriptedProvider, TERMINAL, recall
 from tests.test_action_proposal_validation import _decision
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def cafe_request(text="卡布奇诺和拿铁有什么区别？", role="merchant"):
@@ -67,6 +68,7 @@ class KnowledgeTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.path = Path(self.temporary.name) / "knowledge.json"
         self.store = WorldKnowledgeStore(self.path)
+        self.store.initialize()
         self.bundle, self.overrides, self.entries = self.store.snapshot()
         default = WorldKnowledgeResolver.from_environment()
         self.resolver = WorldKnowledgeResolver(self.store, default.deployment)
@@ -92,21 +94,21 @@ class KnowledgeTests(unittest.TestCase):
             self.assertEqual(character.character_id, f"cafe.{role}")
             self.assertIn(f"{age}岁", character.role_summary)
             self.assertIn(preference, character.backstory)
-            self.assertIn("Capability", character.boundaries)
-            self.assertIn("玩家", character.boundaries)
+            self.assertIn("私", character.boundaries)
+            self.assertNotIn("Capability", character.boundaries)
             self.assertLessEqual(len(character.backstory), 1200)
             self.assertNotRegex(json.dumps(profile, ensure_ascii=False), r"19岁|23岁")
 
     def test_p4b_catalog_count_references_and_access_sets(self):
         roles = {b.character_id for b in self.resolver.deployment.bindings}
         ids = {e.knowledge_id for e in self.entries}
-        self.assertEqual(len(self.entries), 25)
+        self.assertEqual(len(self.entries), 108)
         self.assertEqual(len(ids), len(self.entries))
         self.assertTrue({"cafe.setting", "coffee.latte", "coffee.cappuccino", "cafe.staff.taste_guidance"} <= ids)
         personal = [e for e in self.entries if e.knowledge_type == "personal_background"]
-        self.assertEqual(len(personal), 12)
+        self.assertEqual(len(personal), 52)
         for role in roles:
-            self.assertEqual(sum(e.access.character_ids == (role,) for e in personal), 3)
+            self.assertEqual(sum(e.access.character_ids == (role,) for e in personal), 13)
         events = [e for e in self.entries if e.knowledge_type == "shared_event"]
         self.assertEqual(len(events), 3)
         for entry in self.entries:
@@ -138,13 +140,13 @@ class KnowledgeTests(unittest.TestCase):
             self.assertEqual(bool(visible), role in {"cafe.regular_customer", "cafe.companion_customer"})
 
     def test_load_save_version_delete_and_restore_across_store_instances(self):
-        self.assertFalse(self.path.exists())
+        self.assertTrue(self.path.exists())
         original = next(e for e in self.entries if e.knowledge_id == "coffee.latte")
         edited = original.model_copy(update={"content": "开发者本地更新的一般拿铁说明。"})
         self.store.manage("upsert", entry=edited, expected_revision=0)
         _, overrides, saved = WorldKnowledgeStore(self.path).snapshot()
         changed = next(e for e in saved if e.knowledge_id == original.knowledge_id)
-        self.assertEqual(changed.version, 2)
+        self.assertEqual(changed.version, original.version + 1)
         self.assertEqual(overrides.revision, 1)
         self.assertNotEqual(changed.updated_at, original.updated_at)
         self.store.manage("delete", knowledge_id=original.knowledge_id, expected_revision=1)
@@ -169,7 +171,7 @@ class KnowledgeTests(unittest.TestCase):
         malicious["knowledge_operations"] = [{"operation": "delete", "knowledge_id": "cafe.setting"}]
         with self.assertRaises(ValueError):
             CognitiveRequest.model_validate(malicious)
-        self.assertFalse(self.path.exists())
+        self.assertTrue(self.path.exists())
 
     def test_role_deployment_scene_and_forged_persona_do_not_expand_scope(self):
         customer = self.resolver.deployment.resolve(cafe_request(role="regular_customer"))
@@ -205,9 +207,10 @@ class KnowledgeTests(unittest.TestCase):
         self.assertEqual(self.search().items, ())
 
     def test_hidden_related_id_is_not_exposed(self):
-        visible = self.entries[0].model_copy(update={"related_ids": ("cafe.staff.taste_guidance",)})
+        visible = next(e for e in self.entries if e.knowledge_id == "coffee.latte").model_copy(
+            update={"related_ids": ("cafe.staff.taste_guidance",)})
         customer = self.resolver.deployment.resolve(cafe_request(role="regular_customer"))
-        result = retrieve_knowledge((visible, *self.entries[1:]), customer,
+        result = retrieve_knowledge((visible, *(e for e in self.entries if e.knowledge_id != visible.knowledge_id)), customer,
             KnowledgeQuery(knowledge_ids=(visible.knowledge_id,)), bundle_version="test", revision=0)
         self.assertEqual(result.items[0]["related_ids"], [])
 
@@ -271,20 +274,25 @@ class KnowledgeCognitionTests(unittest.IsolatedAsyncioTestCase):
         self.path = Path(self.temporary.name) / "knowledge.json"
         self.resolver = WorldKnowledgeResolver(WorldKnowledgeStore(self.path),
             WorldKnowledgeResolver.from_environment().deployment)
+        self.resolver.store.initialize()
 
-    async def test_one_inference_uses_knowledge_and_failure_still_answers(self):
+    async def test_planned_knowledge_then_terminal_and_failure_still_answers(self):
         def answer(request):
             self.assertIn("coffee.cappuccino", request.messages[-1].content)
             return {"decision_kind": "DIRECT_RESPONSE", "utterance": "卡布奇诺通常奶泡较丰富；这是饮品说明，不代表本店现在有货。"}
-        provider = ScriptedProvider([answer, TERMINAL])
-        entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(), knowledge_resolver=self.resolver, context_length=16384)
+        def plan(model):
+            data = json.loads(model.messages[-1].content.split("Knowledge context JSON: ")[1].splitlines()[0])
+            self.assertEqual(data["items"], [])
+            return dict(decision_kind="CONTEXT_READ", knowledge_plan=dict(semantic_query="卡布奇诺和拿铁"))
+        provider = ScriptedProvider([plan, answer, TERMINAL])
+        entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(), knowledge_resolver=self.resolver, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         result = await entry.run(cafe_request())
         self.assertIn("奶泡", result.decision.utterance)
         self.path.write_text("invalid", encoding="utf-8")
         result = await entry.run(cafe_request())
         self.assertEqual(result.decision.decision_kind, "DIRECT_RESPONSE")
-        self.assertEqual(len(provider.requests), 2)
-        self.assertNotIn("Knowledge context JSON:", provider.requests[1].messages[-1].content)
+        self.assertEqual(len(provider.requests), 3)
+        self.assertIn('"status":"UNAVAILABLE"', provider.requests[2].messages[-1].content)
 
     async def test_existing_memory_once_contract_keeps_same_knowledge_snapshot(self):
         # Existing M3 fixture exercises the canonical retrieval adapter with one read.
@@ -312,14 +320,14 @@ class KnowledgeCognitionTests(unittest.IsolatedAsyncioTestCase):
     async def test_knowledge_cannot_authorize_action_or_supply_runtime_entities(self):
         proposal = _decision().model_dump()
         entry = CognitiveBackendEntry(ScriptedProvider([proposal]), PrioritizedModelExecutor(),
-                                      knowledge_resolver=self.resolver, context_length=16384)
+                                      knowledge_resolver=self.resolver, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         with self.assertRaises(ActionProposalValidationError):
             await entry.run(cafe_request("请给我一杯拿铁"))
         request = cafe_request()
         event = request.context.current_event.model_copy(update={"event_type": "entity.became_visible", "payload": ()})
         request = request.model_copy(update={"context": request.context.model_copy(update={"current_event": event})})
         entry = CognitiveBackendEntry(ScriptedProvider([proposal]), PrioritizedModelExecutor(),
-                                      knowledge_resolver=self.resolver, context_length=16384)
+                                      knowledge_resolver=self.resolver, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         with self.assertRaises(WorldActionNotEligibleError):
             await entry.run(request)
 
@@ -355,14 +363,16 @@ class KnowledgeHybridTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(self.temporary.cleanup)
         root = Path(self.temporary.name)
         self.store = WorldKnowledgeStore(root / "knowledge.json")
+        self.store.initialize()
         # Keep the existing four-document index fixture independent of content expansion.
         # P4-B's full catalog and access scopes are checked by KnowledgeTests above.
         bundle, _, entries = self.store.snapshot()
         baseline_ids = {"cafe.setting", "coffee.latte", "coffee.cappuccino", "cafe.staff.taste_guidance"}
         builtin = root / "four-document-fixture.json"
-        builtin.write_text(bundle.model_copy(update={"entries": tuple(e for e in entries
+        builtin.write_text(bundle.model_copy(update={"entries": tuple(e.model_copy(update={"usage": "retrieval"}) for e in entries
             if e.knowledge_id in baseline_ids)}).model_dump_json(), encoding="utf-8")
-        self.store = WorldKnowledgeStore(root / "knowledge.json", builtin_path=builtin)
+        self.store = WorldKnowledgeStore(root / "four-current.json", builtin_path=builtin)
+        self.store.initialize()
         self.index = KnowledgeEmbeddingIndex(self.store, root / "knowledge-index.sqlite3")
         self.provider = TinyEmbeddings()
         self.indexer = KnowledgeEmbeddingIndexer(self.index, self.provider)

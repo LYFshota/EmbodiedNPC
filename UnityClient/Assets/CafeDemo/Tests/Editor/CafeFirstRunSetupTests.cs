@@ -50,7 +50,7 @@ namespace CafeDemo.Tests
             var context = settings.transform.parent.Find(
                 "DeveloperPanelRoot/Window/ModelPage/ModelConfigForm/ScrollView/Viewport/Content/Context LengthRow")
                 ?.GetComponentInChildren<TMPro.TMP_InputField>();
-            Assert.That(context?.text, Is.EqualTo("16384"));
+            Assert.That(context?.text, Is.EqualTo("32768"));
             Assert.That(dialogue.IsSetupReady, Is.False);
 
             settings.ApplyStartupConfig(new ModelConfigView { configured = true, revision = 1 });

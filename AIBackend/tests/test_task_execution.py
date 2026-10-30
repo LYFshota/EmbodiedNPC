@@ -6,6 +6,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 from app.contracts import CognitiveRequest
+from app.drink_types import DRINK_TYPE_IDS
 from app.cognitive_tasks import CognitiveTasks
 from app.task_execution import TaskExecutionControl
 from app.task_models import TaskCreate,TaskError
@@ -31,7 +32,7 @@ class TaskExecutionTests(unittest.IsolatedAsyncioTestCase):
     automatic=TaskConsiderationTests.automatic
     run_scripts=TaskConsiderationTests.run_scripts
 
-    async def reserve(self,*,clean=False):
+    async def reserve(self,*,clean=False,drink="latte"):
         if clean:
             req=self.visit()
             value=wire(req)
@@ -43,12 +44,12 @@ class TaskExecutionTests(unittest.IsolatedAsyncioTestCase):
                 source_kind='self_initiated',source=dict(event_id='seed'),goal=dict(kind='clean_assigned_counter',counter_key='assigned_counter'),trigger_kind='next_visit')))
             req=self.automatic(req)
         else:
-            self.seed();req=self.automatic()
+            self.seed(drink=drink);req=self.automatic()
         def choose(model):
             task=task_data(model)['tasks'][0]
             return dict(decision_kind='ACTION_PROPOSAL',task_focus=dict(task_ref=task['task_ref'],expected_version=task['version']),
                 action_proposal=dict(action_id='clean_counter' if clean else 'prepare_drink',
-                    bindings=dict(target='counter_01') if clean else dict(drink_type='latte')))
+                    bindings=dict(target='counter_01') if clean else dict(drink_type=drink)))
         scripts=([dict(decision_kind='TASK_READ',task_query=dict(op='query_tasks')),choose] if clean else [choose])
         result,provider=await self.run_scripts(req,scripts)
         return req,result.task_execution,provider
@@ -60,6 +61,19 @@ class TaskExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     def task(self,req,ticket):
         return self.service.get_task(self.tasks.prepare(req,recovery=True).scope,ticket.task_id)
+
+    async def test_all_registered_drinks_use_real_task_ticket_and_settlement_protocol(self):
+        for drink in DRINK_TYPE_IDS:
+            with self.subTest(drink=drink):
+                self.setUp()
+                req, ticket, provider = await self.reserve(drink=drink)
+                self.assertEqual(ticket.goal.drink_type, drink)
+                self.assertEqual(len(provider.requests), 1)
+                self.assertTrue(self.control(req, ticket, "begin_execution")["start_permitted"])
+                result = synthetic_result(self.task(req, ticket))
+                self.assertEqual(result.receipt.drink_type, drink)
+                self.assertEqual(self.control(req, ticket, "settle_execution", result)["task_status"], "completed")
+                self.assertEqual(self.task(req, ticket).execution.result.receipt.drink_type, drink)
 
     async def test_two_goals_reserve_begin_receipt_settle_once_and_reopen(self):
         for clean in (False,True):

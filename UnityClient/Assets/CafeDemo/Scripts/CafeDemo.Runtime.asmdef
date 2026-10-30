@@ -1,6 +1,6 @@
 {
   "name": "CafeDemo.Runtime",
   "rootNamespace": "CafeDemo",
-  "references": ["EmbodiedNPC", "Unity.InputSystem", "Unity.AI.Navigation", "Unity.TextMeshPro", "VRM10", "UniGLTF"],
+  "references": ["EmbodiedNPC", "Unity.InputSystem", "Unity.AI.Navigation", "Unity.TextMeshPro", "VRM10", "UniGLTF", "Unity.Collections", "UniGLTF.Utils"],
   "autoReferenced": true
 }

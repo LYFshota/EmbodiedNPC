@@ -115,11 +115,11 @@ namespace CafeDemo.Tests
             yield return Saved();
             string id = knowledge.SelectedId;
             Assert.That(id, Does.StartWith("custom."));
-            Assert.That(Find<TMP_Text>("KnowledgeMetadata").text, Does.Contain("Version: 1"));
+            Assert.That(Find<TMP_Text>("KnowledgeMetadata").text, Does.Contain(SettingsUiLanguage.T("条目版本：", "Entry version: ") + "1"));
             Find<TMP_InputField>("KnowledgeContent").text += "\n参考资料可在编辑后更新。";
             knowledge.Save(); yield return Saved();
             Assert.That(knowledge.SelectedId, Is.EqualTo(id));
-            Assert.That(Find<TMP_Text>("KnowledgeMetadata").text, Does.Contain("Version: 2"));
+            Assert.That(Find<TMP_Text>("KnowledgeMetadata").text, Does.Contain(SettingsUiLanguage.T("条目版本：", "Entry version: ") + "2"));
 
             Find<TMP_InputField>("KnowledgeName").text += " 草稿";
             owner.ShowNpc(); Assert.That(knowledge.ConfirmationVisible, Is.True);
@@ -181,16 +181,16 @@ namespace CafeDemo.Tests
             Click("ConfirmChoice1"); Assert.That(knowledge.SelectedId, Is.EqualTo(id));
             Click("DeleteKnowledge"); Click("ConfirmChoice0"); yield return Saved();
             Assert.That(knowledge.SelectedId, Is.Null);
-            var builtin = knowledge.GetComponentsInChildren<Button>(true).First(b => b.name == "KnowledgeItem" && b.GetComponentInChildren<TMP_Text>().text.StartsWith("咖啡馆基本设定"));
+            var builtin = knowledge.GetComponentsInChildren<Button>(true).First(b => b.name == "KnowledgeItem" && b.GetComponentInChildren<TMP_Text>().text.StartsWith("店员口味沟通参考"));
             builtin.onClick.Invoke(); string original = knowledge.DraftContent;
             Find<TMP_InputField>("KnowledgeContent").text = "隔离更新：静态世界设定。";
             knowledge.Save(); yield return Saved();
             Click("RestoreKnowledge"); Click("ConfirmChoice0"); yield return Saved();
             Assert.That(knowledge.DraftContent, Is.EqualTo(original));
             Click("DeleteKnowledge"); Click("ConfirmChoice0"); yield return Saved();
-            Assert.That(Find<TMP_Text>("KnowledgeMetadata").text, Does.Contain("已隐藏"));
-            Click("RestoreKnowledge"); Click("ConfirmChoice0"); yield return Saved();
-            Assert.That(knowledge.DraftContent, Is.EqualTo(original));
+            Assert.That(knowledge.SelectedId, Is.Null);
+            Assert.That(knowledge.GetComponentsInChildren<Button>(true).Any(b => b.name == "KnowledgeItem" &&
+                b.GetComponentInChildren<TMP_Text>().text.StartsWith("店员口味沟通参考")), Is.False);
 
             // Leave one real edited entry for the external K1 retrieval check.
             knowledge.NewKnowledge(); Find<TMP_InputField>("KnowledgeName").text = "隔离测试 · 玉露参考";

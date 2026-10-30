@@ -1,3 +1,4 @@
+using EmbodiedNPC.Cognition;
 using EmbodiedNPC.Planning;
 using NUnit.Framework;
 using UnityEngine;
@@ -99,8 +100,8 @@ namespace EmbodiedNPC.Tests
             foreach (string code in new[] { "TARGET_NOT_REDISCOVERED", "REDISCOVERY_PATH_UNAVAILABLE",
                          "TARGET_NOT_CURRENTLY_VISIBLE", "TARGET_LOCATION_UNKNOWN" })
             {
-                Assert.That(TaskFailurePolicy.ShouldReport("execution", code), Is.True);
-                Assert.That(TaskFailurePolicy.IsSpatialEvidenceFailure(code), Is.True);
+                Assert.That(ActionFeedbackPolicy.ShouldRequestCognition(code, PlanExecutionStatus.Failed), Is.True);
+                Assert.That(ActionFeedbackPolicy.IsSpatialEvidenceFailure(code), Is.True);
             }
         }
 

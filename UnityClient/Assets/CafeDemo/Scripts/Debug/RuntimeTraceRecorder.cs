@@ -202,33 +202,24 @@ namespace CafeDemo
                 value.EventId, null, new { experience_seq = value.ExperienceSequence, status = value.Status,
                     reason = value.Reason, pending_count = backend.PendingExperienceCount,
                     write_status = backend.ExperienceWriteStatus }));
-            Action<string> invalidated = id => Safe(() => Record("transport", "task_failure_invalidated",
-                null, null, id, null, null, null, new { }));
             Action<ExperienceDraftDto, ValidatedExperienceAppendResult, string> settlement = (draft, result, value) =>
             {
                 if (result != null || draft == null) return;
                 Safe(() => Record("experience", "experience_append_settled", draft.observer_id, draft.trace_id,
                     draft.request_id, null, draft.source_event_id, null, new { status = value, persisted_confirmed = false }));
             };
-            Action<ValidatedTaskFailureResponse> task = value => Safe(() => Record("transport",
-                "task_failure_response", null, value.TraceId, value.RequestId, null, null,
-                value.ProposalId, new { proposal_revision = value.ProposalRevision,
-                    resolution = value.Resolution, world_revision = value.WorldRevision }));
             backend.ConnectionStatusChanged += status;
             backend.CognitiveRequestFailed += failure;
             backend.CognitiveResponseReceived += response;
             backend.ValidatedExperienceAppendResultReceived += experience;
             backend.ExperienceAppendSettled += settlement;
-            backend.TaskFailureRequestInvalidated += invalidated;
-            backend.ValidatedTaskFailureResponseReceived += task;
             unsubscribe.Add(() => { if (backend == null) return;
                 backend.ConnectionStatusChanged -= status;
                 backend.CognitiveRequestFailed -= failure;
                 backend.CognitiveResponseReceived -= response;
                 backend.ValidatedExperienceAppendResultReceived -= experience;
                 backend.ExperienceAppendSettled -= settlement;
-                backend.TaskFailureRequestInvalidated -= invalidated;
-                backend.ValidatedTaskFailureResponseReceived -= task; });
+            });
             status(backend.ConnectionStatus);
         }
 
@@ -301,6 +292,7 @@ namespace CafeDemo
                     gesture = decision?.gesture, look_at = decision?.look_at,
                     action_id = decision?.action_proposal?.action_id,
                     bindings = decision?.action_proposal?.bindings,
+                    action_control = decision?.action_control,
                     validated_goal = value.validated_goal == null ? null : new {
                         type = value.validated_goal.type, target_entity_id = value.validated_goal.target_entity_id,
                         destination_entity_id = value.validated_goal.destination_entity_id } });

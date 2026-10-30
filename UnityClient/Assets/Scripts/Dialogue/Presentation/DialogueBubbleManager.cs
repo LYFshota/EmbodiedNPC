@@ -38,6 +38,9 @@ namespace EmbodiedNPC.Dialogue.Presentation
 
         public static DialogueBubbleManager Active { get; private set; }
         public float BubbleLifetimeSeconds => bubbleLifetimeSeconds;
+        public Canvas PresentationCanvas => rootCanvas;
+        public Camera SceneCamera => sceneCamera;
+        public TMPro.TMP_FontAsset PresentationFont => bubbleTemplate == null ? null : bubbleTemplate.Font;
         // Offscreen layout may hide a rendered bubble later; it does not end the speech interval.
         public bool CanPresentText => bubbleTemplate != null && bubbleTemplate.CanPresentText &&
             rootCanvas != null && rootCanvas.isActiveAndEnabled;
@@ -295,7 +298,7 @@ namespace EmbodiedNPC.Dialogue.Presentation
             }
         }
 
-        private bool TryGetHeadRect(DialogueBubbleAnchor anchor, out Rect rect)
+        public bool TryGetHeadRect(DialogueBubbleAnchor anchor, out Rect rect)
         {
             rect = default;
             Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity);

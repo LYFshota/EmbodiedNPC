@@ -49,22 +49,45 @@ namespace EmbodiedNPC.Cognition
     }
 
     [Serializable]
+    public sealed class CognitiveActionControl
+    {
+        public string operation, proposal_id, trace_id;
+        public int proposal_revision;
+        public bool IsValid => operation == "cancel_active_goal" && !string.IsNullOrWhiteSpace(proposal_id) &&
+            proposal_id.Length <= 160 && !string.IsNullOrWhiteSpace(trace_id) && trace_id.Length <= 160 && proposal_revision >= 0;
+        public bool Matches(CognitiveExecutionState state) => state != null && proposal_id == state.proposal_id &&
+            proposal_revision == state.proposal_revision && trace_id == state.trace_id;
+    }
+
+    [Serializable]
     public sealed class CognitiveDecision
     {
         public string decision_kind;
         public string episode_directive;
         public string dialogue_turn_policy;
+        public string recovery_alternative_id;
         public string utterance;
         public string emotion;
+        public string expression_icon;
         public string gesture;
         public string look_at;
         public CognitiveActionProposal action_proposal;
         public string target_daily_mode;
+        public CognitiveActionControl action_control;
 
         public bool IsValid
         {
             get
             {
+                if (!IsAllowedExpressionIcon(expression_icon) ||
+                    expression_icon != null && expression_icon != "none" &&
+                    decision_kind != CognitiveDecisionKinds.DirectResponse && decision_kind != CognitiveDecisionKinds.ActionProposal) return false;
+                if (recovery_alternative_id != null && (decision_kind != CognitiveDecisionKinds.DirectResponse ||
+                    recovery_alternative_id.Length > 120 || string.IsNullOrWhiteSpace(recovery_alternative_id) ||
+                    action_control != null || target_daily_mode != null || action_proposal != null ||
+                    dialogue_turn_policy == "MAY_CONTINUE")) return false;
+                if (action_control != null && (!action_control.IsValid || decision_kind != CognitiveDecisionKinds.DirectResponse ||
+                    action_proposal != null || target_daily_mode != null || dialogue_turn_policy == "MAY_CONTINUE")) return false;
                 if (decision_kind == CognitiveDecisionKinds.AutonomousActionIntent)
                     return target_daily_mode == null && utterance == null && emotion == null && gesture == null && look_at == null &&
                         episode_directive == null && dialogue_turn_policy == null && action_proposal?.IsValid == true &&
@@ -98,7 +121,10 @@ namespace EmbodiedNPC.Cognition
         }
 
         private static bool IsAllowedEmotion(string value) =>
-            value == null || value == "happy" || value == "neutral" || value == "fear";
+            value == null || value == "happy" || value == "neutral" || value == "fear" ||
+            value == "curious" || value == "thoughtful" || value == "concerned" || value == "surprised";
+        public static bool IsAllowedExpressionIcon(string value) => value == null || value == "none" ||
+            value == "happy" || value == "confused" || value == "surprised" || value == "thinking";
         private static bool IsAllowedGesture(string value) =>
             value == null || value == "none" || value == "wave" || value == "nod";
     }
@@ -157,6 +183,7 @@ namespace EmbodiedNPC.Cognition
 
         private bool IsValidActionHandoff()
         {
+            if (decision.action_control != null && (task_receipt != null || task_execution != null)) return false;
             if(task_execution!=null && (schema_version!="1.1" || !task_execution.IsValid || task_receipt!=null ||
                 decision.decision_kind!=CognitiveDecisionKinds.ActionProposal || decision.target_daily_mode!=null ||
                 task_execution.request_id!=request_id || task_execution.run_id!=run_id || task_execution.trace_id!=trace_id ||
@@ -221,6 +248,9 @@ namespace EmbodiedNPC.Cognition
             {
                 // Json.NET can coerce scalar values into strings. Bindings are strict strings on the wire.
                 var wire = JObject.Parse(json);
+                if (wire["decision"] is JObject decisionWire && decisionWire["recovery_alternative_id"] is { } selection &&
+                    selection.Type != JTokenType.Null && selection.Type != JTokenType.String)
+                { error = "COGNITIVE_RESPONSE_MALFORMED"; return false; }
                 if (!CapacityStatusDto.StrictShape(wire["context_status"]))
                 { error="COGNITIVE_RESPONSE_MALFORMED"; return false; }
                 if(wire["task_execution"] is JObject ticket && !TaskExecutionTicketDto.StrictShape(ticket))
@@ -236,6 +266,12 @@ namespace EmbodiedNPC.Cognition
                             identity.Properties().Any(p => p.Value.Type != JTokenType.String)))
                     { error = "COGNITIVE_RESPONSE_MALFORMED"; return false; }
                 }
+                var controlWire = (wire["decision"] as JObject)?["action_control"];
+                if (controlWire != null && controlWire.Type != JTokenType.Null &&
+                    (controlWire is not JObject control || control.Properties().Count() != 4 ||
+                     control["operation"]?.Type != JTokenType.String || control["proposal_id"]?.Type != JTokenType.String ||
+                     control["trace_id"]?.Type != JTokenType.String || control["proposal_revision"]?.Type != JTokenType.Integer))
+                { error = "COGNITIVE_RESPONSE_MALFORMED"; return false; }
                 var actionWire = (wire["decision"] as JObject)?["action_proposal"] as JObject;
                 if (actionWire?["bindings"] is JObject bindings &&
                     bindings.Properties().Any(p => p.Value.Type != JTokenType.String))

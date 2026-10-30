@@ -197,6 +197,8 @@ namespace EmbodiedNPC.Animation
 
         private string LegalDialogueSpeakerId()
         {
+            if (expressive != null && expressive.isActiveAndEnabled && expressive.ConversationSpeakerId != null)
+                return expressive.ConversationSpeakerId;
             if (dialogue == null || !dialogue.isActiveAndEnabled || !dialogue.HasActiveSession ||
                 !dialogue.IsPresentationVisible || dialogue.SelectedTarget == null ||
                 dialogue.SelectedTarget.GetComponent<WorldEntity>() != owner) return null;

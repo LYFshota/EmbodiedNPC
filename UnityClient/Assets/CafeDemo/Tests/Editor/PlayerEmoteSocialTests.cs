@@ -95,6 +95,16 @@ namespace CafeDemo.Tests
             Assert.That(transports.Sum(p => p.Value.Requests.Count), Is.EqualTo(1));
             var request = transports[expected.EntityId].Requests.Single();
             Assert.That(request.IsValid, Is.True);
+            Assert.That(request.context.current_event.occurred_at, Is.LessThanOrEqualTo(request.context.runtime_state.captured_at),
+                "AgentEvent must use the execution snapshot clock; UTC seconds are rejected by the real Backend.");
+            Assert.That(Bridge(expected).LastObservation.OccurredAt, Is.GreaterThan(1_000_000_000d),
+                "Keep the original UTC evidence used by the existing observation history adapter.");
+            var history = EmbodiedNPC.Memory.ObservationExperienceAdapter.Create(Bridge(expected).LastObservation,
+                registry: Object.FindAnyObjectByType<EntityRegistry>());
+            Assert.That(history.StructuredPayload["event_utc"], Is.EqualTo(Bridge(expected).LastObservation.OccurredAt));
+            Assert.That(history.ClockDomain, Is.EqualTo("unity_realtime"));
+            Assert.That(history.SourceSessionId, Is.EqualTo(EmbodiedNPC.Memory.ClientSessionIdentity.Current));
+            Assert.That(history.OccurredAt, Is.LessThanOrEqualTo(Time.realtimeSinceStartupAsDouble));
             Assert.That(request.context.current_event.event_type, Is.EqualTo("player.emote"));
             Assert.That(transports[expected.EntityId].Reply(new CognitiveResponse {
                 message_type = "cognitive_response", schema_version = "1.0", request_id = request.request_id,
@@ -179,5 +189,56 @@ namespace CafeDemo.Tests
                 emote.Cancel(); yield return Wait(.15f);
             }
         }
+        [UnityTest] public IEnumerator T5_RapidEmotes_KeepClockOwnershipAndOnePresentedHistoryPerReply()
+        {
+            var shown = new List<PresentedCognitiveUtterance>();
+            var drafts = new List<EmbodiedNPC.Memory.ExperienceDraft>();
+            var registry = Object.FindAnyObjectByType<EntityRegistry>();
+            foreach (var bridge in observers)
+            {
+                var history = new EmbodiedNPC.Memory.DialogueExperienceAdapter(drafts.Add, registry);
+                bridge.Observer.GetComponent<CognitiveRunDriver>().UtterancePresented += shown.Add;
+                bridge.Observer.GetComponent<CognitiveRunDriver>().UtterancePresented += history.Handle;
+            }
+            player.transform.rotation = Quaternion.LookRotation(Vector3.forward);
+            foreach (string id in new[] { "wave", "cheer", "proud" })
+            {
+                // Deliberately keep earlier requests pending while the next visual action starts.
+                yield return Perform(id);
+                emote.Cancel(); yield return Wait(.05f);
+            }
+            Assert.That(starts.Select(s => s.EmoteId), Is.EqualTo(new[] { "wave", "cheer", "flex" }));
+            Assert.That(starts[0].ResponderEntityId, Is.EqualTo(merchant.EntityId));
+            Assert.That(starts[1].ResponderEntityId, Is.EqualTo(customer.EntityId));
+            Assert.That(starts[2].ResponderEntityId, Is.Empty, "Both visible NPCs already own a Run.");
+            var requests = transports.Values.SelectMany(t => t.Requests).ToArray();
+            Assert.That(requests.Length, Is.EqualTo(2));
+            foreach (var request in requests)
+            {
+                Assert.That(request.context.current_event.occurred_at, Is.LessThanOrEqualTo(request.context.runtime_state.captured_at));
+                Assert.That(request.context.current_event.event_id,
+                    Does.EndWith(":" + request.run.agent_entity_id));
+                var reply = new CognitiveResponse { message_type = "cognitive_response", schema_version = request.schema_version,
+                    request_id = request.request_id, trace_id = request.trace_id, run_id = request.run.run_id,
+                    agent_entity_id = request.run.agent_entity_id,
+                    decision = new CognitiveDecision { decision_kind = CognitiveDecisionKinds.DirectResponse,
+                        utterance = "快速动作回礼 " + request.run.agent_entity_id } };
+                Assert.That(transports[request.run.agent_entity_id].Reply(reply), Is.True);
+                Assert.That(transports[request.run.agent_entity_id].Reply(reply), Is.True);
+            }
+            Assert.That(shown.Count, Is.EqualTo(2));
+            Assert.That(shown.Select(s => s.RequestId).Distinct().Count(), Is.EqualTo(2));
+            Assert.That(drafts.Count, Is.EqualTo(2));
+            Assert.That(drafts.All(d => d.IsValid && d.EventType == "social_response" && d.ClockDomain == "unity_realtime"), Is.True);
+            Assert.That(drafts.Select(d => d.SourceEventId).Distinct().Count(), Is.EqualTo(2));
+            foreach (var reply in shown)
+            {
+                Assert.That(reply.SourceEventId, Does.EndWith(":" + reply.OwnerAgentEntityId));
+                Assert.That(Object.FindAnyObjectByType<DialogueBubbleManager>().GetMessages(reply.OwnerAgentEntityId)
+                    .Count(m => m.Text == reply.Utterance), Is.EqualTo(1));
+            }
+            Assert.That(observers.All(b => !b.Observer.GetComponent<AgentOrchestrator>().HasActiveRun), Is.True);
+        }
+
     }
 }

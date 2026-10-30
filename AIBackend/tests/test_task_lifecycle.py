@@ -3,6 +3,7 @@ import asyncio
 import sqlite3
 import unittest
 from unittest.mock import patch
+from app.drink_types import DRINK_TYPE_IDS
 from app.contracts import CognitiveRequest, CognitiveResponse, TaskRuntimeSyncRequest
 from app.cognitive_tasks import CognitiveTasks
 from app.task_models import TaskCreate, TaskError, ExecutionRequest
@@ -52,7 +53,7 @@ class TaskLifecycleTests(unittest.IsolatedAsyncioTestCase):
         req=self.counter()
         result,provider=await self.run_scripts(req,[dict(decision_kind='NO_ACTION')])
         self.assertIsNone(result.task_receipt);self.assertEqual(self.service.query_tasks(self.scope).tasks,())
-        for drink in ('latte','cappuccino','americano'): self.seed(drink=drink,trigger='when_idle')
+        for drink in DRINK_TYPE_IDS[:3]: self.seed(drink=drink,trigger='when_idle')
         intent=dict(op='create_task',source='self',goal=dict(kind='clean_assigned_counter',counter_key='assigned_counter'),trigger_kind='when_idle')
         result,provider=await self.run_scripts(req,[dict(decision_kind='NO_ACTION',task_operation=intent)])
         self.assertTrue(result.task_receipt.committed);self.assertEqual(result.decision.decision_kind,'NO_ACTION')

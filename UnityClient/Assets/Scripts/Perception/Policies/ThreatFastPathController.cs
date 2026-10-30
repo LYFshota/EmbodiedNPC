@@ -100,7 +100,7 @@ namespace EmbodiedNPC.Perception
                                    goalPlanRunner.InterruptCurrentPlan("INTERRUPTED_BY_THREAT");
             if (!planInterrupted) safetyController?.RecoverToSafeState();
             dialogueController?.CancelForEmergency();
-            backendClient?.ClearPendingRequests();
+            GetComponent<EmbodiedNPC.Cognition.CognitiveRunDriver>()?.CancelPendingDialogueRequest("threat_response");
             motionChannels?.BeginEmergencyMotion();
 
             Vector3 sourceDirection = ApproximateDirectionToWorld(decision.ApproximateDirection, transform);

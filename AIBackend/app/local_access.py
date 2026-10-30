@@ -39,7 +39,7 @@ SENSITIVE_ROUTES = frozenset({
     ("GET", "/v1/embedding-index/status"), ("POST", "/v1/embedding-index/control"),
     ("PUT", "/v1/settings"), ("PUT", "/v1/context-policy"),
     ("POST", "/v1/context-budget/recheck"), ("GET", "/v1/dialogue-history"),
-    ("POST", "/v1/task-failure-response"),
+    ("GET", "/v1/experience-export"),
 })
 
 

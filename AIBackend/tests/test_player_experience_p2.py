@@ -13,6 +13,7 @@ from app.embedding_index_control import EmbeddingControl, ManagedEmbeddingIndexe
 from app.model_requests import CognitiveModelRequestFactory, trusted_local_time
 from tests import test_memory_d1a_retrieval as fixtures
 from tests.test_world_knowledge import official_merchant_request
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 class PlayerExperienceP2Tests(unittest.IsolatedAsyncioTestCase):
@@ -58,8 +59,8 @@ class PlayerExperienceP2Tests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("UTC-05:30", trusted_local_time(before.astimezone(timezone(-timedelta(hours=5, minutes=30)))))
         request = official_merchant_request("现在几点？")
         with patch("app.model_requests.trusted_local_time", side_effect=[first, second]):
-            a = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384)
-            b = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384)
+            a = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
+            b = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         self.assertIn(first, a.messages[0].content); self.assertIn(second, b.messages[0].content)
         self.assertIn("Questions and binary choices are optional", a.messages[0].content)
         self.assertIn("does not establish cafe opening hours", first)

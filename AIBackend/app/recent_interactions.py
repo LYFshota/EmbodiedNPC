@@ -1,9 +1,10 @@
-"""Bounded read-only emote evidence projection over the existing ExperienceLedger."""
+"""Bounded read-only social and execution evidence over the existing ExperienceLedger."""
 import json
 from contextlib import closing
 
 from .memory_consolidation_context import correlated_social_pair
 from .experience_models import is_heard_speech
+from .recent_action_results import RecentInteractionGroups, read_action_results
 
 
 def _identities(event):
@@ -34,6 +35,7 @@ def read_recent_interactions(ledger, observer, conversation, request_id, event_i
             "AND (json_extract(payload_json, '$.actor_entity_id')=? OR json_extract(payload_json, '$.structured_payload.known_fields.target_entity_id')=?))) "
             "ORDER BY experience_seq DESC LIMIT 16",
             (observer, boundary.source_session_id, boundary.clock_domain, boundary.experience_seq, player, player, player)).fetchall()
+        actions, action_scope = read_action_results(ledger, connection, boundary, identities)
     result, seen, used = [], set(), 0
     for row in rows:
         action = ledger._row_to_event(row)
@@ -66,8 +68,8 @@ def read_recent_interactions(ledger, observer, conversation, request_id, event_i
                 occurrence_id=fields['occurrence_id'], event_id=action.event_id, trace_id=action.trace_id,
                 request_id=fields.get('request_id'), run_id=fields.get('run_id'), occurred_at=action.occurred_at,
                 model_content_is_not_world_truth=True,
-                history_description=(f'历史旁听：你（{observer}）此前实际听到{speaker_label}{addressed}说：'
-                    f'「{fields["text"]}」。{identity_note}这不是对你说的话；只证明当时说过这些话。'))
+                history_description=(f'历史旁听：你（{observer}）此前实际听到{speaker_label}{addressed}说了text字段中的内容。'
+                    f'{identity_note}这不是对你说的话；只证明当时说过这些话。'))
             group = [item]
             size = len(json.dumps(group, ensure_ascii=False, separators=(',', ':')))
             if used + size <= 2400:
@@ -107,4 +109,5 @@ def read_recent_interactions(ledger, observer, conversation, request_id, event_i
         result.append(group); seen.add(action.source_event_id); used += size
         if len(result) == 4:
             break
-    return sorted(result, key=lambda group: group[0]['seq'])
+    return RecentInteractionGroups(sorted(result + actions, key=lambda group: group[0]['seq']),
+                                   action_scope=action_scope)

@@ -41,7 +41,7 @@ namespace EmbodiedNPC.Settings
         private static readonly HashSet<string> Stages = new((
             "starting listening launching_player running stopped failed player_identity_pending " +
             "cognitive_request_created cognitive_response cognitive_run_started cognitive_run_terminal " +
-            "connection_status experience_append_settled transport_failure task_failure_response " +
+            "connection_status experience_append_settled transport_failure " +
             "publish_player read_previous_record cleanup_player startup Ready Unavailable Checking " +
             "Unconfigured PendingApplication Connecting Loading"
         ).Split(' '), StringComparer.Ordinal);

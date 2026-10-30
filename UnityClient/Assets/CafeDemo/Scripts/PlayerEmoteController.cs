@@ -29,6 +29,16 @@ namespace CafeDemo
         private string emptyState = EmptyState;
         private DialogueParticipant emoteFocus;
         private readonly RaycastHit[] socialHits = new RaycastHit[8];
+        public Animator Animator => animator;
+        public bool CanBindAnimator(Animator candidate) => !IsActive && candidate != null && candidate.isInitialized &&
+            candidate.GetLayerIndex(WaveLayerName) >= 0 &&
+            candidate.HasState(candidate.GetLayerIndex(WaveLayerName), Animator.StringToHash(WaveLayerName + ".Wave")) &&
+            candidate.HasState(candidate.GetLayerIndex(WaveLayerName), Animator.StringToHash(WaveLayerName + ".Empty"));
+        public void RebindAnimator(Animator candidate)
+        {
+            ResetWave(); animator = candidate; layer = animator == null ? -1 : animator.GetLayerIndex(LayerName);
+            activeState = WaveState; emptyState = EmptyState;
+        }
         public bool IsActive { get; private set; }
         public bool MenuHandlesInput { get; set; }
         public string ActiveEmote => IsActive ? activeEmote : string.Empty;

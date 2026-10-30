@@ -19,6 +19,7 @@ from app.providers import ModelResult
 from app.sqlite_database import SQLiteDatabase
 from tests.test_cognitive_request import _event_request
 from tests.test_cognitive_websocket import SocketHarness
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def cognitive(turn: int, text: str, *, agent: str = "npc_cafe_01",
@@ -151,7 +152,7 @@ class OnlineRecentDialogueOrderingTests(unittest.IsolatedAsyncioTestCase):
         self.tracing_ledger = TracingLedger(self.ledger, self.database)
         self.provider = CapturingProvider()
         self.entry = CognitiveBackendEntry(self.provider, PrioritizedModelExecutor(),
-                                           experience_ledger=self.tracing_ledger, context_length=16384)
+                                           experience_ledger=self.tracing_ledger, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         self.patches = [
             patch.object(m3_main, "cognitive_entry", self.entry),
             patch.object(m3_main, "experience_ingestion_service",

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .contracts import EntityId
+from .contracts import CognitiveActionBindingCapability, EntityId
 
 
 ActionId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
@@ -79,6 +80,22 @@ class ActionRegistration:
     """Minimal internal registration; execution stays on the existing lifecycle in Phase B."""
 
     descriptor: ActionDescriptor
+    # Developer-owned semantic guidance, not a wire contract or capability grant.
+    model_usage: str = ""
+
+
+def binding_contract_signature(
+    bindings: Iterable[ActionBindingDescriptor | CognitiveActionBindingCapability],
+) -> dict[str, tuple[str, bool, tuple[str, ...]]]:
+    """The existing Cognition validator's exact, order-independent binding comparison.
+
+    Enum order remains significant, as before. Do not use descriptions or model
+    guidance to repair a mismatched runtime contract.
+    """
+    return {
+        binding.name: (binding.kind, binding.required, tuple(binding.enum_values))
+        for binding in bindings
+    }
 
 
 class ExecutionAuthorization(BaseModel):

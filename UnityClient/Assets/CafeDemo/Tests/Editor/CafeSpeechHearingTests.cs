@@ -69,7 +69,8 @@ namespace CafeDemo.Tests
         }
         private void Submit(string text) => Assert.That(Object.FindAnyObjectByType<TextUtteranceInput>().SubmitText(text), Is.True);
         private void Reply(CognitiveRequest request, string text) => Assert.That(fake.Reply(new CognitiveResponse {
-            message_type="cognitive_response", schema_version="1.0", request_id=request.request_id,
+            message_type="cognitive_response", schema_version=request.schema_version, request_id=request.request_id,
+            task_result=request.schema_version == "1.1" ? "none" : null,
             trace_id=request.trace_id, run_id=request.run.run_id, agent_entity_id=request.run.agent_entity_id,
             decision=new CognitiveDecision { decision_kind=text == null ? CognitiveDecisionKinds.NoAction : CognitiveDecisionKinds.DirectResponse, utterance=text }
         }), Is.True);

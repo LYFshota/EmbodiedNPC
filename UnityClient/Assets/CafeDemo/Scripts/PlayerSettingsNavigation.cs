@@ -9,7 +9,7 @@ using UnityEngine.UI;
 namespace CafeDemo
 {
     /// <summary>Shared presentation for both scene hosts. Existing forms retain all service ownership.</summary>
-    public sealed class PlayerSettingsNavigation : IDisposable
+    public sealed partial class PlayerSettingsNavigation : IDisposable
     {
         private readonly Transform window;
         private readonly FirstRunModelSetup form;
@@ -103,7 +103,9 @@ namespace CafeDemo
             labels.RemoveAll(x=>x.text==exportState);
             ActionButton(actions.transform,"ExportDiagnostics","导出诊断日志","Export diagnostic logs",()=>exportState.text=DiagnosticsExport.TryExport());
             ActionButton(actions.transform,"OpenDiagnosticsFolder","打开导出目录","Open export folder",()=>exportState.text=DiagnosticsExport.TryOpenFolder());
+            BuildExperienceExport(generalContent.transform, exportState);
             BuildDisplay();
+            BuildAppearance();
             Heading(audio.transform, "音频", "Audio");
             BuildAudio(audio.transform, music);
             var dailyStack = daily.AddComponent<VerticalLayoutGroup>();
@@ -115,9 +117,13 @@ namespace CafeDemo
             ActionButton(ordinaryNav.transform, "DisplaySettingsNav", "画面", "Display", ShowDisplay);
             ActionButton(ordinaryNav.transform, "AudioSettingsNav", "音频", "Audio", ShowAudio);
             ActionButton(ordinaryNav.transform, "AiSettingsNav", "AI 配置", "AI configuration", () => ShowAi(false));
-            if (showNpc != null || showKnowledge != null) NavigationHeading(ordinaryNav.transform,"内容自定义","Customize content");
+            NavigationHeading(ordinaryNav.transform,"内容自定义","Customize content");
             if (showNpc != null) ActionButton(ordinaryNav.transform,"NpcCharacterSettingsNav","NPC 人设","NPC persona",()=>Navigate(showNpc,"NpcCharacterSettingsNav",false));
+            ActionButton(ordinaryNav.transform, "AppearanceSettingsNav", "玩家设定", "Player settings", ShowAppearance);
             if (showKnowledge != null) ActionButton(ordinaryNav.transform,"WorldKnowledgeSettingsNav","世界知识","World knowledge",()=>Navigate(showKnowledge,"WorldKnowledgeSettingsNav",false));
+            // Seven ordinary entries still fit the existing 720p sidebar without overlapping its footer.
+            ordinaryNav.GetComponent<VerticalLayoutGroup>().spacing = 8;
+            foreach (var button in ordinaryNav.GetComponentsInChildren<Button>()) Height(button.gameObject, 48);
             developerNav = NavigationColumn("DeveloperToolsNavigation");
             NavigationHeading(developerNav.transform,"开发者工具","Developer tools");
             for (int i = 0; i < developerActions.Length; i++)
@@ -149,7 +155,7 @@ namespace CafeDemo
         }
         private readonly Button backButton;
         private static void ChangeLanguage(int value) => SettingsUiLanguage.SetEnglish(value == 1);
-        public void Dispose() { SettingsUiLanguage.Changed -= RefreshLanguage; NpcReplyLanguageSettings.Changed -= RefreshLanguage; }
+        public void Dispose() { SettingsUiLanguage.Changed -= RefreshLanguage; NpcReplyLanguageSettings.Changed -= RefreshLanguage; DisposeExperienceExport(); }
 
         public void RefreshLanguage()
         {
@@ -159,6 +165,8 @@ namespace CafeDemo
                 SettingsUiLanguage.T("跟随界面语言", "Follow interface"), SettingsUiLanguage.T("中文优先", "Chinese preferred"), SettingsUiLanguage.T("English 优先", "English preferred") });
             npcReplyLanguage.SetValueWithoutNotify((int)NpcReplyLanguageSettings.Preference); npcReplyLanguage.RefreshShownValue();
             help.text = SettingsOperationHelp.Text;
+            RefreshAppearance();
+            RefreshPlayerNameStatus();
             var header = window.Find("Header")?.GetComponent<TMP_Text>();
             if (header != null) header.text = SettingsUiLanguage.T(IsDeveloper ? "EmbodiedNPC · 开发者工具" : "EmbodiedNPC · 设置", IsDeveloper ? "EmbodiedNPC · Developer tools" : "EmbodiedNPC · Settings");
             var heading = window.Find("SettingsHeading")?.GetComponent<TMP_Text>();
@@ -172,7 +180,7 @@ namespace CafeDemo
                 SettingsPanelTheme.Surface(pair.Value.targetGraphic as Image,pair.Key==SelectedNavigation ? SettingsPanelTheme.Accent : SettingsPanelTheme.Row);
             if (debugSubNavigation != null) debugSubNavigation.SetActive(IsDeveloper && developerSelection=="DeveloperTool1");
         }
-        private void HideNewPages() { general.SetActive(false); display.SetActive(false); audio.SetActive(false); daily.SetActive(false); }
+        private void HideNewPages() { general.SetActive(false); display.SetActive(false); audio.SetActive(false); daily.SetActive(false); appearance.SetActive(false); }
         private void HideAll()
         {
             HideNewPages();
@@ -240,6 +248,7 @@ namespace CafeDemo
         }
         public bool ConsumeBack()
         {
+            if (experienceConfirmation != null && experienceConfirmation.activeSelf) { experienceConfirmation.SetActive(false); return true; }
             foreach (var dropdown in window.GetComponentsInChildren<TMP_Dropdown>())
                 if (dropdown.IsExpanded) { dropdown.Hide(); return true; }
             if (form.BlocksSettingsNavigation) return true;

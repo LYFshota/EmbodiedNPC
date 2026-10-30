@@ -143,7 +143,19 @@ namespace EmbodiedNPC.Cognition
                     ? agentEntity.GetComponent<EmbodiedNPC.Routines.CounterCleaningCognitionSource>()?.Capture(run)
                     : agentEntity.GetComponent<EmbodiedNPC.Actions.CounterCleaningCapability>()?.Capture(),
                 capabilities = actionCapabilities == null ? null : capabilityManifest,
+                runtime_state = GetComponent<EmbodiedNPC.Planning.GoalPlanRunner>() is { } runner
+                    ? runner.CaptureExecutionState(player?.player_entity_id)
+                    : CognitiveExecutionState.Unknown(agentEntity.EntityId, player?.player_entity_id,
+                        EmbodiedNPC.Planning.GoalPlanRunner.SceneInstance(this), currentEvent?.WorldRevision ?? 0),
             };
+            if (playerIdentity?.CurrentIdentity != null)
+            {
+                string profileEntityId = playerIdentity.GetComponent<WorldEntity>()?.EntityId;
+                foreach (var perceived in context.perception.entities)
+                    if (perceived.kind == "player" && perceived.entity_id == profileEntityId)
+                        perceived.display_name = playerIdentity.CurrentIdentity.DisplayName;
+            }
+
             request = new CognitiveRequest
             {
                 request_id = $"cognitive-request-{Guid.NewGuid():N}",
@@ -250,6 +262,15 @@ namespace EmbodiedNPC.Cognition
             if (request.context.current_event?.event_type == AgentEventTypes.DialogueContinue)
                 ContinuationScheduler?.RegisterRequest(request);
             CognitiveRequestCreated?.Invoke(request);
+        }
+
+        internal bool PublishOutcomeRequest(CognitiveRequest request)
+        {
+            if (!isActiveAndEnabled || request?.action_feedback == null || !request.IsValid ||
+                orchestrator?.CurrentRun?.RunId != request.run.run_id) return false;
+            LastRequest = request;
+            CognitiveRequestCreated?.Invoke(request);
+            return true;
         }
 
         public bool HasCurrentSceneFacts(CognitiveRequest request)

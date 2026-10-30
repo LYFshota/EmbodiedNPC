@@ -22,7 +22,8 @@ class KnowledgeModel(BaseModel):
 
 
 class KnowledgeAccess(KnowledgeModel):
-    character_ids: tuple[str, ...] = Field(min_length=1, max_length=32)
+    mode: Literal["public", "restricted"] = "restricted"
+    character_ids: tuple[str, ...] = Field(default=(), max_length=32)
     deployment_ids: tuple[str, ...] = Field(min_length=1, max_length=16)
     scene_ids: tuple[str, ...] = Field(default=(), max_length=16)
 
@@ -32,6 +33,14 @@ class KnowledgeAccess(KnowledgeModel):
         if len(set(values)) != len(values) or any(not v.strip() or len(v) > 120 for v in values):
             raise ValueError("KNOWLEDGE_SCOPE_INVALID")
         return values
+
+    @model_validator(mode="after")
+    def explicit_character_scope(self):
+        if self.mode == "restricted" and not self.character_ids:
+            raise ValueError("KNOWLEDGE_RESTRICTED_CHARACTERS_REQUIRED")
+        if self.mode == "public" and self.character_ids:
+            raise ValueError("KNOWLEDGE_PUBLIC_CHARACTERS_MUST_BE_EMPTY")
+        return self
 
 
 class KnowledgeEntry(KnowledgeModel):
@@ -46,6 +55,7 @@ class KnowledgeEntry(KnowledgeModel):
     version: int = Field(default=1, ge=1, strict=True)
     updated_at: datetime
     access: KnowledgeAccess
+    usage: Literal["constant", "retrieval"] = "retrieval"
 
     @field_validator("name", "content", "knowledge_type", "source")
     @classmethod
@@ -79,7 +89,7 @@ class KnowledgeEntry(KnowledgeModel):
 class KnowledgeBundle(KnowledgeModel):
     schema_version: Literal[1] = 1
     bundle_version: str = Field(min_length=1, max_length=80)
-    entries: tuple[KnowledgeEntry, ...] = Field(max_length=128)
+    entries: tuple[KnowledgeEntry, ...]
 
     @model_validator(mode="after")
     def unique_ids(self):
@@ -148,10 +158,12 @@ class KnowledgeQuery(KnowledgeModel):
 
 
 class KnowledgeContext(KnowledgeModel):
-    status: Literal["OK", "NO_MATCH", "UNAUTHORIZED", "UNAVAILABLE", "BUDGET_EXHAUSTED"]
+    status: Literal["OK", "NO_MATCH", "UNAUTHORIZED", "UNAVAILABLE", "BUDGET_EXHAUSTED", "SNAPSHOT_CHANGED"]
     bundle_version: str | None = None
     revision: int | None = None
+    supplement_status: Literal["OK", "NO_MATCH", "UNAUTHORIZED", "UNAVAILABLE", "BUDGET_EXHAUSTED", "SNAPSHOT_CHANGED"] | None = None
     items: tuple[dict[str, JsonValue], ...] = ()
+    constant_items: tuple[dict[str, JsonValue], ...] = ()
     truncated: bool = False
     developer_defined: Literal[True] = True
     not_personal_memory: Literal[True] = True
@@ -164,7 +176,7 @@ class KnowledgeContext(KnowledgeModel):
 
 def permitted(entry: KnowledgeEntry, principal: KnowledgePrincipal) -> bool:
     access = entry.access
-    return (principal.character_id in access.character_ids
+    return ((access.mode == "public" or principal.character_id in access.character_ids)
             and principal.deployment_id in access.deployment_ids
             and (not access.scene_ids or principal.scene_id in access.scene_ids))
 
@@ -187,6 +199,18 @@ def text_score(entry: KnowledgeEntry, text: str) -> int:
     return score
 
 
+def knowledge_item(entry: KnowledgeEntry, allowed_ids: set[str]) -> dict:
+    item = entry.model_dump(mode="json", exclude={"access", "keywords"})
+    item["related_ids"] = [ref for ref in entry.related_ids if ref in allowed_ids]
+    return item
+
+
+def constant_knowledge(entries, principal) -> tuple[dict, ...]:
+    allowed = tuple(e for e in entries if permitted(e, principal))
+    allowed_ids = {e.knowledge_id for e in allowed}
+    return tuple(knowledge_item(e, allowed_ids) for e in allowed if e.usage == "constant")
+
+
 def retrieve_knowledge(entries: tuple[KnowledgeEntry, ...], principal: KnowledgePrincipal,
                        query: KnowledgeQuery, *, bundle_version: str, revision: int,
                        ranker=None, defer_budget: bool = False) -> KnowledgeContext:
@@ -195,6 +219,8 @@ def retrieve_knowledge(entries: tuple[KnowledgeEntry, ...], principal: Knowledge
     allowed_ids = {e.knowledge_id for e in allowed}
     eligible = []
     for entry in allowed:
+        if entry.usage != "retrieval":
+            continue
         if query.knowledge_ids and entry.knowledge_id not in query.knowledge_ids:
             continue
         if query.knowledge_type and entry.knowledge_type != query.knowledge_type:
@@ -213,8 +239,7 @@ def retrieve_knowledge(entries: tuple[KnowledgeEntry, ...], principal: Knowledge
     estimator = ContextTokenEstimator()
     budget_excluded = False
     for entry in ranked:
-        item = entry.model_dump(mode="json", exclude={"access", "keywords"})
-        item["related_ids"] = [ref for ref in entry.related_ids if ref in allowed_ids]
+        item = knowledge_item(entry, allowed_ids)
         trial = result.model_copy(update={"status": "OK", "items": (*result.items, item)})
         if defer_budget or estimator.estimate_text(trial.serialized()) <= query.token_budget:
             result = trial

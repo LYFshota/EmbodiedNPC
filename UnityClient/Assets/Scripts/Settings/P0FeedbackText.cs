@@ -29,6 +29,12 @@ namespace EmbodiedNPC.Settings
             "COGNITIVE_INPUT_NOT_PERSISTED" => ("本次输入保存未确认，对话未能完成。", "Input storage was not confirmed. This dialogue could not complete."),
             "COGNITIVE_RESPONSE_INVALID" or "COGNITIVE_RESPONSE_MALFORMED" =>
                 ("模型回复格式无效，本次对话未能完成。", "The model reply format was invalid. This dialogue could not complete."),
+            "PRESENTATION_UNAVAILABLE" => ("回复已收到，但对话显示组件暂不可用。", "Reply received, but dialogue presentation is unavailable."),
+            "DIALOGUE_PRESENTATION_HIDDEN" => ("对话界面已关闭，本次回复未展示。", "Dialogue was closed; this reply was not shown."),
+            "DIALOGUE_SCOPE_CHANGED" or "DIALOGUE_SESSION_ENDED" =>
+                ("原对话已结束或切换，本次回复未展示。", "The original dialogue ended or changed; this reply was not shown."),
+            "WORLD_SPEAKER_UNAVAILABLE" or "WORLD_SPEECH_OWNER_CHANGED" or "WORLD_SPEECH_SCENE_CHANGED" =>
+                ("原发言对象或场景已失效，本次回复未发出。", "The original speaker or world scene is no longer valid; this reply was not spoken."),
             "cancelled" => ("此请求已取消；保存状态另行确认。", "This request was cancelled; storage is confirmed separately."),
             _ => ("本次对话未能完成，请检查模型设置或稍后重试。", "This dialogue could not complete. Check model settings or try again later."),
         };

@@ -140,7 +140,7 @@ namespace CafeDemo.Tests
             Assert.That(driver.TryConsumeResponse(ActionResponse(request, "cup_01")), Is.True);
             Assert.That(driver.LastValidatedGoalProposal?.type, Is.EqualTo("bring_object"));
             Assert.That(presenter.Attempts, Is.EqualTo(1));
-            Assert.That(run.State, Is.EqualTo(CognitiveRunState.WaitingActionResult));
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
             Assert.That(driver.HasPendingActionOutcome, Is.True);
             Assert.That(runner.HasActiveTask, Is.True);
             Assert.That(presentations, Is.Zero);

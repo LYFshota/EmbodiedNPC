@@ -14,6 +14,7 @@ from app.contracts import CognitiveRequest, CognitiveRecallIdentityContext, Cogn
 from app.memory_consolidation_context import TrustedPersistentIdentity
 from app.model_requests import CognitiveModelRequestFactory
 from app.recall_subjects import RecallSubjectCatalogBuilder, RecallSubjectCatalogError
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def identity(entity: str, kind: str, persistent: str | None, *, owner: str | None = None) -> dict:
@@ -109,6 +110,17 @@ class MemoryD0SubjectTests(unittest.TestCase):
         self.assertEqual(result.identity.persistent_id, "A.uid")
         self.assertNotEqual(result.identity, catalog.observer)
 
+    def test_absent_requester_never_selects_a_historical_subject(self) -> None:
+        self.add_known("n1.uid", "B.uid")
+        value = request()
+        value = value.model_copy(update={"recall_identity": value.recall_identity.model_copy(
+            update={"requester_entity_id": None})})
+        catalog = self.builder.build(value)
+        self.assertIsNone(catalog.requester_ref)
+        # The known subject stays in the observer's catalog; it is not the speaker.
+        historical = catalog.resolve_identity(TrustedPersistentIdentity("player", "Player", "B.uid"))
+        self.assertEqual(historical.status, "RESOLVED")
+
     def test_player_a_can_select_player_b_and_npc_n2_from_observer_context(self) -> None:
         catalog = self.builder.build(request(
             current=(identity("player_b", "player", "B.uid"),
@@ -171,7 +183,7 @@ class MemoryD0SubjectTests(unittest.TestCase):
         catalog = self.builder.build(value)
         rendered = json.dumps(catalog.model_visible_payload(), ensure_ascii=False)
         model_prompt = "\n".join(message.content for message in
-                                 CognitiveModelRequestFactory.create_event(value, knowledge_context_limit=16384).messages)
+                                 CognitiveModelRequestFactory.create_event(value, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH).messages)
         for secret in ("U10001", "merchant.secret", "persistent_id", "identity_namespace"):
             self.assertNotIn(secret, rendered)
             self.assertNotIn(secret, model_prompt)

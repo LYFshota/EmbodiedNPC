@@ -29,6 +29,7 @@ from app.sqlite_database import SQLiteDatabase
 from tests.test_cross_conversation_recent_dialogue import ScriptedProvider
 from tests.test_online_recent_dialogue_ordering import cognitive, experience
 from tests.test_cognitive_websocket import SocketHarness
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 class EmoteRecentEpisodeTests(unittest.IsolatedAsyncioTestCase):
@@ -81,8 +82,8 @@ class EmoteRecentEpisodeTests(unittest.IsolatedAsyncioTestCase):
         self.speech(prior, '普通文字的实际回复', response=True)
         self.ingest_capture()
         provider = ScriptedProvider()
-        provider.context_length = 16384
-        await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), experience_ledger=self.ledger, context_length=16384).run(
+        provider.context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
+        await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), experience_ledger=self.ledger, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(
             CognitiveRequest.model_validate(self.request))
         items = self.timeline(provider.requests[0])
         self.assertEqual([i['seq'] for i in items], sorted(i['seq'] for i in items))
@@ -118,9 +119,9 @@ class EmoteRecentEpisodeTests(unittest.IsolatedAsyncioTestCase):
                     {'type': 'output_text', 'text': '{"decision_kind":"NO_ACTION"}'}]}]})
         provider = DeepSeekOfficialResponsesProvider(base_url='https://api.deepseek.com',
             api_key='isolated-placeholder', model='offline', transport=httpx.MockTransport(capture_http))
-        provider.context_length = 16384
+        provider.context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
         entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(), experience_ledger=self.ledger,
-            context_length=16384, memory_recall=CognitiveMemoryRecall(
+            context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH, memory_recall=CognitiveMemoryRecall(
                 RecallSubjectCatalogBuilder(CanonicalMemoryRepository(self.database.connect)), None))
         socket = SocketHarness()
         with patch.object(m3_main, 'cognitive_entry', entry), patch.object(
@@ -160,8 +161,8 @@ class EmoteRecentEpisodeTests(unittest.IsolatedAsyncioTestCase):
             request = self.npc_request(npc)
             self.speech(request, '我刚才做了什么动作？')
             provider = ScriptedProvider()
-            provider.context_length = 16384
-            await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), experience_ledger=self.ledger, context_length=16384).run(
+            provider.context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
+            await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), experience_ledger=self.ledger, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(
                 CognitiveRequest.model_validate(request))
             prompt = provider.requests[0].messages[-1].content
             self.assertNotIn(self.evidence['actually_presented'], prompt)

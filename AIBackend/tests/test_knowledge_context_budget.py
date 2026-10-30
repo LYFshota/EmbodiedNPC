@@ -46,7 +46,7 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         missing = retrieve_knowledge((entry,), self.knowledge.principal,
             KnowledgeQuery(knowledge_ids=("missing.exact",)), **kwargs)
         denied = retrieve_knowledge((entry,), KnowledgePrincipal(character_id="unauthorized",
-            deployment_id=self.knowledge.principal.deployment_id), query, **kwargs)
+            deployment_id="other-deployment"), query, **kwargs)
         self.assertEqual(missing, denied)
         self.assertEqual(denied.status, "NO_MATCH")
         self.assertNotIn(entry.knowledge_id, denied.serialized())
@@ -71,7 +71,7 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         catalog = recall_entry._memory_recall.prepare(memory_fixtures.cognitive_request())
         recalled = recall_entry._memory_recall.recall(catalog,
             MemoryRecallPlan(semantic_query="颜色", subject_ref=catalog.requester_ref))
-        options = dict(subject_catalog=catalog.model_visible_payload(), recall_outcome=recalled)
+        options = dict(subject_catalog=catalog.model_visible_payload(), recall_outcome=recalled, cognition_phase=1 if recalled else 0)
         memory_only = CognitiveModelRequestFactory.create_event(request, knowledge_context=limited,
             knowledge_context_limit=16384, **options)
         memory_capacity = self.capacity_for_input(ContextTokenEstimator().estimate_text(memory_only.model_dump_json()) + 20)
@@ -163,7 +163,7 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         saw_optional_omission = False
         for recalled, known in ((outcome, None), (None, knowledge), (outcome, knowledge)):
             model = CognitiveModelRequestFactory.create_event(request, subject_catalog=catalog.model_visible_payload(),
-                recall_outcome=recalled, knowledge_context=known, relationship_context=social,
+                cognition_phase=1, recall_outcome=recalled, knowledge_context=known, relationship_context=social,
                 recent_dialogue=recent, knowledge_context_limit=16384)
             text = model.messages[-1].content
             line = next(v for v in text.splitlines() if v.startswith("Relationship context JSON: "))
@@ -184,11 +184,19 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         from unittest.mock import Mock
         entry._relationship_context_resolver = Mock(resolve=Mock(return_value=social))
         fixture.rows.calls.clear()
+        def dual_read(model):
+            memory_step = memory_fixtures.recall(model)
+            return dict(decision_kind="CONTEXT_READ", knowledge_plan=dict(semantic_query="coffee.latte"),
+                        memory_plan=memory_step["recall_plan"])
+        fixture.provider.scripts[0] = dual_read
         asyncio.run(entry.run(request))
         self.assertEqual(len(fixture.rows.calls), 1)
         self.assertEqual(len(fixture.provider.requests), 2)
-        for model in fixture.provider.requests:
-            self.assertEqual(self.knowledge_payload(model)["items"][0]["content"], content)
+        for index, model in enumerate(fixture.provider.requests):
+            if index == 0:
+                self.assertEqual(self.knowledge_payload(model)["items"], [])
+            else:
+                self.assertEqual(self.knowledge_payload(model)["items"][0]["content"], content)
             line = next(v for v in model.messages[-1].content.splitlines() if v.startswith("Relationship context JSON: "))
             relationship = json.loads(line.split(": ", 1)[1])
             self.assertIn(relationship["interpretations"], [list(social.interpretations), []])
@@ -209,7 +217,7 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
                   {"speaker": "player", "text": "不相关旧话题" * 1500}, {"speaker": "npc", "text": "旧回复" * 1500}]
         for recalled in (None, outcome):
             model = CognitiveModelRequestFactory.create_event(request, subject_catalog=catalog.model_visible_payload(),
-                recall_outcome=recalled, relationship_context=social, recent_dialogue=recent, knowledge_context=knowledge, knowledge_context_limit=16384)
+                cognition_phase=1 if recalled else 0, recall_outcome=recalled, relationship_context=social, recent_dialogue=recent, knowledge_context=knowledge, knowledge_context_limit=16384)
             text = "\n".join(m.content for m in model.messages)
             self.assertLessEqual(ContextTokenEstimator().estimate_text(model.model_dump_json()), ContextBudgetPolicy.cognition(16384, 1024).input_hard_cap)
             self.assertEqual(CognitiveModelRequestFactory.context_from(model), request.context)
@@ -232,7 +240,7 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         outcome = entry._memory_recall.recall(catalog, MemoryRecallPlan(semantic_query="颜色", subject_ref=catalog.requester_ref))
         knowledge = self.knowledge.resolver.resolve(request)
         first = knowledge.model_copy(update={"items": knowledge.items[:1]})
-        kwargs = dict(subject_catalog=catalog.model_visible_payload(), recall_outcome=outcome)
+        kwargs = dict(subject_catalog=catalog.model_visible_payload(), recall_outcome=outcome, cognition_phase=1)
         compact = CognitiveModelRequestFactory.create_event(request, knowledge_context=first, knowledge_context_limit=16384, **kwargs)
         estimator = ContextTokenEstimator()
         limit = self.capacity_for_input(estimator.estimate_text(compact.model_dump_json()) + 5)
@@ -292,11 +300,16 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         entry = CognitiveBackendEntry(fixture.provider, fixture.executor)
         self.assertEqual(entry._context_length, 8192)
 
-    def test_missing_or_unauthorized_knowledge_does_not_fill_or_change_existing_request(self):
+    def test_missing_or_unauthorized_knowledge_preserves_explicit_source_status(self):
         request = knowledge_fixtures.official_merchant_request("没有定义的内容")
         original = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384)
         for status in ("NO_MATCH", "UNAUTHORIZED", "UNAVAILABLE"):
-            self.assertEqual(original, CognitiveModelRequestFactory.create_event(request, knowledge_context=KnowledgeContext(status=status), knowledge_context_limit=16384))
+            model = CognitiveModelRequestFactory.create_event(request,
+                knowledge_context=KnowledgeContext(status=status), knowledge_context_limit=16384)
+            data = self.knowledge_payload(model)
+            self.assertEqual(data["status"], status)
+            self.assertEqual(data["items"], [])
+            self.assertEqual(model.response_schema, original.response_schema)
 
     def test_tight_budget_keeps_a_complete_candidate_without_truncating_its_conditions(self):
         request = knowledge_fixtures.official_merchant_request("拿铁")
@@ -305,7 +318,9 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         large = {**original, "knowledge_id": "large.ref", "content": "完整的长条目。" * 50}
         small = {**original, "knowledge_id": "small.ref", "content": "桂花和薄荷；仅为静态配方，不证明库存或已完成。"}
         knowledge = knowledge.model_copy(update={"items": (large, small)})
-        self.assertLessEqual(ContextTokenEstimator().estimate_text(knowledge.serialized()), 1000)
+        # The local retrieval cap excludes constants; keep constants in all full-wire checks below.
+        retrieval_only = knowledge.model_copy(update={"constant_items": ()})
+        self.assertLessEqual(ContextTokenEstimator().estimate_text(retrieval_only.serialized()), 1000)
         small_only = CognitiveModelRequestFactory.create_event(request, knowledge_context=knowledge.model_copy(update={"items": (small,)}), knowledge_context_limit=16384)
         limit = self.capacity_for_input(ContextTokenEstimator().estimate_text(small_only.model_dump_json()) + 10)
         model = CognitiveModelRequestFactory.create_event(request, knowledge_context=knowledge, knowledge_context_limit=limit)
@@ -381,7 +396,7 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         outcome = outcome.model_copy(update={"evidence": evidence})
         request = knowledge_fixtures.official_merchant_request("愿意尝试的条件和卡布奇诺配方？")
         model = CognitiveModelRequestFactory.create_event(request, subject_catalog=catalog.model_visible_payload(),
-            recall_outcome=outcome, knowledge_context=self.knowledge.resolver.resolve(request), knowledge_context_limit=16384)
+            cognition_phase=1, recall_outcome=outcome, knowledge_context=self.knowledge.resolver.resolve(request), knowledge_context_limit=16384)
         line = next(v for v in model.messages[-1].content.splitlines() if v.startswith("HISTORICAL MEMORY EVIDENCE / RecallOutcome JSON: "))
         retained = RecallOutcome.model_validate_json(line.split(": ", 1)[1])
         # The old local 1800-token quota is gone; global capacity still applies.

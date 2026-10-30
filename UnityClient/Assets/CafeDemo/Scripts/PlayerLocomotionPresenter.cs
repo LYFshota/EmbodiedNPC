@@ -12,6 +12,8 @@ namespace CafeDemo
         [SerializeField, Min(0f)] private float dampingSeconds = .12f;
         private static readonly int Speed = Animator.StringToHash("Speed");
         private CafeDemoPlayerController player;
+        public Animator Animator => animator;
+        public void RebindAnimator(Animator character) { animator = character; NormalizedSpeed = 0f; }
         public float NormalizedSpeed { get; private set; }
         private void Awake() => player = GetComponent<CafeDemoPlayerController>();
 

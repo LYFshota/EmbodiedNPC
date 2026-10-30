@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
+import unicodedata
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator, model_serializer
 from .reply_language import ReplyLanguage, validate_utterance
 from .cognitive_task_models import TaskRuntimeContext, CognitiveTaskReceipt, TaskConsiderationContext, TaskExecutionTicket
 from .task_models import TaskCondition
 from .context_capacity import CapacityStatus
+from .drink_types import DrinkType
 
 
-Emotion = Literal["happy", "neutral", "fear"]
+Emotion = Literal["happy", "neutral", "fear", "curious", "thoughtful", "concerned", "surprised"]
+ExpressionIcon = Literal["none", "happy", "confused", "surprised", "thinking"]
 Gesture = Literal["none", "wave", "nod"]
 GoalType = Literal["bring_object", "move_to_entity", "open_door", "prepare_drink", "clean_counter"]
-DrinkType = Literal["latte", "cappuccino", "americano"]
 EntityId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
 CognitiveDecisionKind = Literal["DIRECT_RESPONSE", "NO_ACTION", "ACTION_PROPOSAL"]
 EpisodeDirective = Literal["CONTINUE", "END"]
@@ -29,10 +31,25 @@ class PerceivedEntity(BaseModel):
     entity_id: EntityId
     kind: EntityKind
     display_name: str = Field(max_length=80)
+    appearance_description: str | None = Field(default=None, min_length=1, max_length=160)
     aliases: tuple[str, ...] = Field(max_length=16)
     semantic_tags: tuple[str, ...] = Field(max_length=16)
     visibility: str = Field(max_length=40)
     capabilities: tuple[str, ...] = Field(max_length=16)
+
+    @field_validator("appearance_description")
+    @classmethod
+    def bounded_appearance_text(cls, value: str | None) -> str | None:
+        if value is not None:
+            if not value.strip() or any(c != "\n" and unicodedata.category(c) in ("Cc", "Cf", "Cs", "Zl", "Zp") for c in value):
+                raise ValueError("APPEARANCE_DESCRIPTION_INVALID")
+        return value
+
+    @model_validator(mode="after")
+    def appearance_requires_current_vision(self):
+        if self.appearance_description is not None and (self.kind != "player" or self.visibility != "current_visible"):
+            raise ValueError("APPEARANCE_REQUIRES_CURRENT_PLAYER_VISION")
+        return self
 
 
 class PerceptionSnapshot(BaseModel):
@@ -274,6 +291,65 @@ class CounterWorkContext(BaseModel):
     trace_id: str | None = Field(default=None, max_length=160)
 
 
+class CognitiveExecutionState(BaseModel):
+    """Bounded Unity snapshot; no commands, persistent identities or inferred progress."""
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    source: Literal["unity_execution_snapshot"]
+    actor_entity_id: EntityId
+    player_entity_id: EntityId | None = None
+    source_session_id: str = Field(min_length=1, max_length=160)
+    scene_instance_id: str | None = Field(default=None, min_length=1, max_length=160)
+    captured_at: float = Field(ge=0, allow_inf_nan=False)
+    world_revision: int = Field(ge=0)
+    status: Literal["UNKNOWN", "IN_PROGRESS", "SUCCEEDED", "FAILED", "CANCELLED"]
+    proposal_id: str | None = Field(default=None, min_length=1, max_length=160)
+    proposal_revision: int = Field(default=0, ge=0)
+    trace_id: str | None = Field(default=None, min_length=1, max_length=160)
+    action_id: EntityId | None = None
+    stage: Literal["accepted", "action", "rediscovering", "replanning", "terminal"] | None = None
+    step: str | None = Field(default=None, pattern=r"^[A-Za-z]{1,40}$")
+    drink_type: DrinkType | None = None
+    outcome_id: str | None = Field(default=None, min_length=1, max_length=240)
+    outcome_world_revision: int = Field(default=0, ge=0)
+    failure_code: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_]{1,120}$")
+    receipt_id: str | None = Field(default=None, min_length=1, max_length=160)
+    # Presence advertises the Unity control extension; old senders offer no control.
+    allowed_controls: list[Literal["cancel_active_goal"]] | None = Field(default=None, max_length=1)
+
+    @model_serializer(mode="wrap")
+    def omit_absent_controls(self, handler):
+        data = handler(self)
+        if self.allowed_controls is None:
+            data.pop("allowed_controls", None)
+        return data
+
+    @model_validator(mode="after")
+    def execution_evidence(self):
+        if self.allowed_controls and self.status != "IN_PROGRESS":
+            raise ValueError("EXECUTION_CONTROL_REQUIRES_ACTIVE_GOAL")
+        details = (self.proposal_id, self.trace_id, self.action_id, self.stage, self.step,
+                   self.drink_type, self.outcome_id, self.failure_code, self.receipt_id)
+        if self.status == "UNKNOWN":
+            if any(x is not None for x in details) or self.proposal_revision or self.outcome_world_revision:
+                raise ValueError("EXECUTION_UNKNOWN_WITH_DETAILS")
+            return self
+        if any(x is None for x in (self.player_entity_id, self.scene_instance_id,
+                                    self.proposal_id, self.trace_id, self.action_id, self.stage)):
+            raise ValueError("EXECUTION_CORRELATION_REQUIRED")
+        if self.status == "IN_PROGRESS":
+            if self.stage == "terminal" or self.outcome_id or self.receipt_id or self.failure_code or self.outcome_world_revision:
+                raise ValueError("EXECUTION_PROGRESS_IS_NOT_OUTCOME")
+        elif (self.stage != "terminal" or self.step is not None or self.outcome_id is None
+              or self.outcome_world_revision > self.world_revision):
+            raise ValueError("EXECUTION_TERMINAL_EVIDENCE_REQUIRED")
+        if self.status != "SUCCEEDED" and self.receipt_id is not None:
+            raise ValueError("EXECUTION_RECEIPT_REQUIRES_SUCCESS")
+        if self.status == "SUCCEEDED" and (self.failure_code or
+                self.action_id == "prepare_drink" and (not self.receipt_id or self.drink_type is None)):
+            raise ValueError("EXECUTION_DRINK_RECEIPT_REQUIRED")
+        return self
+
+
 class CognitiveContextSnapshot(BaseModel):
     """Minimal E5A cognition input; all partitions are engine-neutral and bounded."""
 
@@ -291,6 +367,15 @@ class CognitiveContextSnapshot(BaseModel):
     counter_work: CounterWorkContext | None = None
     scene_facts: SceneFacts | None = None
     capabilities: CognitiveCapabilityManifest | None = None
+    runtime_state: CognitiveExecutionState | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_absent_execution_state(self, handler):
+        # Legacy payload/budget parity: no empty partition or extra contract for old senders.
+        data = handler(self)
+        if self.runtime_state is None:
+            data.pop("runtime_state", None)
+        return data
 
     @model_validator(mode="after")
     def validate_context_correlation(self) -> "CognitiveContextSnapshot":
@@ -298,6 +383,14 @@ class CognitiveContextSnapshot(BaseModel):
             raise ValueError("COGNITIVE_TRIGGER_AGENT_MISMATCH")
         if self.perception.observer_entity_id != self.agent_entity_id:
             raise ValueError("COGNITIVE_PERCEPTION_OBSERVER_MISMATCH")
+        if self.runtime_state is not None:
+            if (self.runtime_state.actor_entity_id != self.agent_entity_id or
+                    self.runtime_state.player_entity_id != (self.relevant_player.player_entity_id if self.relevant_player else None)):
+                raise ValueError("EXECUTION_OBSERVER_PLAYER_MISMATCH")
+            if self.current_event is not None and (
+                    self.runtime_state.captured_at < self.current_event.occurred_at or
+                    self.current_event.has_world_revision and self.runtime_state.world_revision < self.current_event.world_revision):
+                raise ValueError("EXECUTION_SNAPSHOT_PRECEDES_INPUT")
         if self.current_event is not None and self.trigger.source_event_id != self.current_event.event_id:
             raise ValueError("COGNITIVE_SOURCE_EVENT_MISMATCH")
         if self.scene_facts is not None:
@@ -367,6 +460,39 @@ class CognitiveRecallIdentityContext(BaseModel):
         return self
 
 
+class CognitiveActionAlternative(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    alternative_id: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=120)
+    goal: GoalProposal
+
+
+class CognitiveActionFeedback(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    original_request_id: str = Field(min_length=1, max_length=160)
+    original_run_id: str = Field(min_length=1, max_length=160)
+    outcome_id: str = Field(min_length=1, max_length=240)
+    proposal_id: str = Field(min_length=1, max_length=120)
+    proposal_revision: int = Field(ge=0, lt=2)
+    trace_id: str = Field(min_length=1, max_length=160)
+    world_revision: int = Field(ge=0)
+    completed_actions: int = Field(ge=0)
+    failure_code: str = Field(min_length=1, max_length=80)
+    detail: str = Field(max_length=240)
+    failed_goal: GoalProposal
+    allowed_alternatives: tuple[CognitiveActionAlternative, ...] = Field(max_length=4)
+
+    @model_validator(mode="after")
+    def validate_alternatives(self):
+        ids = [a.alternative_id for a in self.allowed_alternatives]
+        if len(ids) != len(set(ids)):
+            raise ValueError("COGNITIVE_RECOVERY_ALTERNATIVES_INVALID")
+        if any(a.goal.type != self.failed_goal.type or a.goal.target_entity_id == self.failed_goal.target_entity_id or a.goal.destination_entity_id != self.failed_goal.destination_entity_id
+               for a in self.allowed_alternatives):
+            raise ValueError("COGNITIVE_RECOVERY_SCOPE_CHANGED")
+        return self
+
+
 class CognitiveRequest(BaseModel):
     """Event-capable cognition entry; world events do not require a fabricated utterance."""
 
@@ -381,6 +507,7 @@ class CognitiveRequest(BaseModel):
     context: CognitiveContextSnapshot
     recall_identity: CognitiveRecallIdentityContext | None = Field(default=None, exclude=True)
     reply_language: ReplyLanguage = "zh-CN"
+    action_feedback: CognitiveActionFeedback | None = Field(default=None, exclude=True)
     context_diagnostics_version: Literal[1] | None = Field(default=None, exclude=True)
     task_runtime: TaskRuntimeContext | None = Field(default=None, exclude=True)
     task_consideration: "TaskConsiderationContext | None" = Field(default=None, exclude=True)
@@ -411,6 +538,24 @@ class CognitiveRequest(BaseModel):
                 event is None or self.recall_identity.requester_entity_id != event.source_entity_id
             ):
                 raise ValueError("RECALL_REQUESTER_MISMATCH")
+        feedback = self.action_feedback
+        if feedback is not None:
+            event, state = self.context.current_event, self.context.runtime_state
+            if (self.schema_version != "1.0" or event is None or state is None or state.status != "FAILED" or
+                    event.event_type != "action.failed" or event.event_id != feedback.outcome_id or
+                    event.source_entity_id != self.run.agent_entity_id or event.target_entity_id != self.run.agent_entity_id or
+                    state.outcome_id != feedback.outcome_id or state.proposal_id != feedback.proposal_id or
+                    state.proposal_revision != feedback.proposal_revision or state.trace_id != feedback.trace_id or
+                    state.world_revision != feedback.world_revision or self.trace_id != feedback.trace_id):
+                raise ValueError("COGNITIVE_OUTCOME_CORRELATION_INVALID")
+        state = self.context.runtime_state
+        if state is not None and state.status != "UNKNOWN":
+            wire = self.recall_identity
+            player = next((p for p in wire.current_subjects if p.entity_id == state.player_entity_id and p.kind == "player"), None) if wire else None
+            if wire is None or not wire.observer.persistent_id or player is None or not player.persistent_id:
+                raise ValueError("EXECUTION_CURRENT_IDENTITIES_REQUIRED")
+            if self.task_runtime is not None and self.task_runtime.scene_instance_id != state.scene_instance_id:
+                raise ValueError("EXECUTION_SCENE_MISMATCH")
         return self
 
 
@@ -494,6 +639,15 @@ class SystemAutonomousActionIntent(BaseModel):
     action_proposal: CognitiveActionProposal
 
 
+class CognitiveActionControl(BaseModel):
+    """Untrusted control of the offered execution, never a new action or a world result."""
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    operation: Literal["cancel_active_goal"]
+    proposal_id: str = Field(min_length=1, max_length=160)
+    proposal_revision: int = Field(ge=0, strict=True)
+    trace_id: str = Field(min_length=1, max_length=160)
+
+
 class CognitiveDecision(BaseModel):
     """Minimal Runtime v2 cognition result; tool and memory slots remain out of scope."""
 
@@ -506,13 +660,41 @@ class CognitiveDecision(BaseModel):
 
     _utterance_limit = field_validator("utterance")(validate_utterance)
     emotion: Emotion | None = None
+    expression_icon: ExpressionIcon | None = Field(default=None, description=(
+        "Optional rare visual accent only. Default null/none. Use happy only for marked delight, "
+        "confused for genuine puzzlement, surprised for a real surprise, thinking for a marked pause to ponder. "
+        "Ordinary greetings, questions, explanations and friendly chat normally have no icon. "
+        "This grants no action or factual authority."))
     gesture: Gesture | None = None
     look_at: EntityId | None = None
     action_proposal: CognitiveActionProposal | None = None
     target_daily_mode: DailyBehaviorMode | None = None
+    action_control: CognitiveActionControl | None = None
+    recovery_alternative_id: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @model_serializer(mode="wrap")
+    def omit_absent_action_control(self, handler):
+        data = handler(self)
+        if self.action_control is None:
+            data.pop("action_control", None)
+        if self.recovery_alternative_id is None:
+            data.pop("recovery_alternative_id", None)
+        if self.expression_icon in (None, "none"):
+            data.pop("expression_icon", None)
+        return data
 
     @model_validator(mode="after")
     def validate_decision_shape(self) -> "CognitiveDecision":
+        if self.expression_icon not in (None, "none") and self.decision_kind not in ("DIRECT_RESPONSE", "ACTION_PROPOSAL"):
+            raise ValueError("COGNITIVE_NO_ACTION_PRESENTATION_FORBIDDEN")
+        if self.recovery_alternative_id is not None and (self.decision_kind != "DIRECT_RESPONSE" or
+                self.action_proposal is not None or self.action_control is not None or
+                self.target_daily_mode is not None or self.dialogue_turn_policy == "MAY_CONTINUE"):
+            raise ValueError("COGNITIVE_RECOVERY_COMBINATION_FORBIDDEN")
+        if self.action_control is not None and (self.decision_kind != "DIRECT_RESPONSE" or
+                self.target_daily_mode is not None or self.action_proposal is not None or
+                self.dialogue_turn_policy == "MAY_CONTINUE"):
+            raise ValueError("COGNITIVE_ACTION_CONTROL_COMBINATION_FORBIDDEN")
         if self.target_daily_mode is not None and self.decision_kind not in ("DIRECT_RESPONSE", "ACTION_PROPOSAL"):
             raise ValueError("COGNITIVE_DAILY_MODE_DECISION_FORBIDDEN")
         if self.dialogue_turn_policy == "MAY_CONTINUE" and (

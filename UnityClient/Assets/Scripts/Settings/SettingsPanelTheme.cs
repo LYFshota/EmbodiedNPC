@@ -65,6 +65,18 @@ namespace EmbodiedNPC.Settings
             }
         }
 
+        public static void StyleScrollbar(Scrollbar scrollbar)
+        {
+            if (scrollbar == null || scrollbar.handleRect == null) return;
+            Surface(scrollbar.GetComponent<Image>(), Row);
+            var thumb = scrollbar.handleRect.GetComponent<Image>();
+            Surface(thumb, Muted);
+            scrollbar.targetGraphic = thumb;
+            // The thumb must remain distinguishable when only the wheel is used.
+            scrollbar.transition = Selectable.Transition.None;
+            if (thumb != null) thumb.canvasRenderer.SetColor(Color.white);
+        }
+
         public static void SizeDropdown(TMP_Dropdown dropdown)
         {
             if (dropdown == null || dropdown.template == null) return;
@@ -74,6 +86,8 @@ namespace EmbodiedNPC.Settings
                 dropdown.template.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, field.rect.width);
             float scale = dropdown.GetComponentInParent<Canvas>()?.scaleFactor ?? 1;
             float available = Screen.height > 0 ? Screen.height / Mathf.Max(.1f,scale) - 100 : 600;
+            var click = dropdown.GetComponentInChildren<SettingsDropdownClickToggle>(true);
+            if (click != null && click.MaximumHeight > 0) available = Mathf.Min(available, click.MaximumHeight);
             dropdown.template.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical,
                 Mathf.Clamp(dropdown.options.Count * 44 + 12, 100, Mathf.Max(100,available)));
             var scroll = dropdown.template.GetComponent<ScrollRect>();
@@ -134,6 +148,8 @@ namespace EmbodiedNPC.Settings
             }
             foreach (var toggle in root.GetComponentsInChildren<Toggle>(true))
                 SettingsUiLanguage.StyleToggle(toggle);
+            foreach (var scrollbar in root.GetComponentsInChildren<Scrollbar>(true))
+                StyleScrollbar(scrollbar);
         }
     }
 }

@@ -12,6 +12,7 @@ from app.providers import MockProvider, ModelResult
 
 from tests.test_cognitive_request import _event_request
 from tests.app_test_isolation import get_test_app, native_app_client
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def _request(event_type: str = "player.utterance") -> dict:
@@ -62,7 +63,7 @@ class WorldActionEligibilityTests(unittest.TestCase):
         validator = RecordingValidator()
         provider = MockProvider(responder=lambda _: ModelResult(text=json.dumps(decision)))
         entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(),
-                                      action_validator=validator, context_length=16384)
+                                      action_validator=validator, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         request = CognitiveRequest.model_validate(payload)
         return entry, request, validator
 

@@ -3712,7 +3712,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: faa23dd44cdae7a469e6fd4410d2f7cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: EmbodiedNPC::EmbodiedNPC.Planning.GoalPlanRunner
-  backendClient: {fileID: 0}
   goalValidator: {fileID: 225032843}
   entityRegistry: {fileID: 1422435117}
   reservations: {fileID: 1422435123}
@@ -4035,8 +4034,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: CafeDemo.Runtime::CafeDemo.CafeVrmExpressionPresenter
   expressive: {fileID: 225032850}
   animator: {fileID: 1615826101}
-  smileWeight: 0.18
+  smileWeight: 0.24
   relaxedWeight: 0.035
+  expressionStrength: 1
   minimumBlinkInterval: 3
   maximumBlinkInterval: 6
 --- !u!114 &225032860
@@ -9052,9 +9052,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1187007178}
     - target: {fileID: 6210743631364156231, guid: fc8f577d883f646458b247a42d819b68, type: 3}
+      propertyPath: restSeconds
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210743631364156231, guid: fc8f577d883f646458b247a42d819b68, type: 3}
       propertyPath: motionChannels
       value: 
       objectReference: {fileID: 1187007181}
+    - target: {fileID: 6210743631364156231, guid: fc8f577d883f646458b247a42d819b68, type: 3}
+      propertyPath: gestureStrength
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6210743631364156231, guid: fc8f577d883f646458b247a42d819b68, type: 3}
+      propertyPath: headAccentDegrees
+      value: 2.2
+      objectReference: {fileID: 0}
     - target: {fileID: 7661829527469086080, guid: fc8f577d883f646458b247a42d819b68, type: 3}
       propertyPath: actorRoot
       value: 
@@ -9761,8 +9773,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: CafeDemo.Runtime::CafeDemo.CafeVrmExpressionPresenter
   expressive: {fileID: 451963929}
   animator: {fileID: 321051306}
-  smileWeight: 0.12
+  smileWeight: 0.24
   relaxedWeight: 0.035
+  expressionStrength: 0.8
   minimumBlinkInterval: 3
   maximumBlinkInterval: 6
 --- !u!114 &451963951
@@ -22460,8 +22473,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: CafeDemo.Runtime::CafeDemo.CafeVrmExpressionPresenter
   expressive: {fileID: 1017394386}
   animator: {fileID: 1781218660}
-  smileWeight: 0.1
+  smileWeight: 0.24
   relaxedWeight: 0.035
+  expressionStrength: 0.7
   minimumBlinkInterval: 3
   maximumBlinkInterval: 6
 --- !u!114 &1017394407
@@ -26137,8 +26151,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: CafeDemo.Runtime::CafeDemo.CafeVrmExpressionPresenter
   expressive: {fileID: 1187007178}
   animator: {fileID: 1350928441}
-  smileWeight: 0.12
+  smileWeight: 0.24
   relaxedWeight: 0.035
+  expressionStrength: 1
   minimumBlinkInterval: 3
   maximumBlinkInterval: 6
 --- !u!114 &1187007185
@@ -36028,7 +36043,6 @@ MonoBehaviour:
   maxConnectAttempts: 3
   retryDelaySeconds: 1
   connectTimeoutSeconds: 5
-  responseTimeoutSeconds: 30
 --- !u!114 &1422435122
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -41382,6 +41396,7 @@ MonoBehaviour:
   motionChannels: {fileID: 451963932}
   maxVisualYawDegrees: 0
   degreesPerSecond: 120
+  bodyDegreesPerSecond: 90
 --- !u!4 &1652490044
 Transform:
   m_ObjectHideFlags: 0
@@ -41416,6 +41431,10 @@ MonoBehaviour:
   animator: {fileID: 321051306}
   blendIn: 0.25
   blendOut: 0.2
+  gestureStrength: 0.2
+  phraseSeconds: 1.6
+  restSeconds: 3
+  headAccentDegrees: 1.2
 --- !u!114 &1652490046
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -52215,6 +52234,7 @@ MonoBehaviour:
   motionChannels: {fileID: 1017394389}
   maxVisualYawDegrees: 0
   degreesPerSecond: 120
+  bodyDegreesPerSecond: 90
 --- !u!4 &2078668015
 Transform:
   m_ObjectHideFlags: 0
@@ -52249,6 +52269,10 @@ MonoBehaviour:
   animator: {fileID: 1781218660}
   blendIn: 0.25
   blendOut: 0.2
+  gestureStrength: 0.13
+  phraseSeconds: 1.4
+  restSeconds: 3.8
+  headAccentDegrees: 0.8
 --- !u!114 &2078668017
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -35,6 +35,7 @@ namespace CafeDemo.Tests
         private bool runInBackground;
         protected virtual bool UsesStartupPanel => true;
         protected virtual bool DisableDailyDemo => true;
+        protected virtual bool ClearSceneAfterTest => false;
         protected const string Evidence = "C:/Users/95265/AppData/Local/Temp/embodiednpc-player-p1";
         [UnitySetUp] public IEnumerator SetUp()
         {
@@ -111,6 +112,7 @@ namespace CafeDemo.Tests
             InputSystem.settings.editorInputBehaviorInPlayMode = editorInputBehavior;
             Application.runInBackground = runInBackground;
             if (Application.isPlaying) yield return new ExitPlayMode();
+            if (ClearSceneAfterTest) EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         }
         protected static IEnumerator Wait(float seconds)
         {
@@ -165,7 +167,7 @@ namespace CafeDemo.Tests
             Assert.That(c.parameters.Select(p => p.name), Is.EqualTo(new[] { "Speed" }));
             var tree = (BlendTree)c.layers[0].stateMachine.defaultState.motion;
             Assert.That(tree.children.Select(x => AssetDatabase.GetAssetPath(x.motion)), Is.EqualTo(new[] {
-                "Assets/CafeDemo/Animations/ThirdParty/Quaternius/Idle_Loop.anim", "Assets/CafeDemo/Animations/ThirdParty/Quaternius/Walk_Loop.anim" }));
+                "Assets/Pack_Character_LowPoly/Animations/Idle.anim", "Assets/CafeDemo/Animations/ThirdParty/Quaternius/Walk_Loop.anim" }));
             Assert.That(tree.children[1].timeScale, Is.EqualTo(3.55f));
             var upper = c.layers[1];
             Assert.That(upper.stateMachine.states.Select(s => s.state.name), Is.EquivalentTo(new[] { "Empty", "Wave" }));

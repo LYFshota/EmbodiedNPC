@@ -48,6 +48,11 @@ namespace CafeDemo
         }
 
         private void Awake() { controller = GetComponent<CharacterController>(); }
+        private void Start()
+        {
+            var appearance = GetComponent<PlayerVrmAppearance>() ?? gameObject.AddComponent<PlayerVrmAppearance>();
+            appearance.Initialize(GetComponent<PlayerLocomotionPresenter>()?.Animator);
+        }
         private void OnEnable()
         {
             if (!inputActions || !view)

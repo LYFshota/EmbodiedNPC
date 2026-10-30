@@ -814,7 +814,7 @@ namespace EmbodiedNPC.Settings
             "dialogue_continuation" => SettingsUiLanguage.T("主动续话","Proactive continuation"),
             "memory_consolidation" => SettingsUiLanguage.T("记忆整理","Memory consolidation"),
             "relationship_reflection" => SettingsUiLanguage.T("关系反思","Relationship reflection"),
-            "task_failure" => SettingsUiLanguage.T("动作失败说明","Action failure explanation"),
+            "action_feedback" => SettingsUiLanguage.T("动作失败说明","Action failure explanation"),
             _ => SettingsUiLanguage.T("连接或能力检查","Connection or capability check")
         };
 
@@ -889,8 +889,8 @@ namespace EmbodiedNPC.Settings
                     (draft < 16384 ? SettingsUiLanguage.T(
                         "低于此 Demo 建议的最低 16K；请保持模型实际支持值，必要输入可能超限。",
                         "Below this Demo's recommended minimum 16K; keep the model's supported value. Required input may exceed it.") : "") +
-                    SettingsUiLanguage.T("实际模型容量尚未验证；请按模型能力设置，默认 32K 不代表支持 32K。",
-                        "Actual model capacity is unverified; configure its supported value. The 32K default is not a capability guarantee.");
+                    SettingsUiLanguage.T("实际模型容量尚未验证。32K 是推荐预算，不代表模型支持；64K 同样需要实际 Provider 或本地模型支持。请按模型能力设置。",
+                        "Actual model capacity is unverified. 32K is the recommended budget, not a capability guarantee. 64K also requires support from the actual provider or local model. Set a supported value.");
             var active = profilesView?.active_runtime?.main_model;
             if (active != null)
             {

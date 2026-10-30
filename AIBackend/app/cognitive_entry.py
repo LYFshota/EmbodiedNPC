@@ -12,8 +12,8 @@ from typing import Callable
 from .action_proposal_validator import ActionProposalValidator
 from .contracts import (CognitiveDecision, CognitiveRequest, GoalProposal, SystemDailyModeIntent,
                         SystemKeepMode, SERVICE_ZONE_EVENT, is_service_zone_consideration)
-from .cognitive_memory_recall import CognitiveMemoryRecall
-from .cognitive_step_models import (CognitiveStepResult, DialogueContinuationStep, MemoryRecallStep, RecallOutcome,
+from .cognitive_memory_recall import CognitiveMemoryRecall, qualify_self_statement_delivery, qualify_shared_experience
+from .cognitive_step_models import (CognitiveStepResult, DialogueContinuationStep, MemoryRecallStep, RecallOutcome, ContextReadStep,
     TaskCognitiveStep, TaskTerminalStep, TaskReadStep)
 from .cognitive_task_models import CognitiveTaskReceipt, TaskExecutionTicket
 from .experience_ledger import ExperienceLedger
@@ -43,7 +43,7 @@ class CognitiveBackendResult:
 class CognitiveBackendEntry:
     """Adapt one request to a terminal response with at most two model steps.
 
-    Ordinary dialogue may use one internal Recall; system/continuation routes
+    Ordinary dialogue may plan one batch of context reads; system/continuation routes
     have their own restricted steps and may be preemptible background work.
     Task mutations use the trusted adapter, while action proposals still need
     independent Unity admission and real outcomes.
@@ -111,6 +111,19 @@ class CognitiveBackendEntry:
         if prepare_options is not None:
             options = prepare_options(options, self._context_length)
         payload_builder = getattr(self._provider, "budget_payload", None) if hasattr(type(self._provider), "budget_payload") else None
+        if request.action_feedback is not None:
+            model = CognitiveModelRequestFactory.create_event(request, inference_options=options,
+                budget_payload_builder=payload_builder, knowledge_context_limit=self._context_length)
+            result = await self._model_executor.execute(self._provider, model, priority="foreground")
+            decision = CognitiveDecision.model_validate(extract_json_object(result.text),
+                context={"reply_language": request.reply_language})
+            if (decision.decision_kind != "DIRECT_RESPONSE" or decision.action_proposal is not None or
+                    decision.action_control is not None or decision.target_daily_mode is not None or
+                    decision.look_at is not None or decision.episode_directive is not None or
+                    decision.dialogue_turn_policy != "WAIT_FOR_PLAYER" or decision.recovery_alternative_id is not None and
+                    decision.recovery_alternative_id not in {a.alternative_id for a in request.action_feedback.allowed_alternatives}):
+                raise ValueError("COGNITIVE_RECOVERY_DECISION_INVALID")
+            return CognitiveBackendResult(decision=decision, validated_goal=None)
         if event is not None and event.event_type in (SERVICE_ZONE_EVENT, COUNTER_CLEANING_EVENT):
             autonomous = event.event_type == COUNTER_CLEANING_EVENT
             if not (is_counter_cleaning_consideration(request) if autonomous else is_service_zone_consideration(request)):
@@ -132,7 +145,7 @@ class CognitiveBackendEntry:
                 outcome = await asyncio.to_thread(self._tasks.read, context, step.task_query)
                 await asyncio.sleep(0)
                 model = CognitiveModelRequestFactory.create_event(request, inference_options=options,task_context=projection,
-                    task_read_outcome=outcome,budget_payload_builder=payload_builder,knowledge_context_limit=self._context_length)
+                    task_read_outcome=outcome,cognition_phase=1,budget_payload_builder=payload_builder,knowledge_context_limit=self._context_length)
                 result = await self._model_executor.execute_preemptible_background(self._provider, model)
                 step = CounterTaskTerminal.model_validate(extract_json_object(result.text)).root
                 task_diagnostic.emit('decision',request=request,decision=step,task_state='validated')
@@ -192,8 +205,10 @@ class CognitiveBackendEntry:
         )
         catalog = (await asyncio.to_thread(self._memory_recall.prepare, request)
                    if self._memory_recall is not None and not continuation else None)
-        knowledge_context = (await asyncio.to_thread(self._knowledge_resolver.resolve, request)
-                             if self._knowledge_resolver is not None else None)
+        knowledge_snapshot = (await asyncio.to_thread(self._knowledge_resolver.capture, request)
+                              if self._knowledge_resolver is not None else None)
+        knowledge_context = (await asyncio.to_thread(self._knowledge_resolver.prefetch,
+            knowledge_snapshot, request, recent_dialogue) if knowledge_snapshot is not None else None)
         await asyncio.sleep(0)  # Deliver cancellation before submitting foreground work.
         model_request = CognitiveModelRequestFactory.create_event(
             request, subject_catalog=catalog.model_visible_payload() if catalog else None,
@@ -211,7 +226,7 @@ class CognitiveBackendEntry:
             task_diagnostic.emit('consideration',request=request,task_state='response_received')
         step = (DialogueContinuationStep if continuation else TaskCognitiveStep if task_context is not None else CognitiveStepResult).model_validate(
             extract_json_object(result.text), context={"reply_language": request.reply_language}).root
-        requested = isinstance(step, (MemoryRecallStep, TaskReadStep))
+        requested = isinstance(step, (MemoryRecallStep, TaskReadStep, ContextReadStep))
         logger.info("cognitive_step=0 request_id=%s trace_id=%s run_id=%s agent_entity_id=%s "
                     "recall_requested=%s latency_ms=%.1f", request.request_id, request.trace_id,
                     request.run.run_id, request.run.agent_entity_id, requested,
@@ -219,10 +234,56 @@ class CognitiveBackendEntry:
         if requested:
             task_diagnostic.emit('read',request=request,decision=step,task_state='validated')
             await asyncio.sleep(0)
-            task_read = isinstance(step, TaskReadStep)
-            task_outcome = await asyncio.to_thread(self._tasks.read, task_context, step.task_query) if task_read else None
-            outcome = None if task_read else (await asyncio.to_thread(self._memory_recall.recall, catalog, step.recall_plan)
-                       if self._memory_recall is not None else RecallOutcome(status="RECALL_UNAVAILABLE"))
+            knowledge_plan = step.knowledge_plan if isinstance(step, ContextReadStep) else None
+            memory_plan = (step.memory_plan if isinstance(step, ContextReadStep)
+                           else step.recall_plan if isinstance(step, MemoryRecallStep) else None)
+            task_plan = (getattr(step, "task_plan", None) if isinstance(step, ContextReadStep)
+                         else step.task_query if isinstance(step, TaskReadStep) else None)
+
+            async def read_branch(call, unavailable):
+                try:
+                    return await asyncio.to_thread(call)
+                except Exception as error:
+                    # Read failures are source-local; cancellation is BaseException and
+                    # propagates. Never retry or turn an unavailable source into no-match.
+                    logger.warning("context_read_unavailable request_id=%s reason=%s",
+                                   request.request_id, type(error).__name__)
+                    return unavailable
+
+            from .world_knowledge import KnowledgeContext
+            jobs, sources = [], []
+            if knowledge_plan is not None:
+                sources.append("knowledge")
+                jobs.append(read_branch(lambda: self._knowledge_resolver.query(
+                    knowledge_snapshot, knowledge_plan.semantic_query) if self._knowledge_resolver else
+                    KnowledgeContext(status="UNAVAILABLE"),
+                    knowledge_snapshot.context.model_copy(update={"status": "UNAVAILABLE"})
+                    if knowledge_snapshot else KnowledgeContext(status="UNAVAILABLE")))
+            if memory_plan is not None:
+                sources.append("memory")
+                jobs.append(read_branch(lambda: self._memory_recall.recall(catalog, memory_plan)
+                    if self._memory_recall else RecallOutcome(status="RECALL_UNAVAILABLE"),
+                    RecallOutcome(status="RECALL_UNAVAILABLE")))
+            if task_plan is not None:
+                sources.append("task")
+                jobs.append(read_branch(lambda: self._tasks.read(task_context, task_plan),
+                    dict(status="TASK_READ_UNAVAILABLE", tasks=[], has_more=False)))
+            # Providers retain their existing embedding serialization/gates. These are
+            # independent reads, not an assumption of parallel GPU model execution.
+            outcomes = dict(zip(sources, await asyncio.gather(*jobs)))
+            if "knowledge" in outcomes:
+                knowledge_context = WorldKnowledgeResolver.merge_results(knowledge_context, outcomes["knowledge"])
+            outcome = outcomes.get("memory")
+            task_outcome = outcomes.get("task")
+            if outcome is not None:
+                if memory_plan.subject_role == "shared":
+                    outcome = await asyncio.to_thread(qualify_shared_experience, outcome,
+                                                      catalog, self._experience_ledger)
+                outcome = await asyncio.to_thread(qualify_self_statement_delivery, outcome,
+                                                  catalog, self._experience_ledger)
+            if knowledge_snapshot is not None:
+                knowledge_context = await asyncio.to_thread(self._knowledge_resolver.validate_snapshot,
+                    knowledge_snapshot, knowledge_context)
             # SQLite reads may finish in their worker after cancellation; cancelled runs
             # never submit Step 1 and never publish an intermediate result.
             await asyncio.sleep(0)
@@ -232,7 +293,7 @@ class CognitiveBackendEntry:
             result = await execute(
                 self._provider, CognitiveModelRequestFactory.create_event(
                     request, subject_catalog=catalog.model_visible_payload() if catalog else None,
-                    recall_outcome=outcome, relationship_context=relationship_context,
+                    recall_outcome=outcome, cognition_phase=1, relationship_context=relationship_context,
                     task_context=task_projection, task_read_outcome=task_outcome,
                     recent_dialogue=recent_dialogue, recent_interactions=recent_interactions, inference_options=options,
                     budget_payload_builder=payload_builder,
@@ -248,10 +309,21 @@ class CognitiveBackendEntry:
             logger.info("cognitive_step=1 request_id=%s trace_id=%s run_id=%s agent_entity_id=%s "
                         "recall_status=%s evidence_count=%d latency_ms=%.1f", request.request_id,
                         request.trace_id, request.run.run_id, request.run.agent_entity_id,
-                        outcome.status if outcome else task_outcome["status"], len(outcome.evidence.items) if outcome and outcome.evidence else 0,
+                        {source: value.status if hasattr(value, "status") else value["status"]
+                         for source, value in outcomes.items()}, len(outcome.evidence.items) if outcome and outcome.evidence else 0,
                         (time.perf_counter() - started) * 1000)
         else:
             decision = step
+        await asyncio.sleep(0)
+        if knowledge_snapshot is not None and knowledge_context is not None and (
+                knowledge_context.items or knowledge_context.constant_items):
+            checked = await asyncio.to_thread(self._knowledge_resolver.validate_snapshot,
+                                             knowledge_snapshot, knowledge_snapshot.context)
+            if checked.status in {"SNAPSHOT_CHANGED", "UNAVAILABLE"}:
+                # A mutation during inference cannot yield a reply/action grounded in
+                # revoked knowledge. Fail safely; never a third model call.
+                raise ValueError("KNOWLEDGE_SNAPSHOT_CHANGED")
+        await asyncio.sleep(0)
         task_diagnostic.emit('decision',request=request,decision=decision,task_state='validated')
         if decision.target_daily_mode is not None:
             daily = request.context.daily_behavior
@@ -273,6 +345,9 @@ class CognitiveBackendEntry:
             raise WorldActionNotEligibleError()
         if getattr(decision,'task_focus',None) is not None and not automatic_action:
             raise ValueError('TASK_EXECUTION_SOURCE_REQUIRED')
+        if decision.recovery_alternative_id is not None:
+            raise ValueError("COGNITIVE_RECOVERY_SOURCE_REQUIRED")
+        self._validate_action_control(request, decision)
         validated_goal = self._action_validator.validate_and_adapt(decision, request.context)
         ticket = None
         if automatic_action:
@@ -301,6 +376,21 @@ class CognitiveBackendEntry:
             decision = CognitiveDecision.model_validate(decision.model_dump(exclude={"task_operation", "future_commitment", "task_focus"}),
                 context={"reply_language": request.reply_language})
         return CognitiveBackendResult(decision=decision, validated_goal=validated_goal, task_receipt=receipt, task_execution=ticket)
+
+    @staticmethod
+    def _validate_action_control(request: CognitiveRequest, decision: CognitiveDecision) -> None:
+        control = decision.action_control
+        if control is None:
+            return
+        event, state, player = request.context.current_event, request.context.runtime_state, request.context.relevant_player
+        if (event is None or event.event_type != "player.utterance" or player is None or
+                event.source_entity_id != player.player_entity_id or event.target_entity_id != request.run.agent_entity_id or
+                not any(p.key == "conversation_id" and p.value for p in event.payload) or
+                state is None or state.status != "IN_PROGRESS" or
+                control.operation not in (state.allowed_controls or ()) or
+                (control.proposal_id, control.proposal_revision, control.trace_id) !=
+                (state.proposal_id, state.proposal_revision, state.trace_id)):
+            raise ValueError("COGNITIVE_ACTION_CONTROL_NOT_ELIGIBLE")
 
     def _policy_snapshot(self) -> RecentDialoguePolicy:
         return self._recent_dialogue_policy_source() if self._recent_dialogue_policy_source else self._recent_dialogue_policy

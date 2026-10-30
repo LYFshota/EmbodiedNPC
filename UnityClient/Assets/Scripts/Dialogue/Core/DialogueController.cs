@@ -1,10 +1,10 @@
 using System;
 using EmbodiedNPC.Communication;
+using EmbodiedNPC.Cognition;
 using EmbodiedNPC.Memory;
 using EmbodiedNPC.Dialogue.Input;
 using EmbodiedNPC.Dialogue.Validation;
 using EmbodiedNPC.Perception;
-using EmbodiedNPC.Planning;
 using EmbodiedNPC.World;
 using TMPro;
 using UnityEngine;
@@ -37,6 +37,7 @@ namespace EmbodiedNPC.Dialogue
         public DialogueParticipant SelectedTarget => selectedTarget;
         public bool HasActiveSession => activeContext != null && activeContext.IsValid;
         public bool IsPresentationVisible => presentationVisible;
+        public string LastPresentationHideReason { get; private set; } = "not_hidden";
         public bool IsChangingSession { get; private set; }
         public bool IsSetupReady => setupReady;
         public string CurrentConversationId => activeContext?.conversationId;
@@ -72,6 +73,7 @@ namespace EmbodiedNPC.Dialogue
         {
             bool hadActiveSession = HasActiveSession || selectedTarget != null;
             if (hadActiveSession) RecordLifecycle("controller_disabled");
+            EndPendingExchange("controller_disabled");
             if (textInput != null) textInput.Submitted -= HandleSubmitted;
             if (textInput != null) textInput.Cancelled -= HandleInputCancelled;
             if (backendClient != null)
@@ -80,10 +82,10 @@ namespace EmbodiedNPC.Dialogue
                 backendClient.ExperienceAppendSettled -= HandleExperienceSettled;
             }
             EmbodiedNPC.Settings.SettingsUiLanguage.Changed -= RefreshRequestFeedback;
+            HideDialoguePresentation("controller_disabled");
             UnbindFeedbackDriver();
             selectedTarget = null;
             activeContext = null;
-            SetPresentationVisible(false);
             textInput?.EndInput();
             if (hadActiveSession) ActiveSessionChanged?.Invoke(null);
         }
@@ -94,13 +96,19 @@ namespace EmbodiedNPC.Dialogue
             bool continueConversation = selectedTarget == target && HasActiveSession;
             if (selectedTarget != target)
             {
-                CancelRediscoveryForSessionChange();
-                if (selectedTarget != null) RecordLifecycle("switch_npc");
+                // Retarget input only. Previously accepted speech and Goals retain their original ownership.
+                if (selectedTarget != null)
+                {
+                    RecordLifecycle("switch_npc");
+                    HideDialoguePresentation("switch_npc");
+                }
             }
             LastEligibility = CheckEligibility(target);
             if (!LastEligibility.IsEligible)
             {
-                ClearSession(ToDisplayMessage(LastEligibility.FailureCode));
+                // A rejected input selection does not end the original accepted exchange.
+                HideDialoguePresentation("selection_rejected");
+                SetStatus(ToDisplayMessage(LastEligibility.FailureCode));
                 return false;
             }
 
@@ -128,20 +136,29 @@ namespace EmbodiedNPC.Dialogue
             if (!setupReady || !HasActiveSession || selectedTarget == null ||
                 !CheckEligibility(selectedTarget).IsEligible) return;
             textInput?.ShowInput();
-            SetPresentationVisible(true);
+            SetPresentationVisible(true, "interaction_open");
         }
 
-        public void HideDialoguePresentation()
+        public void HideDialoguePresentation() => HideDialoguePresentation("explicit_close");
+
+        public void HideDialoguePresentation(string reason)
         {
-            // Closing the input presentation does not cancel the accepted request.
+            // Hide only the input surface. Accepted requests and world speech keep their lifetime.
             textInput?.HideInput();
-            SetPresentationVisible(false);
+            SetPresentationVisible(false, reason);
         }
 
-        private void SetPresentationVisible(bool visible)
+        private void SetPresentationVisible(bool visible, string reason)
         {
             if (presentationVisible == visible) return;
+            bool previous = presentationVisible;
+            if (!visible) LastPresentationHideReason = reason;
             presentationVisible = visible;
+            var request = selectedTarget != null ? selectedTarget.GetComponent<CognitiveRunDriver>()?.PendingRequest : null;
+            Debug.Log($"[Dialogue] PRESENTATION time={Time.realtimeSinceStartupAsDouble:F3} frame={Time.frameCount} " +
+                $"visible={previous}->{visible} reason={reason} conversation={CurrentConversationId ?? "none"} " +
+                $"npc={selectedTarget?.Entity?.EntityId ?? "none"} player={ActiveSpeakerEntityId ?? "none"} " +
+                $"waiting={request != null} request={request?.request_id ?? "none"} run={request?.run?.run_id ?? "none"}", this);
             PresentationVisibilityChanged?.Invoke(visible);
         }
 
@@ -152,14 +169,15 @@ namespace EmbodiedNPC.Dialogue
 
         public void ClearSession(string message = "靠近 NPC 后按 E 开始对话")
         {
+            // Explicitly ending this exchange differs from merely hiding or retargeting input.
+            EndPendingExchange("world_interaction_ended");
+            HideDialoguePresentation("session_ended");
             UnbindFeedbackDriver();
             ResetRequestFeedback();
             bool hadActiveSession = HasActiveSession || selectedTarget != null;
-            CancelRediscoveryForSessionChange();
             if (hadActiveSession) RecordLifecycle("conversation_ended");
             selectedTarget = null;
             activeContext = null;
-            HideDialoguePresentation();
             textInput?.EndInput();
             SetStatus(message);
             if (hadActiveSession) ActiveSessionChanged?.Invoke(null);
@@ -252,7 +270,7 @@ namespace EmbodiedNPC.Dialogue
                 DialogueEligibilityResult eligibility = CheckEligibility(selectedTarget);
                 if (eligibility.FailureCode == DialogueEligibilityFailureCode.TargetOutOfDialogueRange)
                 {
-                    if (presentationVisible) HideDialoguePresentation();
+                    if (presentationVisible) HideDialoguePresentation("out_of_range");
                 }
                 else if (!eligibility.IsEligible)
                 {
@@ -278,29 +296,22 @@ namespace EmbodiedNPC.Dialogue
 
         private void HandleInputCancelled()
         {
-            HideDialoguePresentation();
+            HideDialoguePresentation("close_button");
+        }
+
+        private void EndPendingExchange(string reason)
+        {
+            if (selectedTarget != null)
+                selectedTarget.GetComponent<CognitiveRunDriver>()?.CancelPendingDialogueRequest(reason);
         }
 
         private void RotateConversation(string reason)
         {
+            EndPendingExchange(reason);
             ClearWaitingBubble();
             if (activeContext == null) return;
             activeContext.conversationId = $"{activeContext.speakerEntityId}:{activeContext.targetAgentId}:{Guid.NewGuid():N}";
             RecordLifecycle(reason);
-        }
-
-        private void CancelRediscoveryForSessionChange()
-        {
-            // Cancellation may synchronously publish an Outcome before selectedTarget is cleared.
-            IsChangingSession = true;
-            try { CancelRediscovery(); }
-            finally { IsChangingSession = false; }
-        }
-
-        private void CancelRediscovery()
-        {
-            GoalPlanRunner search = selectedTarget == null ? null : selectedTarget.GetComponent<GoalPlanRunner>();
-            if (search != null && search.IsRediscovering) search.InterruptCurrentPlan("CANCELLED_BY_REQUEST");
         }
 
         private void HandleConnectionStatusChanged(string status)

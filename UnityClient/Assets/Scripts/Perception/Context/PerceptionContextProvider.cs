@@ -12,6 +12,8 @@ namespace EmbodiedNPC.Perception
         private VisionSensor vision;
         private EmbodiedNPC.World.WorldEntity observer;
         private ContextSnapshotBuilder builder;
+        // An assigned fixed seat is conservative even while its animation/occupancy is unconfirmed.
+        public bool HasAssignedFixedSeat => selfSeat != null && selfSeat.AssignedOccupant == observer;
 
         private void Awake()
         {

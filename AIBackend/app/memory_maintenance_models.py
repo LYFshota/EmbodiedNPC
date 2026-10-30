@@ -32,6 +32,29 @@ class MaintenanceResponse(BaseModel):
     operations: tuple[MaintenanceOperation, ...] = Field(max_length=8)
 
 
+class MaintenanceDecision(BaseModel):
+    """Wire-only judgment. Record identity and pending membership belong to code."""
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    pair_ref: str = Field(pattern=r"^p[0-7]$")
+    relation: Literal["DUPLICATE", "REFINES", "COEXISTS", "SUPERSEDES", "CONFLICTS", "UNDETERMINED", "NO_RELATION"]
+    direction: Literal["LEFT_TO_RIGHT", "RIGHT_TO_LEFT"]
+    reason: str = Field(min_length=1, max_length=300)
+    evidence_event_ids: tuple[str, ...] = Field(default=(), max_length=4)
+    source_excerpt: str | None = Field(default=None, min_length=1, max_length=1000)
+
+    @field_validator('reason', 'source_excerpt')
+    @classmethod
+    def nonblank(cls, value):
+        if value is not None and not value.strip():
+            raise ValueError('MAINTENANCE_TEXT_BLANK')
+        return value
+
+
+class MaintenanceDecisionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    decisions: tuple[MaintenanceDecision, ...] = Field(max_length=8)
+
+
 @dataclass(frozen=True)
 class MaintenancePolicy:
     backlog_threshold: int = 4
@@ -58,11 +81,22 @@ class MaintenanceInput:
     subject: TrustedPersistentIdentity
     new_ids: tuple[str, ...]
     records: tuple[dict, ...]
+    # None is a legacy/direct repository caller, not a model-selected pair set.
+    comparison_pairs: tuple[tuple[str, str], ...] | None = None
+    candidate_pairs: tuple[tuple[str, str], ...] = ()
+    comparison_decisions: tuple[dict, ...] = ()
 
     def model_payload(self):
         # Durable owner/subject keys never enter the model request.
-        return dict(new_memory_ids=self.new_ids, memories=self.records,
-                    candidate_search_is_exhaustive=False)
+        payload = dict(new_memory_ids=self.new_ids, memories=self.records,
+                       candidate_search_is_exhaustive=False)
+        if self.comparison_pairs is not None:
+            payload['comparison_scope'] = dict(
+                contract='maintenance-pairs/1.0', compared_pairs=self.comparison_pairs,
+                candidate_pairs=self.candidate_pairs, decisions=self.comparison_decisions,
+                omitted_pair_count=len(self.candidate_pairs)-len(self.comparison_pairs),
+                completion_means='bounded_sample_only')
+        return payload
 
 
 class MaintenanceStale(ValueError):

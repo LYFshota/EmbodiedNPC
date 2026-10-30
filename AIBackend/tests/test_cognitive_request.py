@@ -12,6 +12,7 @@ from app.reply_language import response_schema
 from app.contracts import CognitiveCharacterContext, CognitiveDecision, CognitiveRequest
 from app.providers import MockProvider, ModelRequest, ModelResult, ProviderError
 from tests.app_test_isolation import get_test_app, native_app_client
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def _event_request() -> dict:
@@ -91,7 +92,7 @@ class CognitiveRequestTests(unittest.TestCase):
                     payload=[dict(key="text", value=text)])
                 request = CognitiveRequest.model_validate(value)
                 before = request.model_dump_json()
-                model = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384,
+                model = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH,
                     recent_dialogue=[dict(player_text="Let's speak English.", npc_text="Of course.")],
                     budget_payload_builder=provider.budget_payload)
                 wire = provider.budget_payload(model)
@@ -130,9 +131,9 @@ class CognitiveRequestTests(unittest.TestCase):
                 return httpx.Response(200,json=dict(status="completed",output=[dict(type="message",role="assistant",
                     content=[dict(type="output_text",text=raw)])]))
             provider = build_main_provider(MainModelConfig(display_name="Synthetic",provider_type="deepseek_official_responses",
-                base_url="https://example.invalid",model="synthetic-language",api_key="synthetic-only",context_length=16384),
+                base_url="https://example.invalid",model="synthetic-language",api_key="synthetic-only",context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH),
                 transport=httpx.MockTransport(handler))
-            model = CognitiveModelRequestFactory.create_event(CognitiveRequest.model_validate(value),knowledge_context_limit=16384,
+            model = CognitiveModelRequestFactory.create_event(CognitiveRequest.model_validate(value),knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH,
                 recent_dialogue=[dict(player_text=earlier,npc_text=earlier)],budget_payload_builder=provider.budget_payload)
             result = asyncio.run(provider.generate(model))
             self.assertEqual(raw,result.text)
@@ -147,7 +148,7 @@ class CognitiveRequestTests(unittest.TestCase):
             payload=[dict(key="text", value="介绍一下 DeepSeek。")])
         request = CognitiveRequest.model_validate(value)
         before = request.model_dump_json()
-        model = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384)
+        model = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         self.assertIn(NPC_REPLY_LANGUAGE_RULES, model.messages[0].content)
         self.assertIn("介绍一下 DeepSeek。", model.messages[-1].content)
         self.assertEqual(response_schema(CognitiveStepResult, "zh-CN"), model.response_schema)
@@ -271,7 +272,7 @@ class CognitiveRequestTests(unittest.TestCase):
             }, ensure_ascii=False))
 
         provider = MockProvider(responder=respond)
-        entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=16384)
+        entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         result = asyncio.run(entry.run(CognitiveRequest.model_validate(_event_request())))
 
         self.assertIs(entry.provider, provider)
@@ -289,7 +290,7 @@ class CognitiveRequestTests(unittest.TestCase):
         m3_main.cognitive_entry = CognitiveBackendEntry(MockProvider(responder=lambda _: ModelResult(
             text='{"decision_kind":"NO_ACTION","utterance":null,"emotion":null,'
                  '"gesture":null,"look_at":null}'
-        )), PrioritizedModelExecutor(), context_length=16384)
+        )), PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         try:
             with native_app_client(m3_main) as client, client.websocket_connect("/ws") as websocket:
                 websocket.send_json(_event_request())
@@ -309,7 +310,7 @@ class CognitiveRequestTests(unittest.TestCase):
         previous = m3_main.cognitive_entry
         m3_main.cognitive_entry = CognitiveBackendEntry(MockProvider(
             responder=lambda _: ModelResult(text='{"decision_kind":"propose_action"}')
-        ), PrioritizedModelExecutor(), context_length=16384)
+        ), PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         try:
             with native_app_client(m3_main) as client, client.websocket_connect("/ws") as websocket:
                 websocket.send_json(_event_request())
@@ -330,7 +331,7 @@ class CognitiveRequestTests(unittest.TestCase):
 
         previous = m3_main.cognitive_entry
         m3_main.cognitive_entry = CognitiveBackendEntry(
-            MockProvider(responder=timeout), PrioritizedModelExecutor(), context_length=16384)
+            MockProvider(responder=timeout), PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         try:
             with native_app_client(m3_main) as client, client.websocket_connect("/ws") as websocket:
                 websocket.send_json(_event_request())
@@ -359,7 +360,7 @@ class CognitiveRequestTests(unittest.TestCase):
                 def fail(_, error=error):
                     raise error
                 entry = CognitiveBackendEntry(MockProvider(responder=fail), PrioritizedModelExecutor(),
-                                              context_length=16384)
+                                              context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
                 with patch.object(m3_main, "cognitive_entry", entry):
                     with native_app_client(m3_main) as client, client.websocket_connect("/ws") as websocket:
                         websocket.send_json(_event_request())

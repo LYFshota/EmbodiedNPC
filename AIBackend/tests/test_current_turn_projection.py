@@ -12,6 +12,7 @@ from app.experience_models import ExperienceAppendRequest, ExperienceDraft
 from app.model_requests import CognitiveModelRequestFactory
 from app.sqlite_database import SQLiteDatabase
 from test_recent_dialogue_cognition import request
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 class PriorDialogueProjectionTests(unittest.TestCase):
@@ -129,7 +130,7 @@ class PriorDialogueProjectionTests(unittest.TestCase):
 
 class CurrentTaskPromptTests(unittest.TestCase):
     def test_red_step0_has_explicit_current_task_with_event_text(self):
-        model_request = CognitiveModelRequestFactory.create_event(request("你好。"), knowledge_context_limit=16384)
+        model_request = CognitiveModelRequestFactory.create_event(request("你好。"), knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         self.assertIn('CURRENT TASK: Cognitive context JSON.current_event', model_request.messages[1].content)
         self.assertEqual(request("你好。").context.current_event,
                          CognitiveModelRequestFactory.context_from(model_request).current_event)
@@ -137,8 +138,8 @@ class CurrentTaskPromptTests(unittest.TestCase):
 
     def test_red_step1_keeps_same_current_task_identity(self):
         current = request("我以前最喜欢什么颜色？")
-        step0 = CognitiveModelRequestFactory.create_event(current, knowledge_context_limit=16384)
-        step1 = CognitiveModelRequestFactory.create_event(current, recall_outcome=RecallOutcome(status="NO_MEMORY_FOUND"), knowledge_context_limit=16384)
+        step0 = CognitiveModelRequestFactory.create_event(current, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
+        step1 = CognitiveModelRequestFactory.create_event(current, cognition_phase=1, recall_outcome=RecallOutcome(status="NO_MEMORY_FOUND"), knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         for step in (step0, step1):
             # The event is serialized once in the authoritative context now;
             # its identity, payload, and the final binding must all survive.
@@ -155,7 +156,7 @@ class CurrentTaskPromptTests(unittest.TestCase):
         wire = request("unused").model_dump()
         wire["context"]["current_event"]["event_type"] = "entity.became_visible"
         wire["context"]["current_event"]["payload"] = [{"key": "entity_id", "value": "cup_01"}]
-        model_request = CognitiveModelRequestFactory.create_event(CognitiveRequest.model_validate(wire), knowledge_context_limit=16384)
+        model_request = CognitiveModelRequestFactory.create_event(CognitiveRequest.model_validate(wire), knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         self.assertIn('"event_type":"entity.became_visible"', model_request.messages[1].content)
         self.assertIn('"current_player_text":null', model_request.messages[1].content)
 

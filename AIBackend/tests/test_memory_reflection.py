@@ -30,8 +30,10 @@ class ReflectionProvider:
         self.output=output
     async def generate(self, request):
         self.calls.append(request)
-        if 'operations' in request.response_schema['properties']:
-            return ModelResult(text='{"operations":[]}')
+        if 'decisions' in request.response_schema['properties']:
+            pairs=json.loads(request.messages[1].content.split('\n',1)[1])['pairs']
+            return ModelResult(text=json.dumps({'decisions':[dict(pair_ref=p['pair_ref'],relation='NO_RELATION',
+                direction='LEFT_TO_RIGHT',reason='independent claims') for p in pairs]}))
         records=json.loads(request.messages[1].content.split('\n',1)[1])['memories']
         result=self.output if self.output is not None else dict(insights=[dict(
             insight='根据几次交流，玩家似乎会结合当天状态选择饮品，疲惫时倾向咖啡，需要休息时选择清淡饮品。',

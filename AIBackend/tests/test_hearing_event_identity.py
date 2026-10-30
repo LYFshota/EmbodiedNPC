@@ -56,8 +56,9 @@ class HearingEventIdentityTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(item['target_epistemic_status'], 'identified_from_speech_event')
                 self.assertIn('历史旁听', item['history_description'])
                 self.assertTrue(item['model_content_is_not_world_truth'])
-                # One typed record contains both the raw text and its readable quotation.
-                self.assertEqual(user.count(item['text']), 2)
+                # Source wording appears once; the description retains identity/uncertainty only.
+                self.assertEqual(user.count(item['text']), 1)
+                self.assertNotIn(item['text'], item['history_description'])
                 self.assertEqual(user.count('"occurrence_id":"' + item['occurrence_id'] + '"'), 1)
             chars = sum(len(json.dumps([i], ensure_ascii=False, separators=(',', ':'))) for i in items)
             self.assertLessEqual(chars, 2400)

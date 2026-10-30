@@ -24,6 +24,8 @@ namespace EmbodiedNPC.Animation
         public bool SteamActive => steam != null && steam.isPlaying;
         public bool PropVisible => preparationProp != null && preparationProp.activeInHierarchy;
 
+        public void RebindAnimator(Animator character) => Configure(runner, motion, capability, character, steam, preparationProp);
+
         public void Configure(GoalPlanRunner task, MotionChannelCoordinator channels, DrinkPreparationCapability station,
             Animator character, ParticleSystem effect = null, GameObject prop = null)
         {

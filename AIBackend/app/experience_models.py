@@ -161,6 +161,18 @@ class ExperienceDraft(BaseModel):
             if type(revision) is not int or revision < 1:
                 raise ValueError("PERCEPTION_REVISION_REQUIRED")
         if self.source_type == "dialogue":
+            if self.structured_payload.get("initiative") == "action_feedback":
+                payload = self.structured_payload
+                if (self.event_type != "dialogue_response" or self.actor_entity_id != self.observer_id
+                        or len(self.target_entity_ids) != 1 or not self.source_event_id or not self.trace_id
+                        or self.provenance != "EXECUTED_BY_SELF" or not self.request_id
+                        or not self.conversation_id or not self.natural_language_payload
+                        or not isinstance(payload.get("parent_request_id"), str) or not payload["parent_request_id"]
+                        or not isinstance(payload.get("parent_event_id"), str) or not payload["parent_event_id"]
+                        or self.request_id == payload["parent_request_id"]
+                        or self.source_event_id == payload["parent_event_id"]
+                        or self.schema_version.endswith("/1.0") or len(self.persistent_participants) != 2):
+                    raise ValueError("ACTION_FEEDBACK_CORRELATION_INVALID")
             if self.structured_payload.get("initiative") == "dialogue_continuation":
                 payload = self.structured_payload
                 if (self.event_type != "dialogue_response" or self.actor_entity_id != self.observer_id

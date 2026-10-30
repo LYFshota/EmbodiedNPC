@@ -7,6 +7,21 @@ from jsonschema import Draft202012Validator
 from .providers import ProviderError
 
 
+def _map_values(schema, profile):
+    """Recognize only reversible typed maps, never discard named properties."""
+    patterns = schema.get("patternProperties")
+    if patterns is not None:
+        if (not isinstance(patterns, dict) or len(patterns) != 1
+                or schema.get("properties") or schema.get("additionalProperties") not in (None, False)):
+            raise ProviderError("MODEL_SCHEMA_PROJECTION_UNSUPPORTED")
+        return next(iter(patterns.values()))
+    if profile in ("anthropic", "openai_strict") and isinstance(schema.get("additionalProperties"), dict):
+        if schema.get("properties"):
+            raise ProviderError("MODEL_SCHEMA_PROJECTION_UNSUPPORTED")
+        return schema["additionalProperties"]
+    return None
+
+
 def project_schema(original, profile):
     if original is None or profile == "raw":
         return original, False
@@ -29,11 +44,16 @@ def project_schema(original, profile):
         schema.pop("$defs", None)
         schema.pop("title", None)
         schema.pop("default", None)
-        if profile in ("anthropic", "openai_strict") and isinstance(schema.get("additionalProperties"), dict):
+        map_values = _map_values(schema, profile)
+        if map_values is not None:
+            key_constraints = {key: schema[key] for key in ("minProperties", "maxProperties", "propertyNames") if key in schema}
+            if "patternProperties" in schema:
+                key_constraints["key_patterns"] = list(schema["patternProperties"])
             return {"type": "array", "items": {"type": "object", "properties": {
-                "key": {"type": "string"}, "value": walk(schema["additionalProperties"], visiting)},
+                "key": {"type": "string"}, "value": walk(map_values, visiting)},
                 "required": ["key", "value"], "additionalProperties": False},
-                "description": "Object encoded as unique key/value entries; restored and validated locally."}
+                "description": "Object encoded as unique key/value entries; original key/value constraints validated locally. "
+                    + schema.get("description", "") + " " + json.dumps(key_constraints, ensure_ascii=True)}
         discriminator = schema.pop("discriminator", None)
         if "oneOf" in schema:
             # The project's decision unions have disjoint literal tags. Refuse other unions.
@@ -52,6 +72,7 @@ def project_schema(original, profile):
             schema["properties"] = {key: walk(value, visiting) for key, value in schema["properties"].items()}
             if profile == "openai_strict":
                 schema["required"] = list(schema["properties"])
+            if profile in ("openai_strict", "anthropic"):
                 if schema.get("additionalProperties", False) is not False:
                     raise ProviderError("MODEL_SCHEMA_PROJECTION_UNSUPPORTED")
                 schema["additionalProperties"] = False
@@ -62,8 +83,12 @@ def project_schema(original, profile):
         for key in ("anyOf", "allOf"):
             if key in schema:
                 schema[key] = [walk(item, visiting) for item in schema[key]]
-        if profile in ("anthropic", "openai_strict"):
-            constraints = {key: schema.pop(key) for key in tuple(schema) if key in dropped}
+        if profile in ("anthropic", "openai_strict", "portable_union"):
+            # GenerateContent responseJsonSchema has a narrower keyword set than
+            # general JSON Schema. Keep supported numeric/array bounds there.
+            unsupported = (dropped if profile != "portable_union" else
+                {"minLength", "maxLength", "pattern", "multipleOf", "exclusiveMinimum", "exclusiveMaximum", "propertyNames"})
+            constraints = {key: schema.pop(key) for key in tuple(schema) if key in unsupported}
             if constraints:
                 schema["description"] = (schema.get("description", "") +
                     " Locally validated constraints: " + json.dumps(constraints, ensure_ascii=True)).strip()
@@ -82,7 +107,7 @@ def project_schema(original, profile):
 def unwrap_text(text, wrapped, original=None, profile="raw"):
     if original is None and not wrapped:
         return text
-    if not wrapped and profile not in ("anthropic", "openai_strict"):
+    if not wrapped and profile not in ("anthropic", "openai_strict", "portable_union"):
         return text
     try:
         value = json.loads(text)
@@ -105,7 +130,8 @@ def unwrap_text(text, wrapped, original=None, profile="raw"):
                     except (ValueError, TypeError, KeyError):
                         pass
                 raise ValueError
-            if profile in ("anthropic", "openai_strict") and isinstance(schema.get("additionalProperties"), dict):
+            map_values = _map_values(schema, profile)
+            if map_values is not None:
                 if not isinstance(data, list):
                     raise ValueError
                 result = {}
@@ -114,7 +140,7 @@ def unwrap_text(text, wrapped, original=None, profile="raw"):
                         raise ValueError
                     if entry["key"] in result:
                         raise ValueError
-                    result[entry["key"]] = restore(entry["value"], schema["additionalProperties"])
+                    result[entry["key"]] = restore(entry["value"], map_values)
                 return result
             if isinstance(data, dict) and "properties" in schema:
                 return {k: restore(v, schema["properties"].get(k, {})) for k, v in data.items()}

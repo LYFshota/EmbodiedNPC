@@ -82,18 +82,9 @@ exception types, Win32 codes and stack locations without exception arguments or 
 overwriting an old one or copying UserData, developer data, keys or session tokens.
 It is not a ZIP/release pipeline. Close both processes before copying an installed game.
 
-## Early Prototype public preview
+## Current build/acceptance boundary (2026-10-18)
 
-Use `assemble.py --without-builtin-embedding` when weights are not distributed.
-It writes an explicit package resource policy so Start.cmd can reach first-time
-configuration without weights. Select external Embedding or disable it before
-saving the first Main configuration. The actual built-in provider still checks
-its resources and fails explicitly if selected without the files; no session,
-ownership, schema or runtime resource validation is bypassed.
-
-This source release uses a newly built Windows Player from the cleaned public
-candidate, not a historical Standalone. Validation scope is in
-[release status](../../Docs/RELEASE_STATUS.md). Never distribute UserData.
+The GitHub repository contains portable launcher and assembler source, not a committed Windows Player or final release ZIP. Local Windows candidate P0-F was build/start/exit and offline diagnostics tested; P0-G was built successfully and remains `READY_FOR_MANUAL_TEST`, with real AI/NPC, window/display coverage and clean-machine checks incomplete. See [current status](../../InternalDocs/CURRENT_STATUS.md) and [P0-G evidence](../../InternalDocs/Reports/Standalone_IntegratedBuild_P0G_2026-10-18.md). **Do not redistribute a candidate with UserData, API credentials or development evidence.**
 
 ## UserData backup and restore
 
@@ -136,7 +127,3 @@ recovery flow, without killing or adopting another service.
 On Windows, an ordinary copy can inherit the destination folder's broader permissions.
 The current entry does not repair copied credential-file ACLs automatically; verify or
 restore their private permissions before using real credentials in the restored installation.
-
-## v0.1.0-preview distribution
-
-The official Windows preview includes the eight pinned EmbeddingGemma-300M Q4 ONNX files and their Gemma distribution terms. Use `--models` with the prepared model directory. The optional no-weights assembly mode is not the default release. Main LLM configuration remains required.

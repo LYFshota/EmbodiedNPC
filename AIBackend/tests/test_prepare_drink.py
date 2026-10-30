@@ -18,6 +18,7 @@ from app.local_model_scheduler import PrioritizedModelExecutor
 from app.model_requests import CognitiveModelRequestFactory
 from app.providers import InferenceOptions, ModelResult
 from tests.test_action_proposal_validation import _context, _decision
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def context(agent="npc_cafe_01"):
@@ -68,8 +69,8 @@ class PrepareDrinkTests(unittest.IsolatedAsyncioTestCase):
             guard = patch(target, side_effect=AssertionError("prepare_drink tests must remain offline and storage-free"))
             guard.start(); self.addCleanup(guard.stop)
 
-    def test_three_enum_values_and_step_goal_roundtrip(self):
-        for drink in ("latte", "cappuccino", "americano"):
+    def test_registered_enum_values_and_step_goal_roundtrip(self):
+        for drink in PREPARE_DRINK_REGISTRATION.descriptor.binding_schema[0].enum_values:
             with self.subTest(drink=drink):
                 step = CognitiveStepResult.model_validate(decision(dict(drink_type=drink))).root
                 goal = ActionProposalValidator().validate_and_adapt(step, context())
@@ -78,13 +79,13 @@ class PrepareDrinkTests(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNone(goal.destination_entity_id)
 
     def test_missing_extra_unsupported_bindings_and_types_rejected(self):
-        for bindings in ({}, dict(drink_type="mocha"), dict(drink_type="latte", recipient="player_01"),
+        for bindings in ({}, dict(drink_type="unregistered_drink"), dict(drink_type="latte", recipient="player_01"),
                          dict(drink_type="LATTE"), dict(drink_type=1), dict(drink_type=True),
                          dict(drink_type=[]), dict(drink_type=None), dict(type="latte")):
             with self.subTest(bindings=bindings), self.assertRaises((ValidationError, ActionProposalValidationError)):
                 d = CognitiveDecision.model_validate(decision(bindings))
                 ActionProposalValidator().validate_and_adapt(d, context())
-        for args in (dict(), dict(drink_type="mocha"), dict(drink_type="latte", target_entity_id="cup_01"),
+        for args in (dict(), dict(drink_type="unregistered_drink"), dict(drink_type="latte", target_entity_id="cup_01"),
                      dict(drink_type="latte", recipient="player_01")):
             with self.subTest(args=args), self.assertRaises(ValidationError):
                 GoalProposal(type="prepare_drink", **args)
@@ -94,7 +95,7 @@ class PrepareDrinkTests(unittest.IsolatedAsyncioTestCase):
         for agent in ("npc_cafe_regular_01", "npc_cafe_companion_01", "npc_cafe_quiet_01"):
             with self.subTest(agent=agent), self.assertRaises(ActionProposalValidationError):
                 ActionProposalValidator().validate_and_adapt(d, context(agent))
-        for replacement in ([], ["latte"], ["latte", "cappuccino", "americano", "mocha"]):
+        for replacement in ([], ["latte"], [*PREPARE_DRINK_REGISTRATION.descriptor.binding_schema[0].enum_values, "unregistered_drink"]):
             v = context().model_dump()
             v["capabilities"]["available_actions"][0]["bindings"][0]["enum_values"] = replacement
             with self.subTest(values=replacement), self.assertRaises((ValidationError, ActionProposalValidationError)):
@@ -141,4 +142,4 @@ class PrepareDrinkTests(unittest.IsolatedAsyncioTestCase):
         current = CognitiveRequest.model_validate(value)
         self.assertFalse(may_propose_new_world_action(current))
         with self.assertRaises(ValidationError):
-            await CognitiveBackendEntry(ScriptedDrinkProvider(decision()), PrioritizedModelExecutor(), context_length=16384).run(current)
+            await CognitiveBackendEntry(ScriptedDrinkProvider(decision()), PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(current)

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using EmbodiedNPC.Settings;
 using EmbodiedNPC.Communication;
 using EmbodiedNPC.Planning;
 using EmbodiedNPC.Planning.MiniGoap;
@@ -11,9 +13,26 @@ namespace EmbodiedNPC.Actions
 {
     public static class DrinkTypes
     {
-        public static bool IsValid(string value) => value == "latte" || value == "cappuccino" || value == "americano";
-        public static string Name(string value) => value switch
-        { "latte" => "拿铁", "cappuccino" => "卡布奇诺", "americano" => "美式", _ => "饮品" };
+        // Stable protocol order and both display languages have one authoring source.
+        private static readonly (string Id, string Chinese, string English)[] definitions =
+        {
+            ("latte", "拿铁", "Latte"),
+            ("cappuccino", "卡布奇诺", "Cappuccino"),
+            ("americano", "美式", "Americano"),
+            ("espresso", "浓缩咖啡", "Espresso"),
+            ("flat_white", "馥芮白", "Flat White"),
+            ("mocha", "摩卡", "Mocha"),
+            ("caramel_macchiato", "焦糖玛奇朵", "Caramel Macchiato"),
+            ("hot_chocolate", "热巧克力", "Hot Chocolate"),
+            ("matcha_latte", "抹茶拿铁", "Matcha Latte"),
+            ("black_tea", "红茶", "Black Tea"),
+        };
+        public static IReadOnlyList<string> Ids { get; } = Array.AsReadOnly(definitions.Select(value => value.Id).ToArray());
+        private static readonly Dictionary<string, (string Id, string Chinese, string English)> byId =
+            definitions.ToDictionary(value => value.Id, StringComparer.Ordinal);
+        public static bool IsValid(string value) => value != null && byId.ContainsKey(value);
+        public static string Name(string value, bool english = false) => value != null && byId.TryGetValue(value, out var definition)
+            ? (english ? definition.English : definition.Chinese) : (english ? "drink" : "饮品");
         public static bool IsCurrent(EntityRegistry registry, WorldEntity entity) => registry != null &&
             entity != null && entity.isActiveAndEnabled && entity.gameObject.activeInHierarchy &&
             registry.TryGetEntity(entity.EntityId, out var current) && current == entity;
@@ -123,14 +142,14 @@ namespace EmbodiedNPC.Actions
         public ActionPresentationInfo Present(ActionExecutionResult result)
         {
             result.ValidatedBindings.TryGetValue("drink_type", out string drink);
-            string name = DrinkTypes.Name(drink);
+            string name = DrinkTypes.Name(drink, SettingsUiLanguage.IsEnglish);
             string message = result.Status switch
             {
-                ActionExecutionStatus.Accepted => $"好呀，我去准备{name}，稍等一下。",
-                ActionExecutionStatus.Succeeded => $"{name}做好了，请享用。",
-                ActionExecutionStatus.Cancelled => "我已经停止制作饮品。",
-                ActionExecutionStatus.TimedOut => "制作超时了，这次没有完成。",
-                ActionExecutionStatus.Failed or ActionExecutionStatus.Rejected => "这次没能完成饮品制作。",
+                ActionExecutionStatus.Accepted => SettingsUiLanguage.T($"好呀，我去准备{name}，稍等一下。", $"Sure, I will prepare {name}. Please wait."),
+                ActionExecutionStatus.Succeeded => SettingsUiLanguage.T($"{name}做好了，请享用。", $"Your {name} is ready. Enjoy!"),
+                ActionExecutionStatus.Cancelled => SettingsUiLanguage.T("我已经停止制作饮品。", "I have stopped preparing the drink."),
+                ActionExecutionStatus.TimedOut => SettingsUiLanguage.T("制作超时了，这次没有完成。", "Drink preparation timed out and was not completed."),
+                ActionExecutionStatus.Failed or ActionExecutionStatus.Rejected => SettingsUiLanguage.T("这次没能完成饮品制作。", "I could not finish preparing the drink."),
                 _ => result.SourceMessage,
             };
             return new ActionPresentationInfo(result.Status, result.FailureCode, message);

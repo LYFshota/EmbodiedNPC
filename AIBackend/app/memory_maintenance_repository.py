@@ -6,7 +6,7 @@ from .canonical_memory_ranking import CanonicalMemoryRanker
 from .canonical_memory_read_repository import CanonicalMemoryReadRepository
 from .canonical_recall_models import CanonicalReadFilter, CanonicalRecallBudget
 from .experience_ledger import ExperienceLedger
-from .memory_consolidation_admission import identity_key, semantic_id, source_texts
+from .memory_consolidation_admission import identity_key, semantic_id, source_texts, NPC_SELF_STATEMENT_PREFIX
 from .memory_consolidation_context import TrustedPersistentIdentity
 from .memory_maintenance_models import (
     MAINTENANCE_VERSION, MaintenancePolicy, MaintenanceInput, MaintenanceResponse,
@@ -119,20 +119,44 @@ class MemoryMaintenanceRepository:
                 "AND s.identity_namespace=? AND s.identity_type=? AND s.persistent_id=? "
                 "AND NOT EXISTS (SELECT 1 FROM memory_maintenance_items i WHERE i.memory_id=r.memory_id AND i.processed_at IS NULL) "
                 "ORDER BY r.learned_at DESC,r.memory_id LIMIT ?", (*identity_key(owner),*identity_key(subject),policy.scan_limit))]
-            ranked = self.ranker.rank(rows,db,' '.join(r['fact'] for r in records)[:512],CanonicalReadFilter(),
-                                     CanonicalRecallBudget(candidate_limit=policy.related_limit,top_k=policy.related_limit))
-            selected = list(ranked.ids)
-            # A small recent fallback still permits LLM inspection when there is
-            # no lexical/vector overlap. Similarity never decides an operation.
-            for row in rows[:4]:
-                if row['memory_id'] not in selected and len(selected)<policy.related_limit:
-                    selected.append(row['memory_id'])
-            for memory_id in selected:
+            new_rows = [dict(db.execute("SELECT memory_id,memory_type,summary,confidence,importance,learned_at "
+                                       "FROM memory_records WHERE memory_id=?", (i,)).fetchone()) for i in new_ids]
+            ranked_peers = []
+            for record in records:
+                peers = [r for r in (*new_rows, *rows) if r['memory_id'] != record['memory_id']]
+                # Attribution is authority metadata, not a shared semantic topic.
+                query = record['fact'].removeprefix(NPC_SELF_STATEMENT_PREFIX)
+                ranked = self.ranker.rank(peers, db, query, CanonicalReadFilter(),
+                    CanonicalRecallBudget(candidate_limit=policy.related_limit, top_k=policy.related_limit))
+                ids = list(ranked.ids[:policy.related_limit])
+                # Retain the existing small recent fallback, after ranked peers.
+                for peer in peers[:4]:
+                    if peer['memory_id'] not in ids and len(ids) < policy.related_limit:
+                        ids.append(peer['memory_id'])
+                ranked_peers.append(ids)
+            # Round-robin gives each new fact its best candidate before taking
+            # lower-ranked peers. Bind unordered pairs once, including new/new.
+            candidates, seen = [], set()
+            for rank in range(policy.related_limit):
+                for memory_id, peers in zip(new_ids, ranked_peers):
+                    if rank >= len(peers):
+                        continue
+                    pair = (memory_id, peers[rank])
+                    key = frozenset(pair)
+                    if key not in seen:
+                        seen.add(key)
+                        candidates.append(pair)
+            selected = tuple(candidates[:8])
+            wanted = {i for pair in selected for i in pair} - set(new_ids)
+            for memory_id in dict.fromkeys(i for pair in selected for i in pair if i in wanted):
                 try:
                     records.append(self._fact(db,memory_id,owner,subject))
                 except MaintenanceAdmissionError:
                     continue
-        return MaintenanceInput(job['job_id'],job['attempt_generation'],owner,subject,new_ids,tuple(records))
+            hydrated = {r['memory_id'] for r in records}
+            selected = tuple(pair for pair in selected if set(pair) <= hydrated)
+        return MaintenanceInput(job['job_id'],job['attempt_generation'],owner,subject,new_ids,tuple(records),
+                                selected, tuple(candidates))
 
     def requeue(self, job_id, generation, now, code, *, failed=False, policy=MaintenancePolicy()):
         with closing(self.connect()) as db, db:
@@ -174,11 +198,16 @@ class MemoryMaintenanceRepository:
             if encoded(current)!=encoded(context.records):
                 raise MaintenanceStale('MEMORY_REVISION_CHANGED')
             by_id={r['memory_id']:r for r in current}
+            planned = None if context.comparison_pairs is None else {frozenset(p) for p in context.comparison_pairs}
+            if planned is not None and (len(planned) != len(context.comparison_pairs) or len(planned) > 8
+                or any(len(p) != 2 or not p.issubset(by_id) or not p.intersection(context.new_ids) for p in planned)):
+                raise MaintenanceAdmissionError('MAINTENANCE_PAIR_PLAN_INVALID')
             pairs=set()
             for op in response.operations:
                 pair=(op.new_memory_id,op.old_memory_id)
                 if (op.new_memory_id not in context.new_ids or op.old_memory_id not in by_id
-                    or pair[0]==pair[1] or frozenset(pair) in pairs):
+                    or pair[0]==pair[1] or frozenset(pair) in pairs
+                    or (planned is not None and frozenset(pair) not in planned)):
                     raise MaintenanceAdmissionError('OPERATION_OUTSIDE_INPUT')
                 pairs.add(frozenset(pair))
                 new=by_id[op.new_memory_id]

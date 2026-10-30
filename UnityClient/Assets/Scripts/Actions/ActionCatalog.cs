@@ -62,7 +62,7 @@ namespace EmbodiedNPC.Actions
                 ActionInterruptionPolicy.Cancel, ActionConfirmationPolicy.OnRebind),
                 entityBinder, new BringObjectAdmissionPolicy(), new BringObjectPlanFactory(),
                 new BringObjectCandidateProvider(), recoveryPolicy, new BringObjectPresentationPolicy(),
-                new BringObjectExecutionPreparationPolicy(), reportsTaskFailures: true),
+                new BringObjectExecutionPreparationPolicy()),
             new ActionRegistration(new ActionDescriptor(
                 "move_to_entity", "1.0",
                 "Move the NPC near one validated entity without picking it up or delivering it.",
@@ -82,9 +82,9 @@ namespace EmbodiedNPC.Actions
                 new OpenDoorCandidateProvider(), recoveryPolicy, new OpenDoorPresentationPolicy(),
                 new OpenDoorExecutionPreparationPolicy()),
             new ActionRegistration(new ActionDescriptor(
-                "prepare_drink", "1.0", "Prepare one latte, cappuccino or americano for the requesting player at the authorized station.",
+                "prepare_drink", "1.0", $"Prepare one of {DrinkTypes.Ids.Count} supported hot drinks from drink_type for the requesting player at the authorized station.",
                 new[] { new ActionBindingDescriptor("drink_type", ActionBindingKind.Enum,
-                    enumValues: new[] { "latte", "cappuccino", "americano" }) },
+                    enumValues: DrinkTypes.Ids) },
                 new[] { "authorized_drink_station", "requesting_player" }, true, 30f,
                 ActionInterruptionPolicy.Cancel, ActionConfirmationPolicy.OnRebind),
                 new PrepareDrinkBinder(), new PrepareDrinkAdmissionPolicy(), new PrepareDrinkPlanFactory(),

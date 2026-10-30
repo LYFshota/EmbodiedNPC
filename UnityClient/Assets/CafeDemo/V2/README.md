@@ -12,15 +12,19 @@ This is a local scene upgrade, not a new runtime framework. Gameplay services, i
 - V2 uses simple colliders, a freshly baked `CafeDemoV2NavMesh.asset`, and the existing OrbitCamera at 3.1 m / 18 degrees.
 - Existing low-poly geometry and replaced visuals are retained inactive. The original Merchant/RegularCustomer identities remain; CompanionCustomer and QuietCustomer have independent identities. BackgroundNpc is explicitly inactive.
 
-Full raw captures and local evidence remain excluded from Git. Public capability and validation boundaries are summarized in [the acceptance summary](../../../../Docs/RELEASE_STATUS.md).
+Full raw captures and local evidence remain excluded from Git. Public capability and validation boundaries are summarized in [the acceptance summary](../../../../Docs/Validation/CafeDemoV2_2026-10-10.md).
 
 ## Dependencies and source permissions
 
-The complete café, four NPCs and Xingmang remain included, with their stable model GUIDs. UniGLTF/VRM10 are pinned in the package lock. Character-specific sources and restrictions are recorded in [Characters/SOURCE.md](Characters/SOURCE.md); Ao is not CC0. Xingmang owner rights are OWNER CONFIRMED and its project-scoped non-commercial license has been formally adopted.
+This scene references `Assets/CafeEnvironmentCompatibilityTest/CozyCafe.glb`, `GirlA.vrm`, `Assets/VRMCompatibilityTest/Xingmang.vrm`, and the three imported models under `Assets/CafeDemo/V2/Characters`. These source assets and their stable GUIDs accompany V2. UniGLTF and VRM 1.0 are pinned to official UniVRM 0.131.3, commit `9750dadc592f421c356bf0376c73e61abbe323e3`; no repository-external local package path is required. Model source and permission notes are in `Characters/SOURCE.md`.
 
-See [resource licenses](../../../../THIRD_PARTY_NOTICES.md) and [Cafe attribution and modifications](../../../../ThirdPartyNotices/Cafe_Attribution.md). fangzhangmnm/Wacky contributions use CC BY 4.0; the VamTastic contribution is marked CC BY with its version unverified. The hidden standee and its GLB-exclusive data were removed in the prior candidate; the current café is a modified derivative, not the untouched source file. Historical evidence and private reports are not distributed in this source tree.
+Xingmang has an independent limited-use license: © 2026 LYFshota. Public access and use to build, run, study, test and research EmbodiedNPC are permitted with the license and source credits retained; independent use or separate model redistribution needs permission. The owner confirms that this public grant authorizes compliant users under the embedded ExplicitlyLicensedPerson flag. See `Assets/VRMCompatibilityTest/Xingmang.LICENSE.md`. It is not CC0 or Apache-2.0. The commission/buyout declaration has not been independently checked against the contract; this documentation update does not modify the binary.
 
-Run the existing TitleScene → CafeDemoV2 flow and follow [source setup](../../../../Docs/SOURCE_SETUP.md), including six-resource Reimport after package/shader import if needed. Do not rerun one-time scene authoring menus.
+On 2026-10-10 the project owner confirmed that all models except Xingmang are CC0 for this GitHub delivery. See `Characters/SOURCE.md`; original metadata and source records remain unchanged. The earlier local audit did not independently establish all publication pages, including the VaM-derived texture source chain. The owner confirmation and embedded permissions are separate evidence; this delivery does not claim an independent rights audit or change the Xingmang authorization.
+
+Cafe source attribution (copied from the existing asset audit): **Wacky**, **Cozy morning in a cafe — 3D Editor Challenge**, **CC-BY-4.0**. Source: https://sketchfab.com/3d-models/cozy-morning-in-a-cafe-3d-editor-challenge-3e70ea39900848d0951e1b47954361eb . VRM permissions are separate; retain the source metadata.
+
+V2 is the current Cafe entry after TitleScene. Dated layout and acceptance notes below are historical evidence; they do not imply every later WIP change has been verified in Windows Player. For source startup, dependencies and built-in model preparation, see [source setup](../../../../Docs/SOURCE_SETUP.md).
 
 ## Counter layout revision — 2026-10-05
 
@@ -34,7 +38,7 @@ Three customers start seated at the existing Table1 A/B and Table2 C chairs. `Ca
 
 Merchant and RegularCustomer keep `cafe.merchant` and `cafe.regular_customer`. New IDs are `cafe.companion_customer` and `cafe.quiet_customer`; event receiver routing and player dialogue candidates include all four. Customer action capabilities are empty. Existing Settings discovers the four definitions and edits independent local overrides without schema or backend changes. A preserved legacy RegularCustomer override can still show “顾客” instead of the new default “沈知意”; restoring that NPC's defaults is an explicit user Settings action.
 
-The initial 2026-10-09 P1 validation used an external Unity copy. Subsequent 2026-10-10 core acceptance exercised isolated CafeDemoV2 Play through the actual Editor. These historical runs and the Git delivery rechecks are distinguished in [the public summary](../../../../Docs/RELEASE_STATUS.md); a standalone build is still not verified.
+The initial 2026-10-09 P1 validation used an external Unity copy. Subsequent 2026-10-10 core acceptance exercised isolated CafeDemoV2 Play through the actual Editor. These historical runs and the Git delivery rechecks are distinguished in [the public summary](../../../../Docs/Validation/CafeDemoV2_2026-10-10.md); a standalone build is still not verified.
 
 Continuous ambient conversation, P3 emotion expressions and P4 random idle are not implemented. `Sitting_Talking_Loop` is an imported compatibility resource only. This scene is already configured; the one-time `CafeV2NpcP1Setup` authoring menu is not needed again and must not be rerun over updated Persona/scene authoring.
 
@@ -44,4 +48,4 @@ Fixed single-player UID is `cafe-local-player-001`. Four NPCs retain separate ca
 
 DialogueContinuationScheduler is wired but disabled by default, waits 4 seconds and permits at most one continuation opportunity per Player input. It reuses the event/cognition pipeline; Player input cancels old continuations, and only successful displayed/ACKed responses become Experience. The opportunity can choose NO_ACTION.
 
-Current observed seats and visible occupant identities use the observer's own perspective. Unknown is not empty; Persona familiarity is not proof of today's arrival/current position. Missing beside geometry remains an explicit limitation. Historical real acceptance and current delivery checks are separated in [the public validation summary](../../../../Docs/RELEASE_STATUS.md).
+Current observed seats and visible occupant identities use the observer's own perspective. Unknown is not empty; Persona familiarity is not proof of today's arrival/current position. Missing beside geometry remains an explicit limitation. Historical real acceptance and current delivery checks are separated in [the public validation summary](../../../../Docs/Validation/CafeDemoV2_2026-10-10.md).

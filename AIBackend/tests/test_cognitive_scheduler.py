@@ -9,6 +9,7 @@ from app.contracts import CognitiveRequest
 from app.local_model_scheduler import PrioritizedModelExecutor
 from app.providers import MockProvider, ModelMessage, ModelRequest, ModelResult
 from tests.test_cognitive_request import _event_request
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 class CognitiveSchedulerTests(unittest.IsolatedAsyncioTestCase):
@@ -16,7 +17,7 @@ class CognitiveSchedulerTests(unittest.IsolatedAsyncioTestCase):
         provider = MockProvider()
         executor = AsyncMock(spec=PrioritizedModelExecutor)
         executor.execute.return_value = ModelResult(text='{"decision_kind":"NO_ACTION"}')
-        entry = CognitiveBackendEntry(provider, executor, context_length=16384)
+        entry = CognitiveBackendEntry(provider, executor, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         await entry.run(CognitiveRequest.model_validate(_event_request()))
         executor.execute.assert_awaited_once()
         args, kwargs = executor.execute.call_args
@@ -34,6 +35,11 @@ class CognitiveSchedulerTests(unittest.IsolatedAsyncioTestCase):
         peak = 0
 
         class Provider:
+            # Match the current ModelProvider/CapacityCapture metadata contract.
+            name = "scripted"
+            model = "scheduler-contract-test"
+            context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
+
             async def generate(self, request):
                 nonlocal active, peak
                 active += 1
@@ -58,7 +64,7 @@ class CognitiveSchedulerTests(unittest.IsolatedAsyncioTestCase):
 
         async def foreground():
             foreground_queued.set()
-            return await CognitiveBackendEntry(provider, executor, context_length=16384).run(
+            return await CognitiveBackendEntry(provider, executor, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(
                 CognitiveRequest.model_validate(_event_request())
             )
 

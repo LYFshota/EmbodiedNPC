@@ -167,7 +167,7 @@ namespace EmbodiedNPC.Tests
             Assert.AreEqual("32768", field.text);
             Assert.AreEqual("1024", ((TMP_InputField)Get("maxOutputTokens")).text);
             Assert.IsTrue(field.transform.parent.gameObject.activeSelf);
-            Invoke("OnContextPresetChosen", 2);
+            Invoke("OnContextPresetChosen", 1);
             ((TMP_InputField)Get("mainModel")).text = "arbitrary-model-name";
             Assert.AreEqual("32768", field.text);
             var local = Preset("ollama", "ollama", "http://127.0.0.1:11434");
@@ -183,23 +183,23 @@ namespace EmbodiedNPC.Tests
             var presets = (TMP_Dropdown)Get("contextPresets");
             Assert.IsFalse(field.readOnly);
             Assert.IsTrue(presets.interactable);
-            CollectionAssert.AreEqual(new[] { "8K", "16K", "32K", "64K" }, presets.options.ConvertAll(o => o.text));
-            for (int i = 0; i < 4; i++)
+            CollectionAssert.AreEqual(new[] { "16K", SettingsUiLanguage.T("32K（推荐）", "32K (Recommended)"), "64K" }, presets.options.ConvertAll(o => o.text));
+            for (int i = 0; i < 3; i++)
             {
                 Invoke("OnContextPresetChosen", i);
-                Assert.AreEqual((8192 << i).ToString(), field.text);
+                Assert.AreEqual((16384 << i).ToString(), field.text);
                 Assert.AreEqual(i, presets.value);
                 Invoke("BuildProfileCommand", false);
             }
             field.text = "16384";
             Invoke("OnContextLengthChanged", field.text);
-            Assert.AreEqual(1, presets.value);
-            foreach (string custom in new[] { "4096", "12000", "49152", "52000", "131072" })
+            Assert.AreEqual(0, presets.value);
+            foreach (string custom in new[] { "8192", "4096", "12000", "49152", "52000", "131072", "1000000" })
             {
                 field.text = custom; Invoke("OnContextLengthChanged", field.text);
                 string command = Invoke("BuildProfileCommand", false).ToString();
                 Assert.That(command, Does.Contain("\"context_length\": " + custom));
-                Assert.AreEqual(4, presets.value);
+                Assert.AreEqual(3, presets.value);
             }
             foreach (string invalid in new[] { "0", "-1", "not-a-number", "1000001" })
             {
@@ -207,6 +207,32 @@ namespace EmbodiedNPC.Tests
                 Assert.IsInstanceOf<ArgumentException>(Assert.Throws<TargetInvocationException>(
                     () => Invoke("BuildProfileCommand", false)).InnerException);
             }
+        }
+
+        [TestCase(false)] [TestCase(true)]
+        public void ContextRecommendation_LocalizesWithoutChangingManual8k(bool english)
+        {
+            bool previous = SettingsUiLanguage.IsEnglish;
+            try
+            {
+                Set("mainConnectionState", Control<TextMeshProUGUI>("capacityState", main));
+                Set("embeddingConnectionState", Control<TextMeshProUGUI>("embeddingState", embedding));
+                var field = (TMP_InputField)Get("contextLength");
+                field.text = "8192";
+                SettingsUiLanguage.SetEnglish(english);
+                Invoke("RefreshLanguage");
+                var presets = (TMP_Dropdown)Get("contextPresets");
+                CollectionAssert.AreEqual(new[] { "16K", english ? "32K (Recommended)" : "32K（推荐）", "64K", "8K" },
+                    presets.options.ConvertAll(o => o.text));
+                Assert.AreEqual("8192", field.text);
+                Assert.AreEqual(3, presets.value);
+                Invoke("RefreshContextCapacityState");
+                string capacity = ((TMP_Text)(Get("mainCapacityState") ?? Get("mainConnectionState"))).text;
+                StringAssert.Contains("32K", capacity);
+                StringAssert.Contains("64K", capacity);
+                Assert.That(capacity, Does.Contain(english ? "not a capability guarantee" : "不代表模型支持"));
+            }
+            finally { SettingsUiLanguage.SetEnglish(previous); }
         }
 
         [Test] public void SavedCloud8k_DoesNotAdoptNewDefaultOnReload()
@@ -229,7 +255,7 @@ namespace EmbodiedNPC.Tests
             Assert.That(command, Does.Contain("\"key_action\": \"retain\""));
         }
 
-        [TestCase(32768)] [TestCase(65536)] [TestCase(52000)] [TestCase(0)]
+        [TestCase(8192)] [TestCase(16384)] [TestCase(32768)] [TestCase(65536)] [TestCase(49152)] [TestCase(52000)] [TestCase(0)]
         public void SavedCapacityAndActiveRemainUnchangedWhileDraftChanges(int capacity)
         {
             var view = (ModelProfilesView)Get("profilesView");
@@ -246,7 +272,7 @@ namespace EmbodiedNPC.Tests
             string command = Invoke("BuildProfileCommand", false).ToString();
             Assert.That(command, Does.Contain("\"context_length\": " + (capacity == 0 ? "null" : capacity.ToString())));
             string frozen = JsonUtility.ToJson(view);
-            Invoke("OnContextPresetChosen", 1); Invoke("OnContextLengthChanged", "16384");
+            Invoke("OnContextPresetChosen", 0); Invoke("OnContextLengthChanged", "16384");
             Assert.AreEqual(frozen, JsonUtility.ToJson(view));
             string status = ((TMP_Text)Get("mainConnectionState")).text;
             Assert.That(status, Does.Contain("16384"));
@@ -721,7 +747,8 @@ namespace EmbodiedNPC.Tests
                 typeof(FirstRunModelSetup).GetMethod("ApplyProfiles", flags).Invoke(actual, new object[] { view });
                 var context = (TMP_InputField)read("contextLength");
                 Assert.AreEqual("32768", context.text);
-                CollectionAssert.AreEqual(new[] { "8K", "16K", "32K", "64K" }, ((TMP_Dropdown)read("contextPresets")).options.ConvertAll(o => o.text));
+                CollectionAssert.AreEqual(new[] { "16K", SettingsUiLanguage.T("32K（推荐）", "32K (Recommended)"), "64K" }, ((TMP_Dropdown)read("contextPresets")).options.ConvertAll(o => o.text));
+                Assert.AreEqual(1, ((TMP_Dropdown)read("contextPresets")).value);
                 Assert.AreSame(((GameObject)read("advancedSettings")).transform, context.transform.parent.parent);
                 Assert.IsFalse(((GameObject)read("advancedSettings")).activeSelf);
                 string capacityStatus = ((TMP_Text)read("mainCapacityState")).text;

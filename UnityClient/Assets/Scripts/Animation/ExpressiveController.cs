@@ -3,6 +3,7 @@ using EmbodiedNPC.Cognition;
 using EmbodiedNPC.Dialogue;
 using EmbodiedNPC.Dialogue.Presentation;
 using EmbodiedNPC.World;
+using EmbodiedNPC.Routines;
 using UnityEngine;
 
 namespace EmbodiedNPC.Animation
@@ -22,7 +23,21 @@ namespace EmbodiedNPC.Animation
         [SerializeField] private FacingController facing;
         private bool listening;
         private string sessionId;
-        private WorldEntity attentionTarget;
+        private WorldEntity attentionTarget, conversationSpeaker;
+        private string acceptedConversation;
+        private AgentOrchestrator orchestrator;
+        private NpcDefaultRoutineController routine;
+        public string ConversationSpeakerId => HasConversationAttention ? conversationSpeaker.EntityId : null;
+        private bool HasConversationAttention => conversationSpeaker != null &&
+            conversationSpeaker.isActiveAndEnabled && conversationSpeaker.gameObject.activeInHierarchy &&
+            dialogue != null && dialogue.isActiveAndEnabled && dialogue.HasActiveSession &&
+            dialogue.CurrentConversationId == acceptedConversation && dialogue.SelectedTarget != null &&
+            dialogue.SelectedTarget.Entity == owner && dialogue.ActiveSpeakerEntityId == conversationSpeaker.EntityId &&
+            dialogue.CheckEligibility(dialogue.SelectedTarget).IsEligible &&
+            IsConversationHeld;
+        private bool IsConversationHeld => dialogue != null && dialogue.IsPresentationVisible ||
+            speech != null && speech.IsSpeaking || orchestrator != null && orchestrator.HasActiveRun ||
+            routine != null && routine.IsEngagementHeld;
         public DialoguePresentationState State { get; private set; }
         public string ExpressionHint { get; private set; } = "neutral";
         public string GestureHint { get; private set; } = "none";
@@ -44,7 +59,10 @@ namespace EmbodiedNPC.Animation
             {
                 dialogue.ActiveSessionChanged += HandleSessionChanged;
                 dialogue.PresentationVisibilityChanged += HandleVisibilityChanged;
+                dialogue.DialogueSubmissionAccepted += HandleAcceptedUtterance;
             }
+            orchestrator = owner == null ? null : owner.GetComponent<AgentOrchestrator>();
+            routine = owner == null ? null : owner.GetComponent<NpcDefaultRoutineController>();
             RefreshSession();
         }
         private void OnDisable()
@@ -55,6 +73,7 @@ namespace EmbodiedNPC.Animation
             {
                 dialogue.ActiveSessionChanged -= HandleSessionChanged;
                 dialogue.PresentationVisibilityChanged -= HandleVisibilityChanged;
+                dialogue.DialogueSubmissionAccepted -= HandleAcceptedUtterance;
             }
         }
         public void Configure(WorldEntity entity, MotionChannelCoordinator channels,
@@ -87,9 +106,14 @@ namespace EmbodiedNPC.Animation
             ClearHints(); State = listening ? DialoguePresentationState.Listening : DialoguePresentationState.Idle;
         }
         private void HandleSessionChanged(DialogueParticipant value) => RefreshSession();
-        private void HandleVisibilityChanged(bool visible)
+        private void HandleVisibilityChanged(bool visible) => RefreshSession();
+        private void HandleAcceptedUtterance(UserUtterance utterance)
         {
-            if (!visible && sessionId != null) { speech?.Cancel(); ClearHints(); }
+            if (utterance == null || owner == null || utterance.targetAgentId != owner.EntityId ||
+                dialogue == null || utterance.conversationId != dialogue.CurrentConversationId ||
+                entityRegistry == null || !entityRegistry.TryGetEntity(utterance.speakerEntityId, out var speaker) ||
+                !speaker.IsAgent(AgentRole.Player)) return;
+            conversationSpeaker = speaker; acceptedConversation = utterance.conversationId;
             RefreshSession();
         }
         private void RefreshSession()
@@ -98,7 +122,14 @@ namespace EmbodiedNPC.Animation
                 dialogue.SelectedTarget.GetComponent<WorldEntity>() == owner;
             string current = selected ? dialogue.CurrentConversationId : null;
             if (!string.Equals(current, sessionId, StringComparison.Ordinal))
-            { speech?.Cancel(); ClearHints(); sessionId = current; }
+            { ClearHints(); conversationSpeaker = null; acceptedConversation = null; sessionId = current; }
+            if (conversationSpeaker != null && (!conversationSpeaker.isActiveAndEnabled ||
+                !conversationSpeaker.gameObject.activeInHierarchy || !selected || !IsConversationHeld ||
+                !dialogue.CheckEligibility(dialogue.SelectedTarget).IsEligible || entityRegistry == null ||
+                !entityRegistry.TryGetEntity(conversationSpeaker.EntityId, out var registered) || registered != conversationSpeaker ||
+                motionChannels != null && (motionChannels.IsFormalTaskMotionActive || motionChannels.IsEmergencyMotionActive ||
+                    motionChannels.IsInteractionMotionActive || motionChannels.IsCarryPresentationActive)))
+            { conversationSpeaker = null; acceptedConversation = null; }
             listening = selected && dialogue.IsPresentationVisible;
             if (speech == null || !speech.IsSpeaking) State = listening ? DialoguePresentationState.Listening : DialoguePresentationState.Idle;
             RefreshDialogueFacing(selected);
@@ -107,10 +138,12 @@ namespace EmbodiedNPC.Animation
         {
             if (facing == null) return;
             WorldEntity speaker = null;
-            bool allowed = isActiveAndEnabled && selected && dialogue.IsPresentationVisible &&
+            bool confirmed = HasConversationAttention;
+            bool allowed = isActiveAndEnabled && selected &&
+                (confirmed || dialogue.IsPresentationVisible) &&
                 entityRegistry != null && entityRegistry.TryGetEntity(dialogue.ActiveSpeakerEntityId, out speaker) &&
                 speaker != null && speaker.isActiveAndEnabled && speaker.gameObject.activeInHierarchy;
-            facing.SetDialogueTarget(allowed ? speaker.transform : null, allowed);
+            facing.SetDialogueTarget(allowed ? speaker.transform : null, allowed, confirmed);
         }
         private void Update()
         {
@@ -127,7 +160,7 @@ namespace EmbodiedNPC.Animation
         }
         public void Cleanup()
         {
-            listening = false; sessionId = null; speech?.Cancel(); ClearHints(); State = DialoguePresentationState.Idle;
+            listening = false; sessionId = acceptedConversation = null; conversationSpeaker = null; speech?.Cancel(); ClearHints(); State = DialoguePresentationState.Idle;
             facing?.SetDialogueTarget(null, false);
         }
     }

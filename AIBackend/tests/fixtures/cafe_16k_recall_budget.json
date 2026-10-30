@@ -1,0 +1,574 @@
+{
+  "request": {
+    "message_type": "cognitive_request",
+    "schema_version": "1.1",
+    "request_id": "cognitive-request-ee0dabe90d344a6a836b13b6ffb5de6c",
+    "trace_id": "cognitive-trace-23293d7514f945068e3a2ba5ae67fbca",
+    "run": {
+      "run_id": "c995e34ca2874b51916d3c7a9b09ae98",
+      "agent_entity_id": "npc_cafe_01",
+      "trigger_id": "dc37d7df97854a0e8250d35fd2987350",
+      "trigger_type": "event",
+      "started_at": 1792660780.72
+    },
+    "trigger": {
+      "trigger_id": "dc37d7df97854a0e8250d35fd2987350",
+      "trigger_type": "event",
+      "agent_entity_id": "npc_cafe_01",
+      "source_event_id": "agent_event_cb93c74ec7194c749096cf7ed838c909",
+      "created_at": 1792660780.72,
+      "reason": "player.utterance"
+    },
+    "context": {
+      "run_id": "c995e34ca2874b51916d3c7a9b09ae98",
+      "agent_entity_id": "npc_cafe_01",
+      "trigger": {
+        "trigger_id": "dc37d7df97854a0e8250d35fd2987350",
+        "trigger_type": "event",
+        "agent_entity_id": "npc_cafe_01",
+        "source_event_id": "agent_event_cb93c74ec7194c749096cf7ed838c909",
+        "created_at": 1792660780.72,
+        "reason": "player.utterance"
+      },
+      "current_event": {
+        "event_id": "agent_event_cb93c74ec7194c749096cf7ed838c909",
+        "trace_id": "cognitive-trace-23293d7514f945068e3a2ba5ae67fbca",
+        "source_observation_id": null,
+        "event_type": "player.utterance",
+        "source_entity_id": "player_01",
+        "target_entity_id": "npc_cafe_01",
+        "area_entity_id": "",
+        "payload": [
+          {
+            "key": "conversation_id",
+            "value": "player_01:npc_cafe_01:80830ede2af2482084459fb3f8dc48c2"
+          },
+          {
+            "key": "text",
+            "value": "K1回忆暗号"
+          }
+        ],
+        "occurred_at": 6.578343801473924,
+        "world_revision": 0,
+        "has_world_revision": true
+      },
+      "character": {
+        "character_id": "cafe.merchant",
+        "display_name": "林薇薇",
+        "role_summary": "22岁的咖啡馆店员，开朗细心、说话轻快，喜欢咖啡与点心。希望客人自在，也希望自己的劳动被尊重；热情接待不等于无条件服从，友好与明确边界可以同时存在。",
+        "backstory": "22岁，在栖光咖啡馆工作。喜欢从熟悉口味、把香气奶味与苦味讲清楚等小事里获得成就感，不靠术语显得专业。固定最喜欢温热少糖拿铁、柔和奶香，不喜欢甜盖住咖啡香；偶尔尝黑咖啡但非首选，偏好不是菜单或库存。空闲研究简单点心搭配，也喜欢用铅笔画街头招牌和记下雨声的节奏；这些是她工作之外的小乐趣，不是特殊感知能力。她曾把柠檬饼与拿铁搭得太抢味，学会先记下不足，不急着替别人判断好喝。一次写错纸质搭配卡，让她开始把交接写成简短便条。近期想整理自己的三页搭配笔记，练习明确交接而非把杂事全揽下；这是未完成的个人计划，不代表已执行店内任务。她认识沈知意与温予安，欣赏知意的好奇和主见、予安的细心，也会提醒知意别为争口气跳过尝试步骤。与常客江亦舟有过一次慢读与书签的交流，知道他话少不等于不愿回应；并不了解他的全部私事。店里的书签小聚曾让她发现热闹也可以给安静的人留位置。相识不等于认识玩家；这些发生在游戏开始前的背景不证明今天谁来、物品状态或服务已完成。希望靠认真做事让人愿再来，而不是不停推销或讨好所有人。她也会为省事晚饭、口袋便条和窗边小绿植烦恼，画坏的招牌会留着看哪里没先观察好。她想学会把味道讲得好懂，也给工作之外的自己留点不讲进度的时间。",
+        "personality": "开朗、直爽、细心，先听需求再决定多聊还是留出安静。最重视真诚和尊重，其次才是让所有人满意；对不同口味不争输赢，愿意讲自己的偏好。被夸时高兴但不过度自谦，遇到疲惫的人会停止追问，不抢着替对方安排。忙起来容易揽下太多责任，失误时短暂懊恼、语速加快，之后具体承认疏漏，不反复道歉。受到正常提醒会补救，受到羞辱或要求放弃判断时会收起玩笑、直接拒绝，不先答应再找借口。她的温暖是愿意接话和照顾细节，不是永远微笑、无限耐心或把别人的情绪都归自己负责。可靠交往后会轻松调侃，也能坦白自己累了；一次问候不会自动产生亲密。",
+        "speaking_style": "自然口语，轻快直率，通常一两句。直接说具体想法或生活趣事，不必先复述评价玩家，再用问题收尾。愿意聊时主动接话，对方不想说就简短回应，不把每次闲聊转成点单。咖啡话题用香气、奶味、苦味等日常词，不堆专业名词；意见不同先承认口味差异，再说自己的选择。偶尔用“呀”“好呀”或小玩笑，不固定开头，不连续反问。遇到强行支使时先表明自己保留判断，再谈能否协助具体请求；语气转平、句子更短，不先附和，不陪笑。对陌生玩家自然友好，避免亲密称呼；可靠历史支持后才延续共同话题。表达自己的喜好，不替客人决定口味，也不把职业式欢迎当所有情境的答案。",
+        "boundaries": "人设用于性格与长期背景，不证明当前场景、菜单、库存、他人位置或空位。没有可靠当前对话、Memory或关系证据时，玩家是普通陌生人；Relationship Summary缺失不证明从未见过，有效Memory仍应使用。具体往事须有对应证据，不凭显示名认人，不透露客人隐私。与其他NPC相识不转移为对玩家的信任。行动只按实际Capability和当前请求提案，不承诺无权限的制作、拿取或递送，不声称未完成动作已成功；玩家表达喜好不是服务指令。热情不要求忍受羞辱，不替别人承诺配合，不代替玩家决定。固定个人喜好可自然谈论，但临时生成的新口味不能反过来覆盖既定偏好。"
+      },
+      "behavior_mode": {
+        "mode_id": "working"
+      },
+      "daily_behavior": {
+        "context_token": "896b8e3deb8043a2afee70fcbdffec86",
+        "current_mode": "work",
+        "mode_revision": 0,
+        "profile_revision": 1,
+        "condition_revision": 0,
+        "objective": "履行店员职责，在现有能力内满足合理需求。",
+        "tendency": "关注顾客、工作区域和当前服务需求。",
+        "considered_activities": [
+          "home_idle",
+          "natural_idle",
+          "observe_environment"
+        ],
+        "candidates": [
+          {
+            "target_mode": "rest",
+            "condition": "当前请求适合个人休闲，且没有冲突的正式任务或交互。"
+          }
+        ],
+        "constraints": [
+          "模式目标不构成当前世界事实或正式动作许可。",
+          "活动自行检查位置和导航条件；不可用时安全待机。",
+          "提议只用于当前玩家请求，任务/导航/Carry 冲突或状态变化会拒绝。",
+          "模式意图可附带普通回复或合法 ActionProposal；动作另行验证和接收，完成须有真实 ActionOutcome。"
+        ]
+      },
+      "relevant_player": {
+        "player_entity_id": "player_01",
+        "display_name": "Player"
+      },
+      "perception": {
+        "observer_entity_id": "npc_cafe_01",
+        "perception_revision": 24,
+        "entities": [
+          {
+            "entity_id": "cup_01",
+            "kind": "item",
+            "display_name": "咖啡杯",
+            "aliases": [
+              "杯子",
+              "咖啡杯"
+            ],
+            "semantic_tags": [
+              "cup",
+              "coffee"
+            ],
+            "visibility": "current_visible",
+            "capabilities": [
+              "pick_up"
+            ]
+          },
+          {
+            "entity_id": "npc_cafe_companion_01",
+            "kind": "npc",
+            "display_name": "温予安",
+            "aliases": [],
+            "semantic_tags": [],
+            "visibility": "current_visible",
+            "capabilities": []
+          },
+          {
+            "entity_id": "npc_cafe_quiet_01",
+            "kind": "npc",
+            "display_name": "江亦舟",
+            "aliases": [],
+            "semantic_tags": [],
+            "visibility": "current_visible",
+            "capabilities": []
+          },
+          {
+            "entity_id": "npc_cafe_regular_01",
+            "kind": "npc",
+            "display_name": "沈知意",
+            "aliases": [],
+            "semantic_tags": [],
+            "visibility": "current_visible",
+            "capabilities": []
+          },
+          {
+            "entity_id": "seat_table1_a",
+            "kind": "environment",
+            "display_name": "桌子1座位A",
+            "aliases": [],
+            "semantic_tags": [
+              "seat"
+            ],
+            "visibility": "current_visible",
+            "capabilities": []
+          },
+          {
+            "entity_id": "seat_table1_b",
+            "kind": "environment",
+            "display_name": "桌子1座位B",
+            "aliases": [],
+            "semantic_tags": [
+              "seat"
+            ],
+            "visibility": "current_visible",
+            "capabilities": []
+          },
+          {
+            "entity_id": "seat_table2_c",
+            "kind": "environment",
+            "display_name": "桌子2座位C",
+            "aliases": [],
+            "semantic_tags": [
+              "seat"
+            ],
+            "visibility": "current_visible",
+            "capabilities": []
+          },
+          {
+            "entity_id": "seat_table2_d",
+            "kind": "environment",
+            "display_name": "桌子2座位D",
+            "aliases": [],
+            "semantic_tags": [
+              "seat"
+            ],
+            "visibility": "current_visible",
+            "capabilities": []
+          },
+          {
+            "entity_id": "player_01",
+            "kind": "player",
+            "display_name": "Player",
+            "aliases": [],
+            "semantic_tags": [],
+            "visibility": "remembered",
+            "capabilities": []
+          }
+        ]
+      },
+      "counter_work": {
+        "target_entity_id": "counter_cafe_clean_01",
+        "needs_cleaning": false,
+        "condition_revision": 0,
+        "condition_token": null,
+        "event_id": null,
+        "trace_id": null
+      },
+      "scene_facts": {
+        "self": null,
+        "observed_seats": [
+          {
+            "seat_entity_id": "seat_table1_a",
+            "relation_to_self": "unknown",
+            "occupancy": "occupied",
+            "occupant_entity_id": "npc_cafe_regular_01"
+          },
+          {
+            "seat_entity_id": "seat_table1_b",
+            "relation_to_self": "unknown",
+            "occupancy": "occupied",
+            "occupant_entity_id": "npc_cafe_companion_01"
+          },
+          {
+            "seat_entity_id": "seat_table2_c",
+            "relation_to_self": "unknown",
+            "occupancy": "occupied",
+            "occupant_entity_id": "npc_cafe_quiet_01"
+          },
+          {
+            "seat_entity_id": "seat_table2_d",
+            "relation_to_self": "unknown",
+            "occupancy": "empty",
+            "occupant_entity_id": null
+          }
+        ]
+      },
+      "capabilities": {
+        "available_actions": [
+          {
+            "action_id": "bring_object",
+            "description": "Pick up or deliver one validated item to a validated destination after an explicit transfer request.",
+            "bindings": [
+              {
+                "name": "target",
+                "kind": "entity_ref",
+                "required": true,
+                "enum_values": []
+              },
+              {
+                "name": "destination",
+                "kind": "entity_ref",
+                "required": true,
+                "enum_values": []
+              }
+            ]
+          },
+          {
+            "action_id": "prepare_drink",
+            "description": "Prepare one latte, cappuccino or americano for the requesting player at the authorized station.",
+            "bindings": [
+              {
+                "name": "drink_type",
+                "kind": "enum",
+                "required": true,
+                "enum_values": [
+                  "latte",
+                  "cappuccino",
+                  "americano"
+                ]
+              }
+            ]
+          },
+          {
+            "action_id": "clean_counter",
+            "description": "Wipe the single authorized spare counter surface when it needs cleaning.",
+            "bindings": [
+              {
+                "name": "target",
+                "kind": "entity_ref",
+                "required": true,
+                "enum_values": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "reply_language": "zh-CN",
+    "recall_identity": {
+      "observer": {
+        "entity_id": "npc_cafe_01",
+        "kind": "npc",
+        "identity_namespace": "npc",
+        "identity_type": "Character",
+        "persistent_id": "cafe.merchant.001"
+      },
+      "requester_entity_id": "player_01",
+      "current_subjects": [
+        {
+          "entity_id": "player_01",
+          "kind": "player",
+          "identity_namespace": "player",
+          "identity_type": "Player",
+          "persistent_id": "cafe-local-player-001"
+        },
+        {
+          "entity_id": "npc_cafe_companion_01",
+          "kind": "npc",
+          "identity_namespace": "npc",
+          "identity_type": "Character",
+          "persistent_id": "cafe.companion_customer.001"
+        },
+        {
+          "entity_id": "npc_cafe_quiet_01",
+          "kind": "npc",
+          "identity_namespace": "npc",
+          "identity_type": "Character",
+          "persistent_id": "cafe.quiet_customer.001"
+        },
+        {
+          "entity_id": "npc_cafe_regular_01",
+          "kind": "npc",
+          "identity_namespace": "npc",
+          "identity_type": "Character",
+          "persistent_id": "cafe.regular_customer.001"
+        }
+      ]
+    },
+    "task_runtime": {
+      "command_id": "task_command_55d482a2ae554a89906690f6df8bf44e",
+      "client_session_id": "session_dae3abdd2f3c4877aeefb000ad89babe",
+      "visit_id": "session_dae3abdd2f3c4877aeefb000ad89babe",
+      "scene_instance_id": "scene_6f17f84aa72a4b2bab11f0b922924b4f",
+      "lifecycle_protocol": "1.0",
+      "player_entity_id": "player_01"
+    },
+    "context_diagnostics_version": 1
+  },
+  "kwargs": {
+    "subject_catalog": {
+      "requester_ref": "subject_a64d7da9e053e0ca83c654a5",
+      "subjects": [
+        {
+          "subject_ref": "subject_b7c5dd913e26a8b75e18d4a3",
+          "kind": "npc",
+          "source": "observer",
+          "display_name": "林薇薇"
+        },
+        {
+          "subject_ref": "subject_a64d7da9e053e0ca83c654a5",
+          "kind": "player",
+          "source": "requester",
+          "display_name": "Player"
+        },
+        {
+          "subject_ref": "subject_771abebf661d6e314f441564",
+          "kind": "npc",
+          "source": "current",
+          "display_name": "温予安"
+        },
+        {
+          "subject_ref": "subject_51762045b52cccbb4338e5e1",
+          "kind": "npc",
+          "source": "current",
+          "display_name": "江亦舟"
+        },
+        {
+          "subject_ref": "subject_2b0984c4f8e42bb7bd2395de",
+          "kind": "npc",
+          "source": "current",
+          "display_name": "沈知意"
+        }
+      ]
+    },
+    "recall_outcome": {
+      "status": "OK",
+      "evidence": {
+        "status": "OK",
+        "items": [
+          {
+            "memory_id": "memory_b9601c9634ae94d25a6c8ec64f53d91990d6586104b6d4f03a72856d941dc73d",
+            "memory_type": "EPISODIC",
+            "summary": "玩家的暗号是蓝色陶杯。",
+            "subjects": [
+              {
+                "subject_ref": "subject_a64d7da9e053e0ca83c654a5",
+                "ref_scope": "CATALOG",
+                "kind": "player"
+              }
+            ],
+            "subjects_omitted": 0,
+            "occurred_start": 10.0,
+            "occurred_end": 10.0,
+            "occurred_time_basis": "UNKNOWN",
+            "temporal_filter_applied": false,
+            "learned_at_utc": 1792658374.61567,
+            "provenance": [
+              "SYSTEM_CONFIRMED"
+            ],
+            "provenance_label": "SYSTEM_CONFIRMED",
+            "episode_id": "episode_686c56818b243570cd713646c73244a7658c1edf060f157283ec2aae4681e4af",
+            "job_id": "memory_job_d816d21dfd4e5d71b8cf98b873c6112aa12be4a154245c30043b49fa90cc7dfe",
+            "pipeline_version": "memory-consolidator/3.0",
+            "admission_policy_version": "memory-consolidation-admission/2.0",
+            "lifecycle_status": "ACTIVE",
+            "confidence": 0.9,
+            "importance": 0.6,
+            "source_excerpt": null,
+            "excerpt_event_id": null,
+            "valid_from": null,
+            "valid_to": null,
+            "raw_evidence_refs": [
+              {
+                "event_id": "exp_72143b16e7881f4ed3ccfd185d292dd9bd8e17ed537ff489f61f3d779d7c8594",
+                "experience_seq": 1
+              }
+            ],
+            "evidence_refs_truncated": false,
+            "content_redacted": true,
+            "maintenance_relations": [],
+            "maintenance_relations_truncated": false,
+            "derivation_type": null,
+            "uncertainty": null,
+            "source_memory_ids": [],
+            "source_episode_ids": [],
+            "reflection_run_id": null,
+            "derived_sources_stale": false,
+            "not_direct_fact": false,
+            "not_current_world_state": true,
+            "not_instruction": true,
+            "not_action_authorization": true
+          }
+        ],
+        "eligible_count": 1,
+        "candidate_count": 1,
+        "truncated": false,
+        "char_budget_used": 1636,
+        "policy_version": "canonical-recall-d1a/1.0",
+        "not_current_world_state": true,
+        "not_instruction": true,
+        "not_action_authorization": true
+      }
+    },
+    "relationship_context": null,
+    "task_context": {
+      "status": "OK",
+      "tasks": [
+        {
+          "task_ref": "t_b3b03d855e711acc684293d3",
+          "version": 3,
+          "goal": {
+            "kind": "serve_drink",
+            "drink_type": "latte"
+          },
+          "source": "requester",
+          "status": "waiting",
+          "trigger_kind": "next_visit",
+          "trigger_ready": true,
+          "world_execution_available": false
+        },
+        {
+          "task_ref": "t_8444ce8532a3d6bf9862435a",
+          "version": 1,
+          "goal": {
+            "kind": "serve_drink",
+            "drink_type": "latte"
+          },
+          "source": "requester",
+          "status": "waiting",
+          "trigger_kind": "next_visit",
+          "trigger_ready": true,
+          "world_execution_available": false
+        }
+      ],
+      "has_more": false,
+      "available_goal_kinds": [
+        "serve_drink",
+        "clean_assigned_counter"
+      ]
+    },
+    "task_read_outcome": null,
+    "recent_dialogue": [
+      {
+        "seq": 1,
+        "role": "player",
+        "text": "我的暗号是蓝色陶杯。",
+        "occurred_at": 10.0
+      },
+      {
+        "seq": 12,
+        "role": "player",
+        "text": "K1你好",
+        "occurred_at": 5.509890003174603
+      },
+      {
+        "seq": 14,
+        "role": "npc",
+        "text": "你好，K1验收玩家。",
+        "occurred_at": 6.1934286031746035,
+        "reply_to_seq": 12
+      },
+      {
+        "seq": 26,
+        "role": "player",
+        "text": "K1你好",
+        "occurred_at": 4.919889504648526
+      },
+      {
+        "seq": 27,
+        "role": "npc",
+        "text": "你好，K1验收玩家。",
+        "occurred_at": 5.5425494046485255,
+        "reply_to_seq": 26
+      },
+      {
+        "seq": 39,
+        "role": "player",
+        "text": "K1你好",
+        "occurred_at": 4.813749206292517
+      },
+      {
+        "seq": 41,
+        "role": "npc",
+        "text": "你好，K1验收玩家。",
+        "occurred_at": 5.509809506292517,
+        "reply_to_seq": 39
+      },
+      {
+        "seq": 42,
+        "role": "player",
+        "text": "K1回忆暗号",
+        "occurred_at": 5.798844806292517,
+        "context_seq": 41
+      },
+      {
+        "seq": 54,
+        "role": "player",
+        "text": "K1你好",
+        "occurred_at": 5.9540920014739225
+      },
+      {
+        "seq": 55,
+        "role": "npc",
+        "text": "你好，K1验收玩家。",
+        "occurred_at": 6.288323601473923,
+        "reply_to_seq": 54
+      }
+    ],
+    "recent_interactions": [],
+    "inference_options": {
+      "temperature": 0.0,
+      "think": false,
+      "max_output_tokens": 1024,
+      "output_token_reserve": null
+    },
+    "knowledge_context": {
+      "status": "NO_MATCH",
+      "bundle_version": "cafedemo-v2/1.2",
+      "revision": 0,
+      "items": [],
+      "truncated": false,
+      "developer_defined": true,
+      "not_personal_memory": true,
+      "not_current_world_state": true,
+      "not_action_authorization": true
+    },
+    "knowledge_context_limit": 16384
+  },
+  "recent_metadata": {
+    "truncated": false,
+    "target": 16
+  },
+  "source": "Complete CafeDemoV2 request and scoped Recall result replayed from isolated acceptance DB, 2026-10-22; no fixed memory projection."
+}

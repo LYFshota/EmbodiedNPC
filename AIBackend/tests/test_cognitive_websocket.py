@@ -17,6 +17,7 @@ from app.local_model_scheduler import PrioritizedModelExecutor
 from app.sqlite_database import SQLiteDatabase
 from app.providers import ModelMessage, ModelRequest, ModelResult, ProviderError
 from tests.test_cognitive_request import _event_request
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 class BlockingProvider:
@@ -24,7 +25,7 @@ class BlockingProvider:
     model = "blocked"
     # Transport concurrency tests need the supported Demo window, not the
     # conservative unknown-capacity fallback before generate() is reached.
-    context_length = 16384
+    context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
     def __init__(self):
         self.started = asyncio.Event()

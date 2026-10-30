@@ -237,7 +237,7 @@ namespace EmbodiedNPC.Tests
                 .GetMethod("TryBuildMain", BindingFlags.NonPublic | BindingFlags.Instance)
                 .Invoke(setup, arguments);
             Assert.IsFalse(valid);
-            StringAssert.Contains("16K", statusText.text);
+            StringAssert.Contains("1–1000000", statusText.text);
         }
 
         [Test]

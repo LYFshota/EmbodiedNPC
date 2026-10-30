@@ -41,7 +41,8 @@ namespace EmbodiedNPC.Memory
                 presented.ConversationId, presented.PlayerEntityId, presented.OwnerAgentEntityId,
                 presented.Utterance, presented.WorldRevision, presented.PresentedAt,
                 presented.PresentedAt, presented.SourceEventId, presented.EpisodeDirective);
-            try { sink(Create(turn, entityRegistry, presented.ContinuationEvent)); }
+            try { sink(Create(turn, entityRegistry, presented.ContinuationEvent,
+                presented.SourceEvent?.event_type == "action.failed" ? presented.SourceEvent : null)); }
             catch (Exception) { /* Persistence cannot change already completed presentation. */ }
         }
 
@@ -71,7 +72,7 @@ namespace EmbodiedNPC.Memory
         }
 
         public static ExperienceDraft Create(AcceptedDialogueTurn turn, EntityRegistry entityRegistry = null,
-            CognitiveEventDto continuationEvent = null)
+            CognitiveEventDto continuationEvent = null, CognitiveEventDto actionFeedbackEvent = null)
         {
             string observer = turn.TargetAgentId;
             string actor = turn.IsResponse ? turn.TargetAgentId : turn.SpeakerEntityId;
@@ -95,6 +96,14 @@ namespace EmbodiedNPC.Memory
                         pair.key == "last_response_event_id") payload[pair.key] = pair.value;
                     if (pair.key == "last_response_seq") payload[pair.key] = int.Parse(pair.value);
                 }
+            }
+            if (actionFeedbackEvent != null)
+            {
+                payload["initiative"] = "action_feedback";
+                foreach (var pair in actionFeedbackEvent.payload)
+                    if (pair.key == "parent_request_id" || pair.key == "parent_event_id")
+                        payload[pair.key] = ExperienceIds.ProtocolId(pair.value,
+                            pair.key == "parent_request_id" ? "request" : "dialogue");
             }
             string sourceEventId = string.IsNullOrWhiteSpace(turn.SourceEventId)
                 ? ExperienceIds.ProtocolId(turn.RequestId, "dialogue")

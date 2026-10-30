@@ -87,6 +87,20 @@ namespace EmbodiedNPC.Cognition
             return true;
         }
 
+        // Outcome cognition uses the same single foreground slot. Its trusted request is composed
+        // by the Driver from the accepted parent; it must not recapture a newer input event.
+        internal bool TryStartOutcomeRun(CognitiveRunDto parent, out CognitiveRun run)
+        {
+            run = null;
+            if (!isActiveAndEnabled || HasActiveRun || parent?.IsValid != true ||
+                parent.agent_entity_id != ownerEntity?.EntityId) return false;
+            run = new CognitiveRun(Guid.NewGuid().ToString("N"), parent.agent_entity_id,
+                "outcome_" + Guid.NewGuid().ToString("N"), "event", UtcNowSeconds());
+            activeRun = LastRun = run;
+            InvokeRunStarted(run);
+            return true;
+        }
+
         public bool CompleteCurrentRun() => FinishCurrentRun(CognitiveRunState.Completed);
 
         public bool CancelCurrentRun() => FinishCurrentRun(CognitiveRunState.Cancelled);

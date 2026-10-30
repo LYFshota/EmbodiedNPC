@@ -33,15 +33,18 @@ def dependencies(message):
 class RecentDialogueTimeline(list[dict]):
     """Model-visible speech plus internal original-source metadata, never durable state."""
 
-    def __init__(self, messages=(), *, sources=None, truncated=False, target=8, expanded=0):
+    def __init__(self, messages=(), *, sources=None, truncated=False, target=8, expanded=0,
+                 current_session_id=None):
         super().__init__(messages)
         self.sources = sources or {}
+        self.current_session_id = current_session_id
         self.truncated = truncated
         self.target_messages = target
         self.expanded_messages = expanded
 
     @classmethod
-    def select(cls, messages, sources, target, char_budget, overlap, *, truncated=False):
+    def select(cls, messages, sources, target, char_budget, overlap, *, truncated=False,
+               current_session_id=None):
         ordered = sorted(messages, key=lambda m: m["seq"])
         start = max(0, len(ordered) - target)
         floor = max(0, start - overlap)
@@ -78,7 +81,7 @@ class RecentDialogueTimeline(list[dict]):
         base = {m["seq"] for m in ordered[start:]}
         return cls(kept, sources={seq: sources[seq] for seq in retained},
                    truncated=truncated or len(kept) < len(ordered), target=target,
-                   expanded=len(retained - base))
+                   expanded=len(retained - base), current_session_id=current_session_id)
 
     def budget_groups(self):
         """Small dependency blocks, with the nearest NPC block first.
@@ -128,5 +131,9 @@ class RecentDialogueTimeline(list[dict]):
                 if ref in by_seq:
                     required.update(dependencies(by_seq[ref]))
             incomplete = bool(required - selected)
-            result.append({**message, **({"context_incomplete": True} if incomplete else {})})
+            source_session = self.sources.get(message["seq"], {}).get("source_session_id")
+            scope = ({"session_scope": "current_session" if source_session == self.current_session_id
+                      else "earlier_session"} if self.current_session_id and source_session else {})
+            result.append({**message, **scope,
+                           **({"context_incomplete": True} if incomplete else {})})
         return result

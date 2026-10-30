@@ -110,8 +110,9 @@ namespace EmbodiedNPC.Memory
                             NullIfBlank(observation.SubjectEntityId);
             var targets = string.IsNullOrWhiteSpace(target) ? Array.Empty<string>() : new[] { target };
             var known = new Dictionary<string, object>(StringComparer.Ordinal);
+            // Manual appearance metadata is transient cognition input, not a durable witnessed trait.
             foreach (KeyValuePair<string, string> pair in observation.KnownFields)
-                known[pair.Key] = pair.Value;
+                if (pair.Key != "appearance_description") known[pair.Key] = pair.Value;
             var payload = new Dictionary<string, object>
             {
                 ["perception_revision"] = perceptionRevision > 0 ? perceptionRevision : observation.PerceptionRevision,

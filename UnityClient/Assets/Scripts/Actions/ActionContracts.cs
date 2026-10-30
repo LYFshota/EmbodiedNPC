@@ -134,8 +134,7 @@ namespace EmbodiedNPC.Actions
             IActionAdmissionPolicy admissionPolicy = null, IActionPlanFactory planFactory = null,
             IActionCandidateProvider candidateProvider = null, IActionRecoveryPolicy recoveryPolicy = null,
             IActionPresentationPolicy presentationPolicy = null,
-            IActionExecutionPreparationPolicy executionPreparationPolicy = null,
-            bool reportsTaskFailures = false)
+            IActionExecutionPreparationPolicy executionPreparationPolicy = null)
         {
             Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
             Binder = binder;
@@ -145,7 +144,6 @@ namespace EmbodiedNPC.Actions
             RecoveryPolicy = recoveryPolicy;
             PresentationPolicy = presentationPolicy;
             ExecutionPreparationPolicy = executionPreparationPolicy;
-            ReportsTaskFailures = reportsTaskFailures;
         }
 
         public ActionDescriptor Descriptor { get; }
@@ -156,7 +154,6 @@ namespace EmbodiedNPC.Actions
         public IActionRecoveryPolicy RecoveryPolicy { get; }
         public IActionPresentationPolicy PresentationPolicy { get; }
         public IActionExecutionPreparationPolicy ExecutionPreparationPolicy { get; }
-        public bool ReportsTaskFailures { get; }
     }
 
     public sealed class ExecutionAuthorization

@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from app.cognitive_entry import CognitiveBackendEntry
 from app.cognitive_tasks import CognitiveTasks
 from app.cognitive_step_models import RecallOutcome
+from app.drink_types import DRINK_TYPE_IDS
 from app.contracts import CognitiveRequest, CognitiveResponse
 from app.local_model_scheduler import PrioritizedModelExecutor
 from app.providers import ModelResult
@@ -21,12 +22,13 @@ from app.task_service import TaskService
 from app.task_repository import TaskRepository
 from app.task_models import TaskError
 from tests.test_action_proposal_validation import _context
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def request(*, number="1", language="zh-CN", event_type="player.utterance", owner="cafe.merchant.001", player="synthetic-task-player"):
     context = _context(action_id="prepare_drink").model_dump(mode="json")
     context["capabilities"]["available_actions"][0]["bindings"] = [dict(
-        name="drink_type", kind="enum", required=True, enum_values=["latte", "cappuccino", "americano"])]
+        name="drink_type", kind="enum", required=True, enum_values=DRINK_TYPE_IDS)]
     context["current_event"]["event_type"] = event_type
     context["current_event"]["payload"] = [dict(key="text", value="下次来时给我准备拿铁，可以吗？")]
     value = dict(message_type="cognitive_request", schema_version="1.1", request_id="request_"+number,
@@ -46,6 +48,7 @@ DECLINE = dict(decision_kind="DIRECT_RESPONSE", utterance="抱歉，我不能接
 class Scripted:
     name = "scripted"
     model = "offline"
+    context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
     def __init__(self, scripts): self.scripts, self.requests = scripts, []
     async def generate(self, model):
         self.requests.append(model)
@@ -67,7 +70,7 @@ class CognitionTaskTests(unittest.IsolatedAsyncioTestCase):
 
     def entry(self, scripts, **kwargs):
         self.provider = Scripted(scripts)
-        return CognitiveBackendEntry(self.provider, PrioritizedModelExecutor(), tasks=self.tasks, context_length=16384, **kwargs)
+        return CognitiveBackendEntry(self.provider, PrioritizedModelExecutor(), tasks=self.tasks, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH, **kwargs)
 
     async def test_accept_commit_before_reply_and_trusted_envelope(self):
         req = request()
@@ -306,7 +309,7 @@ class CognitionTaskTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_formal_mock_provider_handles_new_schema_without_task_writes(self):
         from app.model_requests import create_mock_provider
-        entry = CognitiveBackendEntry(create_mock_provider(), PrioritizedModelExecutor(), tasks=self.tasks, context_length=16384)
+        entry = CognitiveBackendEntry(create_mock_provider(), PrioritizedModelExecutor(), tasks=self.tasks, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         result = await entry.run(request(language="en-US"))
         self.assertEqual(result.decision.utterance, "Welcome! What would you like?")
         self.assertIsNone(result.task_receipt)

@@ -300,31 +300,9 @@ namespace EmbodiedNPC.Routines
             FinishCognitiveCommit(CurrentMode); reason = "system_mode_committed"; return true;
         }
 
-        // Mode-only presentation can roll back this local mode before any world action exists.
-        public bool TryCommitCognitiveMode(CognitiveRequest request, CognitiveRun run, string targetMode,
-            Func<bool> presentCommittedReply, out string reason)
-        {
-            if (!TryValidateCognitiveMode(request, run, targetMode, out reason)) return false;
-            Enum.TryParse(targetMode, true, out DailyBehaviorMode target);
-            double now = Time.unscaledTimeAsDouble;
-            var previousMode = CurrentMode; int previousRevision = ModeRevision;
-            double previousEntered = enteredAt, previousNext = nextTransitionAt;
-            bool presented = false;
-            CurrentMode = target; ModeRevision++; enteredAt = now; nextTransitionAt = now + profile.TransitionCooldown;
-            try { presented = presentCommittedReply != null && presentCommittedReply(); }
-            finally
-            {
-                if (!presented)
-                { CurrentMode = previousMode; ModeRevision = previousRevision; enteredAt = previousEntered; nextTransitionAt = previousNext; }
-            }
-            if (!presented) { reason = "presentation_unavailable"; return false; }
-            FinishCognitiveCommit(target);
-            reason = "cognition_mode_applied";
-            return true;
-        }
-
-        // A combined proposal commits only the mode here. Action handoff/presentation belongs to the Driver.
-        public bool TryCommitCognitiveModeForAction(CognitiveRequest request, CognitiveRun run, string targetMode, out string reason)
+        // Commit only the checked life state. Dialogue and action presentation
+        // have their own admission and do not roll this state back.
+        public bool TryCommitCognitiveMode(CognitiveRequest request, CognitiveRun run, string targetMode, out string reason)
         {
             if (!TryValidateCognitiveMode(request, run, targetMode, out reason)) return false;
             Enum.TryParse(targetMode, true, out DailyBehaviorMode target);

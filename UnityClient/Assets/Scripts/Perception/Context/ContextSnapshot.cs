@@ -84,6 +84,8 @@ namespace EmbodiedNPC.Perception
             entity_id = entityId,
             kind = ToWireKind(fields),
             display_name = Get(fields, "display_name", entityId),
+            appearance_description = visibility == "current_visible" && ToWireKind(fields) == "player"
+                ? Get(fields, "appearance_description", null) : null,
             aliases = Split(Get(fields, "aliases", string.Empty)),
             semantic_tags = Split(Get(fields, "semantic_tags", string.Empty)),
             visibility = visibility,

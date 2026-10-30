@@ -242,14 +242,13 @@ class ProviderRegistryTests(unittest.TestCase):
                 "from app import m3_main as m; "
                 "print(m.saved_settings_document.settings.selected_preset_id, m.provider.name, "
                 "m.cognitive_entry.provider is m.provider, "
-                "m.failure_response_service._provider is m.provider, "
                 "m.base_memory_consolidator.provider is m.provider, "
                 "m.relationship_reflection_worker.model.provider is m.provider, "
                 "m.canonical_embedding_provider.base_url, m.canonical_embedding_provider.model)"
             )
             result = subprocess.run([sys.executable, "-B", "-c", script], env=env,
                                     capture_output=True, text=True, check=True)
-            self.assertEqual("local-qwen deepseek_official_responses True True True True "
+            self.assertEqual("local-qwen deepseek_official_responses True True True "
                              "http://embedding.local:11434 embedding-test", result.stdout.strip())
 
 

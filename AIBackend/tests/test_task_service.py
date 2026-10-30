@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 from pydantic import ValidationError
 
+from app.drink_types import DRINK_TYPE_IDS
 from app.sqlite_database import LATEST_SCHEMA_VERSION, SQLiteDatabase
 from app.task_models import (
     CleanAssignedCounterGoal, CounterReceipt, DrinkReceipt, ExecutionRequest,
@@ -96,6 +97,27 @@ class TaskServiceTests(unittest.TestCase):
         with self.assertRaises(TaskError) as raised:
             call()
         self.assertEqual(raised.exception.code, code)
+
+    def test_every_registered_drink_persists_executes_and_requires_matching_receipt(self):
+        for number, drink in enumerate(DRINK_TYPE_IDS):
+            with self.subTest(drink=drink):
+                suffix = str(number)
+                task = self.create("create_drink_" + suffix, drink=drink, event="drink_" + suffix)
+                reopened = TaskService(TaskRepository(self.db.connect), clock=lambda: 100.0)
+                self.assertEqual(reopened.get_task(self.context, task.task_id).goal.drink_type, drink)
+                task = self.service.reserve_execution(self.next_context, "reserve_drink_" + suffix, task.task_id,
+                    execution_request(task, suffix)).task
+                task = self.service.start_execution(self.next_context, "start_drink_" + suffix, task.task_id,
+                    expected_version=task.version, attempt_id=task.execution.attempt_id).task
+                result = synthetic_result(task, receipt_id="receipt_drink_" + suffix)
+                wrong = "cappuccino" if drink == "latte" else "latte"
+                mismatch = result.model_copy(update={"receipt": result.receipt.model_copy(update={"drink_type": wrong})})
+                self.error("TASK_DRINK_RECEIPT_MISMATCH", lambda: self.service.settle_execution(
+                    self.next_context, "bad_drink_" + suffix, task.task_id, mismatch))
+                self.assertEqual(self.service.get_task(self.next_context, task.task_id).status, "executing")
+                settled = self.service.settle_execution(self.next_context, "settle_drink_" + suffix, task.task_id, result).task
+                self.assertEqual(settled.status, "completed")
+                self.assertEqual(reopened.get_task(self.context, task.task_id).execution.result.receipt.drink_type, drink)
 
     def test_create_query_update_defer_cancel_and_historical_receipt(self):
         task = self.create()
@@ -460,7 +482,7 @@ class TaskMigrationTests(unittest.TestCase):
 
     def old_database(self):
         # Genuine old migrations 1..18; do not construct v19 then subtract tables.
-        with patch("app.sqlite_database.migrate_tasks", lambda db: None):
+        with patch("app.sqlite_database.migrate_tasks", lambda db: None), patch("app.sqlite_database.migrate_relationship_state", lambda db: None):
             database = SQLiteDatabase(self.path)
         with closing(database.connect()) as db, db:
             seed_row(db, "experience_events", event_id="event", observer_id="npc", payload_json="{}")
@@ -485,12 +507,12 @@ class TaskMigrationTests(unittest.TestCase):
 
     def test_empty_initialization_and_idempotent_reopen(self):
         database = SQLiteDatabase(self.path)
-        self.assertEqual((LATEST_SCHEMA_VERSION, TASK_SCHEMA_VERSION), (19, 19))
+        self.assertEqual((LATEST_SCHEMA_VERSION, TASK_SCHEMA_VERSION), (20, 19))
         first = self.snapshot(database)
         SQLiteDatabase(self.path)
         self.assertEqual(self.snapshot(database), first)
         with closing(database.connect()) as db:
-            self.assertEqual(db.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0], 19)
+            self.assertEqual(db.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0], LATEST_SCHEMA_VERSION)
             self.assertEqual(db.execute("PRAGMA foreign_key_check").fetchall(), [])
             self.assertIn("npc_tasks_active_dedup", objects(db, "index"))
 
@@ -500,7 +522,8 @@ class TaskMigrationTests(unittest.TestCase):
         with closing(database.connect()) as db:
             old_objects = list(db.execute("SELECT type,name,sql FROM sqlite_master ORDER BY type,name"))
         self.assertNotIn("npc_tasks", before)
-        database.migrate()
+        with closing(database.connect()) as db:
+            migrate_tasks(db)
         after = self.snapshot(database)
         self.assertEqual({key: value for key, value in before.items() if key != "schema_migrations"},
                          {key: after[key] for key in before if key != "schema_migrations"})
@@ -535,7 +558,7 @@ class TaskMigrationTests(unittest.TestCase):
                 database.migrate()
         self.assertEqual(self.snapshot(database), before)
         with closing(database.connect()) as db, db:
-            db.execute("INSERT INTO schema_migrations VALUES(20,1)")
+            db.execute("INSERT INTO schema_migrations VALUES(?,1)", (LATEST_SCHEMA_VERSION+1,))
         future = self.snapshot(database)
         with self.assertRaisesRegex(sqlite3.IntegrityError, "UNSUPPORTED_FUTURE_MEMORY_SCHEMA"):
             database.migrate()
@@ -552,7 +575,7 @@ class TaskMigrationTests(unittest.TestCase):
             self.assertNotIn("npc_tasks", objects(db, "table"))
         database = SQLiteDatabase(self.path)
         with closing(database.connect()) as db:
-            self.assertEqual(db.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0], 19)
+            self.assertEqual(db.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0], LATEST_SCHEMA_VERSION)
             self.assertEqual(db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
 
 

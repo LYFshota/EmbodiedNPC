@@ -1,7 +1,7 @@
 {
   "name": "CafeDemo.Playable.Tests",
   "rootNamespace": "CafeDemo.Tests",
-  "references": ["CafeDemo.Runtime", "EmbodiedNPC", "Unity.InputSystem", "Unity.AI.Navigation", "Unity.TextMeshPro", "VRM10", "UniGLTF"],
+  "references": ["CafeDemo.Runtime", "EmbodiedNPC", "Unity.InputSystem", "Unity.AI.Navigation", "Unity.TextMeshPro", "VRM10", "UniGLTF", "CafeDemo.AvatarAcceptance"],
   "includePlatforms": ["Editor"],
   "overrideReferences": true,
   "precompiledReferences": ["nunit.framework.dll", "Newtonsoft.Json.dll"],

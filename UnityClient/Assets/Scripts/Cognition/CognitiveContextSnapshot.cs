@@ -175,6 +175,7 @@ namespace EmbodiedNPC.Cognition
         public CounterWorkDto counter_work;
         public SceneFactsDto scene_facts;
         public CognitiveCapabilityManifestDto capabilities;
+        public CognitiveExecutionState runtime_state;
 
         public bool IsValid => !string.IsNullOrWhiteSpace(run_id) &&
                                !string.IsNullOrWhiteSpace(agent_entity_id) && trigger != null && trigger.IsValid &&
@@ -185,6 +186,8 @@ namespace EmbodiedNPC.Cognition
                                (relevant_player == null || relevant_player.IsValid) && perception != null &&
                                perception.IsValid && string.Equals(perception.observer_entity_id, agent_entity_id,
                                    StringComparison.Ordinal) && (capabilities == null || capabilities.IsValid) &&
-                               (scene_facts == null || scene_facts.IsValid) && (counter_work == null || counter_work.IsValid);
+                               (scene_facts == null || scene_facts.IsValid) && (counter_work == null || counter_work.IsValid) &&
+                               (runtime_state == null || runtime_state.IsValid && runtime_state.actor_entity_id == agent_entity_id &&
+                                runtime_state.player_entity_id == relevant_player?.player_entity_id);
     }
 }

@@ -63,7 +63,7 @@ async def contract_probe(main, transport=None):
             status, code = "FAIL", "MODEL_CONTRACT_TIMEOUT"
         results.append(dict(case=name, status=status, error_code=code, latency_ms=round((time.monotonic()-start)*1000)))
     results.extend(dict(case=name, status="NOT_RUN", error_code=None) for name in
-                   ("memory_consolidation", "relationship_reflection", "task_failure"))
+                   ("memory_consolidation", "relationship_reflection", "action_feedback"))
     return {"success": all(r["status"] != "FAIL" for r in results), "results": results,
             "max_calls": 3, "semantic_correctness": "NOT_PROVEN", "world_execution": "NOT_RUN"}
 

@@ -8,4 +8,4 @@ Merchant 与 RegularCustomer 独立运行 perception/cognition。Merchant 有 br
 
 `CafeDemo.Playable.Tests` 的 Editor runner 显式进入/退出 Play Mode，运行真实 Input System、CharacterController、NavMeshAgent 与当前场景 UI。场景无关的合同与数学测试位于 `Assets/Tests/Editor`。只执行请求指定的 targeted class，不跑历史 fixture 或压力重复。
 
-Backend 启动与隔离见 [OPERATIONS](../../../../Docs/OPERATIONS.md)；验证证据与 NOT_RUN 项见 [CURRENT_TEST_MATRIX](../../../../Docs/RELEASE_STATUS.md)。下一阶段 Demo Recording Preparation 尚未开始，本页不提供已完成录制的声明。MainCamera smoke 需要检查实际 UI/角色截图，静态 hierarchy 不能替代运行证据。
+Backend 启动与隔离见 [OPERATIONS](../../../../InternalDocs/OPERATIONS.md)；验证证据与 NOT_RUN 项见 [CURRENT_TEST_MATRIX](../../../../InternalDocs/CURRENT_TEST_MATRIX.md)。下一阶段 Demo Recording Preparation 尚未开始，本页不提供已完成录制的声明。MainCamera smoke 需要检查实际 UI/角色截图，静态 hierarchy 不能替代运行证据。

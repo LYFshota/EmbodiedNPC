@@ -7,6 +7,8 @@ using EmbodiedNPC.Dialogue.Presentation;
 using EmbodiedNPC.Planning;
 using EmbodiedNPC.Memory;
 using EmbodiedNPC.World;
+using EmbodiedNPC.Settings;
+using EmbodiedNPC.Planning.MiniGoap;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -15,6 +17,71 @@ namespace EmbodiedNPC.Tests.Editor
 {
     public sealed class PrepareDrinkContractTests
     {
+        // Independent golden fixture keeps protocol order and translations reviewable.
+        private static readonly string[][] DrinkCases =
+        {
+            new[]{"latte","拿铁","Latte"}, new[]{"cappuccino","卡布奇诺","Cappuccino"},
+            new[]{"americano","美式","Americano"}, new[]{"espresso","浓缩咖啡","Espresso"},
+            new[]{"flat_white","馥芮白","Flat White"}, new[]{"mocha","摩卡","Mocha"},
+            new[]{"caramel_macchiato","焦糖玛奇朵","Caramel Macchiato"},
+            new[]{"hot_chocolate","热巧克力","Hot Chocolate"}, new[]{"matcha_latte","抹茶拿铁","Matcha Latte"},
+            new[]{"black_tea","红茶","Black Tea"},
+        };
+        private static IEnumerable<string> RegisteredDrinks => DrinkTypes.Ids;
+
+        [Test] public void ManifestAndNamesMatchIndependentTenDrinkContract()
+        {
+            Assert.That(DrinkTypes.Ids,Is.EqualTo(DrinkCases.Select(d=>d[0])));
+            BuiltInActionCatalog.Instance.TryGet("prepare_drink",out var registration);
+            var binding=registration.Descriptor.BindingSchema.Single();
+            Assert.That(binding.Name,Is.EqualTo("drink_type"));Assert.That(binding.Kind,Is.EqualTo(ActionBindingKind.Enum));
+            Assert.That(binding.Required,Is.True);Assert.That(binding.EnumValues,Is.EqualTo(DrinkCases.Select(d=>d[0])));
+            foreach(var drink in DrinkCases)
+            {
+                Assert.That(DrinkTypes.IsValid(drink[0]),Is.True);
+                Assert.That(DrinkTypes.Name(drink[0]),Is.EqualTo(drink[1]));
+                Assert.That(DrinkTypes.Name(drink[0],true),Is.EqualTo(drink[2]));
+            }
+        }
+
+        [TestCase(false)][TestCase(true)] public void PreparationFeedbackUsesCurrentUiLanguage(bool english)
+        {
+            const string key="EmbodiedNPC.Settings.Language";
+            bool had=PlayerPrefs.HasKey(key);int previous=PlayerPrefs.GetInt(key,0);
+            try
+            {
+                PlayerPrefs.SetInt(key,english?1:0);
+                foreach(var drink in DrinkCases)
+                {
+                    string name=drink[english?2:1];
+                    foreach(var status in new[]{ActionExecutionStatus.Accepted,ActionExecutionStatus.Succeeded,
+                        ActionExecutionStatus.Cancelled,ActionExecutionStatus.Failed,ActionExecutionStatus.TimedOut})
+                    {
+                        var result=new ActionExecutionResult("prepare_drink","p","t",status,"test_code",
+                            new Dictionary<string,string>{{"drink_type",drink[0]}},0,1);
+                        var text=new PrepareDrinkPresentationPolicy().Present(result);
+                        Assert.That(text.Status,Is.EqualTo(status));Assert.That(text.Code,Is.EqualTo("test_code"));
+                        if(status==ActionExecutionStatus.Accepted || status==ActionExecutionStatus.Succeeded)
+                            Assert.That(text.Message,Does.Contain(name));
+                        else Assert.That(text.Message,Does.Not.Contain(english?"is ready":"做好了"));
+                    }
+                    foreach(var phase in new[]{PlanProgressKind.Accepted,PlanProgressKind.Action})
+                    {
+                        var snapshot=new TaskFeedbackSnapshot(new TaskFeedbackKey("npc","p",0,"t"),"prepare_drink","station","player",
+                            "player",0,1,new PlanActionProgress(phase,"plan",0,0,PlannerActionType.PrepareDrink),drinkType:drink[0]);
+                        Assert.That(ActionFeedbackPresenter.FormatPhase(snapshot),Is.EqualTo(english
+                            ? (phase==PlanProgressKind.Accepted?$"Preparing {name}…":$"Making {name}…")
+                            : (phase==PlanProgressKind.Accepted?$"正在准备{name}…":$"正在制作{name}…")));
+                    }
+                }
+            }
+            finally { if(had)PlayerPrefs.SetInt(key,previous);else PlayerPrefs.DeleteKey(key); }
+        }
+
+        [TestCase(0f)][TestCase(-1f)][TestCase(float.NaN)][TestCase(float.PositiveInfinity)]
+        public void InvalidInstancePreparationDurationIsRejected(float seconds) =>
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new PrepareDrinkActionRunner(seconds));
+
         private static string Wire(string drink) => "{\"message_type\":\"cognitive_response\",\"schema_version\":\"1.0\","+
             "\"request_id\":\"request_drink\",\"trace_id\":\"trace_drink\",\"run_id\":\"run_drink\",\"agent_entity_id\":\"npc_cafe_01\","+
             "\"decision\":{\"decision_kind\":\"ACTION_PROPOSAL\",\"action_proposal\":{\"action_id\":\"prepare_drink\",\"bindings\":{\"drink_type\":\""+drink+"\"}}},"+
@@ -22,7 +89,7 @@ namespace EmbodiedNPC.Tests.Editor
         [TestCase("request_drink")][TestCase("proposal_request_drink")][TestCase("request with spaces")]
         public void ProposalNormalizationIsIdempotentAcrossRevisions(string id)
         { var canonical=GoalPlanRunner.NormalizeProposalId(id);Assert.That(GoalPlanRunner.NormalizeProposalId(canonical),Is.EqualTo(canonical)); }
-        [TestCase("latte")][TestCase("cappuccino")][TestCase("americano")]
+        [TestCaseSource(nameof(RegisteredDrinks))]
         public void EnumAdapterPreservesTypedGoalWithoutEntitySpoof(string drink)
         {
             var proposal=new CognitiveActionProposal { action_id="prepare_drink",
@@ -33,7 +100,7 @@ namespace EmbodiedNPC.Tests.Editor
             Assert.That(CognitiveResponseValidator.TryParse(Wire(drink),out var response,out var error),Is.True,error);
             Assert.That(response.validated_goal.drink_type,Is.EqualTo(drink));
         }
-        [TestCase("mocha")][TestCase("LATTE")][TestCase("")][TestCase(null)]
+        [TestCase("unregistered_drink")][TestCase("LATTE")][TestCase("")][TestCase(null)]
         public void IllegalEnumIsRejected(string drink)
         {
             var proposal=new CognitiveActionProposal { action_id="prepare_drink",bindings=new Dictionary<string,string>{{"drink_type",drink}} };

@@ -53,7 +53,7 @@ class DialogueP1Tests(unittest.IsolatedAsyncioTestCase):
         # Deliberately put the old state first: assembly may not silently pick a winner.
         evidence=_measured(outcome.evidence.model_copy(update={'items':(old,new)}))
         model=CognitiveModelRequestFactory.create_event(req,subject_catalog=catalog.model_visible_payload(),
-            recall_outcome=outcome.model_copy(update={'evidence':evidence}),knowledge_context_limit=16384)
+            cognition_phase=1, recall_outcome=outcome.model_copy(update={'evidence':evidence}),knowledge_context_limit=16384)
         content=model.messages[-1].content
         actual=RecallOutcome.model_validate(json.JSONDecoder().raw_decode(content.split('HISTORICAL MEMORY EVIDENCE / RecallOutcome JSON: ')[1])[0])
         self.assertEqual(actual.evidence.items,(old,new))
@@ -66,7 +66,7 @@ class DialogueP1Tests(unittest.IsolatedAsyncioTestCase):
         recent=[dict(turn_index=1,input_seq=1,player_text='不能替我确认库存。',
                      npc_text='稍等我问清楚再回你。',evidence_status='paired')]
         model=CognitiveModelRequestFactory.create_event(req,subject_catalog=catalog.model_visible_payload(),
-            recall_outcome=RecallOutcome(status='NO_MEMORY_FOUND'),recent_dialogue=recent,
+            cognition_phase=1, recall_outcome=RecallOutcome(status='NO_MEMORY_FOUND'),recent_dialogue=recent,
             inference_options=InferenceOptions(max_output_tokens=512),knowledge_context_limit=16384)
         content=model.messages[-1].content
         self.assertEqual(CognitiveModelRequestFactory.context_from(model).current_event,req.context.current_event)

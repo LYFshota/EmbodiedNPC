@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import closing
 from pathlib import Path
 import asyncio
+import json
 import sqlite3
 import tempfile
 import unittest
@@ -70,45 +71,39 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(directory.cleanup)
         self.database = SQLiteDatabase(Path(directory.name) / "memory.sqlite3")
         self.reflections = RelationshipReflectionRepository(self.database.connect)
+        from app.experience_models import ExperienceDraft
+        from app.experience_ledger import ExperienceLedger
+        from app.episode_repository import EpisodeRepository
+        from app.memory_consolidation_context import MemoryContextResolver
+        from app.memory_pipeline import SEMANTIC_MEMORY_CONSOLIDATOR_VERSION
+        from app.relationship_reflection_candidate import RelationshipReflectionCandidateBuilder
+        ledger = ExperienceLedger(self.database.connect)
+        episodes = EpisodeRepository(self.database.connect)
+        identities = [dict(entity_id="npc_01", identity_namespace="npc", identity_type="Character",
+                           persistent_id="npc-secret-uid"),
+                      dict(entity_id="player_01", identity_namespace="player", identity_type="Player",
+                           persistent_id="player-secret-uid")]
+        episode = None
+        for index, text in enumerate(("你好，今天忙吗？", "有点忙，但很高兴见到你。"), 1):
+            draft = ExperienceDraft(schema_version="experience-draft/1.1", observer_id="npc_01",
+                event_type="dialogue_input" if index == 1 else "dialogue_response", source_type="dialogue",
+                source_session_id="session_1", clock_domain="backend_utc", source_event_id=f"src_{index}",
+                actor_entity_id="player_01" if index == 1 else "npc_01",
+                target_entity_ids=("npc_01",) if index == 1 else ("player_01",),
+                persistent_participants=identities, natural_language_payload=text,
+                request_id=f"request_{index}", conversation_id="conversation_1",
+                occurred_at=index, observed_at=index, provenance="HEARD" if index == 1 else "EXECUTED_BY_SELF")
+            _, event = ledger.append(draft, event_id=f"secret_event_{index}",
+                dedup_key=f"key_{index}", payload_hash=str(index)*64)
+            episode = (episodes.open_for_event(event, "episode-boundary/1.0") if episode is None
+                       else episodes.append_event(episode.episode_id, event))
+        _, job = episodes.close_and_enqueue(episode.episode_id, "test_end", __import__("time").time()+1,
+                                           SEMANTIC_MEMORY_CONSOLIDATOR_VERSION)
         with closing(self.database.connect()) as connection:
             with connection:
-                connection.execute(
-                    """
-                    INSERT INTO episodes (
-                        episode_id, observer_id, source_session_id, start_seq, end_seq,
-                        started_at_utc, ended_at_utc, status, close_reason, event_count,
-                        policy_version, schema_version, created_at_utc, updated_at_utc
-                    ) VALUES ('episode_secret', 'npc_01', 'session_1', 1, 2,
-                              1, 2, 'CLOSED', 'test_end', 2,
-                              'episode-boundary/1.0', 'episode/1.0', 1, 2)
-                    """
-                )
-        observer = TrustedPersistentIdentity("npc", "Character", "npc-secret-uid")
-        subject = TrustedPersistentIdentity("player", "Player", "player-secret-uid")
-        events = (
-            ConsolidationEvidenceEvent(
-                experience_seq=1, event_id="secret_event_1", event_type="dialogue_input",
-                source_type="dialogue", actor_entity_id="player_01",
-                target_entity_ids=("npc_01",),
-                participant_handles={"player_01": "participant_2", "npc_01": "participant_1"},
-                structured_payload={}, natural_language_payload="你好，今天忙吗？",
-                occurred_at=1, observed_at=1, world_revision=None, confidence=None,
-                provenance="HEARD",
-            ),
-            ConsolidationEvidenceEvent(
-                experience_seq=2, event_id="secret_event_2", event_type="dialogue_response",
-                source_type="dialogue", actor_entity_id="npc_01",
-                target_entity_ids=("player_01",),
-                participant_handles={"player_01": "participant_2", "npc_01": "participant_1"},
-                structured_payload={}, natural_language_payload="有点忙，但很高兴见到你。",
-                occurred_at=2, observed_at=2, world_revision=None, confidence=None,
-                provenance="EXECUTED_BY_SELF",
-            ),
-        )
-        self.candidate = RelationshipReflectionCandidate(
-            observer=observer, subject=subject, episode_id="episode_secret",
-            episode_input_hash="a" * 64, evidence_events=events,
-        )
+                connection.execute("UPDATE memory_jobs SET status='SUCCEEDED' WHERE job_id=?", (job.job_id,))
+        context = MemoryContextResolver(ledger, episodes).resolve(job)
+        self.candidate = RelationshipReflectionCandidateBuilder().build(context)[0]
 
     def worker(self, outputs):
         provider = FakeProvider(list(outputs))
@@ -122,7 +117,7 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_interpretation_persists_backend_owned_metadata_and_bounded_input(self) -> None:
         worker, scanner, provider, executor = self.worker([
-            '{"outcome":"INTERPRETATION","interpretation":"这次交流比较友善，增加了熟悉感。"}'
+            '{"outcome":"INTERPRETATION","interpretation":"这次交流比较友善，增加了熟悉感。","state_update":null}'
         ])
         batch = await worker.process_batch()
         self.assertEqual((batch.persisted, batch.issues), (1, ()))
@@ -143,7 +138,10 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
         for secret in ("npc-secret-uid", "player-secret-uid", "episode_secret",
                        "secret_event_1", "secret_event_2", "participant_1", "participant_2"):
             self.assertNotIn(secret, visible)
-        self.assertEqual(set(request.response_schema["properties"]), {"outcome", "interpretation"})
+        self.assertEqual(set(request.response_schema["properties"]), {"outcome", "interpretation", "state_update"})
+        self.assertIn("state_update", request.response_schema["required"])
+        self.assertEqual(request.response_schema["properties"]["state_update"]["anyOf"],
+                         [{"$ref": "#/$defs/StateUpdate"}, {"type": "null"}])
         scanner.begin_new_round()
         again = await worker.process_batch()
         self.assertEqual((again.persisted, again.already_processed), (0, 1))
@@ -151,7 +149,7 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_change_persists_null_and_is_processed(self) -> None:
         worker, scanner, provider, _ = self.worker([
-            '{"outcome":"NO_CHANGE","interpretation":null}'
+            '{"outcome":"NO_CHANGE","interpretation":null,"state_update":null}'
         ])
         self.assertEqual((await worker.process_batch()).persisted, 1)
         record = self.reflections.get(worker.reflection_id_for(self.candidate))
@@ -172,6 +170,8 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
             '{"outcome":"INTERPRETATION","interpretation":"x","subject":"forged"}',
             '{"outcome":"INTERPRETATION","interpretation":',
             'Here is JSON: {"outcome":"NO_CHANGE","interpretation":null}',
+            '{"outcome":"NO_CHANGE","interpretation":null,"state_update":null,"state_update":null}',
+            '{"outcome":"INTERPRETATION","interpretation":"x","state_update":{"operation":"ADD","operation":"CORRECT"}}',
         )
         for raw in invalid:
             with self.subTest(raw=raw):
@@ -183,9 +183,52 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
                     self.candidate.observer, self.candidate.subject, self.candidate.episode_id, POLICY,
                 ))
 
+    async def test_arrays_extra_plural_and_no_change_delta_are_rejected_without_selection(self) -> None:
+        update = dict(operation="ADD", target=None, kind="EXPLICIT", text="A greeting.",
+                      event="e0", quote="你好")
+        base = dict(outcome="INTERPRETATION", interpretation="A local impression.")
+        invalid = (
+            dict(base, state_updates=[update, update]),
+            dict(base, state_updates=[update]),
+            dict(base, state_update=[update]),
+            dict(base, state_update=[update, update]),
+            dict(base, state_update=update, state_updates=[update]),
+            dict(base),
+            dict(outcome="NO_CHANGE", interpretation=None, state_update=update),
+            dict(outcome="NO_CHANGE", interpretation="x", state_update=None),
+            dict(outcome="INTERPRETATION", interpretation=None, state_update=None),
+        )
+        for payload in invalid:
+            with self.subTest(payload=payload):
+                worker, _, provider, _ = self.worker([json.dumps(payload)])
+                with self.assertLogs("app.relationship_reflection_worker", level="WARNING") as logs:
+                    batch = await worker.process_batch()
+                self.assertEqual((batch.persisted, batch.already_processed), (0, 0))
+                self.assertEqual(batch.issues[0].reason, "RELATIONSHIP_OUTPUT_INVALID")
+                self.assertIn("RELATIONSHIP_OUTPUT_INVALID", logs.output[0])
+                self.assertEqual(len(provider.requests), 1)
+                self.assertIsNone(self.reflections.get(worker.reflection_id_for(self.candidate)))
+                state = self.reflections.read_current_pair_state(self.candidate.observer, self.candidate.subject)
+                self.assertEqual((state.revision, state.items), (0, ()))
+
+    async def test_invalid_structure_is_uncommitted_and_rediscovered_after_round_and_restart(self) -> None:
+        raw = '{"outcome":"INTERPRETATION","interpretation":"x","state_update":[]}'
+        worker, scanner, provider, _ = self.worker([raw, raw])
+        with self.assertLogs("app.relationship_reflection_worker", level="WARNING"):
+            first = await worker.process_batch()
+            scanner.begin_new_round()
+            again = await worker.process_batch()
+            restarted, _, restarted_provider, _ = self.worker([raw])
+            after_restart = await restarted.process_batch()
+        for result in (first, again, after_restart):
+            self.assertEqual((result.persisted, result.already_processed), (0, 0))
+            self.assertEqual(result.issues[0].reason, "RELATIONSHIP_OUTPUT_INVALID")
+        self.assertEqual((len(provider.requests), len(restarted_provider.requests)), (2, 1))
+        self.assertIsNone(self.reflections.get(worker.reflection_id_for(self.candidate)))
+
     async def test_model_cannot_smuggle_backend_identity_into_interpretation(self) -> None:
         worker, _, _, _ = self.worker([
-            '{"outcome":"INTERPRETATION","interpretation":"player-secret-uid"}'
+            '{"outcome":"INTERPRETATION","interpretation":"player-secret-uid","state_update":null}'
         ])
         batch = await worker.process_batch()
         self.assertEqual(batch.persisted, 0)
@@ -195,7 +238,7 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
     async def test_provider_failure_leaves_candidate_for_next_round(self) -> None:
         worker, scanner, provider, _ = self.worker([
             ProviderError("OLLAMA_UNAVAILABLE"),
-            '{"outcome":"INTERPRETATION","interpretation":"这次交流友善。"}',
+            '{"outcome":"INTERPRETATION","interpretation":"这次交流友善。","state_update":null}',
         ])
         failed = await worker.process_batch()
         self.assertEqual(failed.persisted, 0)
@@ -224,22 +267,22 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_unique_race_is_treated_as_already_processed(self) -> None:
         worker, _, _, _ = self.worker([
-            '{"outcome":"NO_CHANGE","interpretation":null}'
+            '{"outcome":"NO_CHANGE","interpretation":null,"state_update":null}'
         ])
-        original_insert = self.reflections.insert
+        original_insert = self.reflections.finalize_pair_update
 
-        def concurrent_insert(record):
-            original_insert(record)
+        def concurrent_insert(*args):
+            original_insert(*args)
             raise sqlite3.IntegrityError("UNIQUE constraint failed")
 
-        with patch.object(self.reflections, "insert", side_effect=concurrent_insert):
+        with patch.object(self.reflections, "finalize_pair_update", side_effect=concurrent_insert):
             batch = await worker.process_batch()
         self.assertEqual((batch.persisted, batch.already_processed), (0, 1))
         self.assertIsNotNone(self.reflections.get(worker.reflection_id_for(self.candidate)))
 
     async def test_start_and_stop_run_the_bounded_background_loop(self) -> None:
         worker, _, provider, _ = self.worker([
-            '{"outcome":"NO_CHANGE","interpretation":null}'
+            '{"outcome":"NO_CHANGE","interpretation":null,"state_update":null}'
         ])
         worker.start()
         try:

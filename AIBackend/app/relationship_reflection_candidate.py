@@ -9,7 +9,7 @@ from .memory_consolidation_context import (
 )
 
 
-RELATIONSHIP_REFLECTION_POLICY_VERSION = "relationship-reflection/1.0"
+RELATIONSHIP_REFLECTION_POLICY_VERSION = "relationship-reflection/2.0"
 MAX_RELATIONSHIP_EVIDENCE_EVENTS = 64  # Matches the Slice 1 persisted evidence bound.
 
 

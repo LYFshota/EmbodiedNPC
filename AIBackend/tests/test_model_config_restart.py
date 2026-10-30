@@ -28,6 +28,7 @@ from tests.test_memory_d2_cognitive_steps import (
     KnownSubjects, MinimalRows, ScriptedProvider, TERMINAL, cognitive_request, recall,
 )
 from tests.test_model_api_config import embedding, main
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def saved_document(directory: Path, *, main_changes=None, embedding_changes=None):
@@ -124,14 +125,15 @@ class CognitionGenerationTests(unittest.IsolatedAsyncioTestCase):
     async def test_startup_options_are_shared_by_step_zero_and_one(self):
         with tempfile.TemporaryDirectory() as root:
             _, document = saved_document(Path(root), main_changes={
-                "temperature": 0.7, "thinking": True, "max_output_tokens": 900})
+                "temperature": 0.7, "thinking": True, "max_output_tokens": 900,
+                "context_length": DEFAULT_COGNITIVE_CONTEXT_LENGTH})
             options = cognition_options(document)
             self.assertEqual(InferenceOptions(temperature=0.7, think=True, max_output_tokens=900), options)
             provider = ScriptedProvider([recall, TERMINAL])
             memory = CognitiveMemoryRecall(RecallSubjectCatalogBuilder(KnownSubjects()),
                                            CanonicalMemoryRetrieval(MinimalRows()))
             entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(),
-                                          memory_recall=memory, inference_options=options, context_length=16384)
+                                          memory_recall=memory, inference_options=options, context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
             await entry.run(cognitive_request())
             self.assertEqual(2, len(provider.requests))
             self.assertEqual([options, options], [item.inference_options for item in provider.requests])
@@ -169,7 +171,7 @@ saved = c.put('/v1/model-config', json={'expected_revision': config['revision'],
 after = c.get('/v1/runtime-status').json()
 print(json.dumps({'before': before, 'saved_code': saved.status_code, 'after': after,
                   'indexer_active': m.canonical_embedding_indexer is not None,
-                  'same_provider': m.provider is m.cognitive_entry.provider is m.failure_response_service._provider
+                  'same_provider': m.provider is m.cognitive_entry.provider
                   is m.base_memory_consolidator.provider
                   is m.relationship_reflection_worker.model.provider}))
 """

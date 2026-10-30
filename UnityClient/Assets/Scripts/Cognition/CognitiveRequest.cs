@@ -9,6 +9,36 @@ using Newtonsoft.Json.Serialization;
 namespace EmbodiedNPC.Cognition
 {
     [Serializable]
+    public sealed class CognitiveActionAlternative
+    {
+        public string alternative_id, description;
+        public EmbodiedNPC.Communication.GoalProposal goal;
+        public bool IsValid => !string.IsNullOrWhiteSpace(alternative_id) && alternative_id.Length <= 120 &&
+            !string.IsNullOrWhiteSpace(description) && description.Length <= 120 && goal != null &&
+            goal.type == "bring_object" && CognitiveActionProposal.IsEntityId(goal.target_entity_id) &&
+            CognitiveActionProposal.IsEntityId(goal.destination_entity_id);
+    }
+
+    [Serializable]
+    public sealed class CognitiveActionFeedback
+    {
+        public string original_request_id, original_run_id, outcome_id, proposal_id, trace_id;
+        public int proposal_revision, world_revision, completed_actions;
+        public string failure_code, detail;
+        public EmbodiedNPC.Communication.GoalProposal failed_goal;
+        public CognitiveActionAlternative[] allowed_alternatives = Array.Empty<CognitiveActionAlternative>();
+        public bool IsValid => !string.IsNullOrWhiteSpace(original_request_id) &&
+            !string.IsNullOrWhiteSpace(original_run_id) && !string.IsNullOrWhiteSpace(outcome_id) &&
+            !string.IsNullOrWhiteSpace(proposal_id) && !string.IsNullOrWhiteSpace(trace_id) &&
+            proposal_revision >= 0 && proposal_revision < 2 && world_revision >= 0 && completed_actions >= 0 &&
+            !string.IsNullOrWhiteSpace(failure_code) && failure_code.Length <= 80 && (detail?.Length ?? 0) <= 240 &&
+            failed_goal != null && allowed_alternatives != null && allowed_alternatives.Length <= 4 &&
+            allowed_alternatives.All(a => a?.IsValid == true && a.goal.type == failed_goal.type && a.goal.target_entity_id != failed_goal.target_entity_id &&
+                a.goal.destination_entity_id == failed_goal.destination_entity_id) &&
+            allowed_alternatives.Select(a => a.alternative_id).Distinct(StringComparer.Ordinal).Count() == allowed_alternatives.Length;
+    }
+
+    [Serializable]
     public sealed class CognitiveRunDto
     {
         public string run_id;
@@ -119,6 +149,8 @@ namespace EmbodiedNPC.Cognition
         public CognitiveContextSnapshot context;
         // Private Unity-to-Backend identity input. The model prompt serializes context only.
         public CognitiveRecallIdentityDto recall_identity;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public CognitiveActionFeedback action_feedback;
         public string reply_language = "zh-CN";
         public int context_diagnostics_version = 1;
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
@@ -126,7 +158,14 @@ namespace EmbodiedNPC.Cognition
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public TaskConsiderationContextDto task_consideration;
 
-        public bool IsValid => ReplyUtteranceContract.IsLanguage(reply_language) && message_type == "cognitive_request" &&
+        public bool IsValid => (action_feedback == null || action_feedback.IsValid &&
+            schema_version == "1.0" && context?.current_event?.event_type == "action.failed" &&
+            context.current_event.event_id == action_feedback.outcome_id && trace_id == action_feedback.trace_id &&
+            context.runtime_state?.status == "FAILED" && context.runtime_state.outcome_id == action_feedback.outcome_id &&
+            context.runtime_state.proposal_id == action_feedback.proposal_id &&
+            context.runtime_state.proposal_revision == action_feedback.proposal_revision &&
+            context.runtime_state.trace_id == action_feedback.trace_id && context.runtime_state.world_revision == action_feedback.world_revision &&
+            context.current_event.source_entity_id == run?.agent_entity_id && context.current_event.target_entity_id == run?.agent_entity_id) && ReplyUtteranceContract.IsLanguage(reply_language) && message_type == "cognitive_request" &&
                                ((context?.current_event?.event_type == "npc.task_consideration") == (task_consideration!=null)) &&
                                (schema_version == "1.0" && task_runtime == null || schema_version == "1.1" && task_runtime?.IsValid == true) &&
                                !string.IsNullOrWhiteSpace(request_id) && !string.IsNullOrWhiteSpace(trace_id) &&

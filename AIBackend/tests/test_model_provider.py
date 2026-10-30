@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 import httpx
 
-from app.failure_service import TaskFailureResponseService
 from app.providers import (
     InferenceOptions,
     ModelMessage,
@@ -16,7 +15,9 @@ from app.providers import (
     MockProvider,
     OllamaProvider,
 )
-from test_m72f_failure_service import make_report
+from tests.test_action_feedback import make_request, reply
+from app.cognitive_entry import CognitiveBackendEntry
+from app.local_model_scheduler import PrioritizedModelExecutor
 
 
 class RecordingProvider:
@@ -105,20 +106,13 @@ class ModelProviderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(11, result.usage.prompt_tokens)
         self.assertEqual(5, result.usage.completion_tokens)
 
-    async def test_failure_business_path_uses_only_model_provider_contract(self) -> None:
-        provider = RecordingProvider(json.dumps({
-            "resolution": "clarify",
-            "utterance": "请重新说明目标。",
-            "emotion": "neutral",
-            "gesture": "none",
-            "selected_alternative_id": None,
-        }, ensure_ascii=False))
 
-        response = await TaskFailureResponseService(provider).respond(make_report())
-
-        self.assertEqual("clarify", response.resolution)
-        self.assertEqual(1, len(provider.requests))
-        self.assertEqual("ModelTaskFailureResponse", provider.requests[0].response_schema["title"])
+    async def test_failure_business_path_uses_unified_model_provider_contract(self):
+        provider=RecordingProvider(json.dumps(reply(),ensure_ascii=False))
+        result=await CognitiveBackendEntry(provider,PrioritizedModelExecutor(),context_length=32768).run(make_request())
+        self.assertEqual(result.decision.utterance,reply()['utterance'])
+        self.assertEqual(len(provider.requests),1)
+        self.assertEqual(provider.requests[0].response_schema['title'],'CognitiveDecision')
 
 
 if __name__ == "__main__":

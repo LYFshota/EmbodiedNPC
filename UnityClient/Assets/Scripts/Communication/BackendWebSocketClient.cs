@@ -16,8 +16,6 @@ namespace EmbodiedNPC.Communication
     /// an already accepted deterministic plan continues independently.</summary>
     public class BackendWebSocketClient : MonoBehaviour
     {
-        public event Action<ValidatedTaskFailureResponse> ValidatedTaskFailureResponseReceived;
-        public event Action<string> TaskFailureRequestInvalidated;
         public event Action<ValidatedExperienceAppendResult> ValidatedExperienceAppendResultReceived;
         public event Action<ExperienceDraftDto, ValidatedExperienceAppendResult, string> ExperienceAppendSettled;
         public event Action<CognitiveResponse> CognitiveResponseReceived;
@@ -32,13 +30,11 @@ namespace EmbodiedNPC.Communication
         [SerializeField, Min(1)] private int maxConnectAttempts = 3;
         [SerializeField, Min(0.1f)] private float retryDelaySeconds = 1f;
         [SerializeField, Min(0.1f)] private float connectTimeoutSeconds = 5f;
-        [SerializeField, Min(0.1f)] private float responseTimeoutSeconds = 30f;
         private WebSocket websocket;
         private CancellationTokenSource lifetime;
         private Task connectionTask;
         private bool connectionStarting;
         private readonly Dictionary<string, CognitiveRequest> pendingTaskCommands = new(StringComparer.Ordinal);
-        private TaskFailureResponseInbox failureInbox;
         private ExperienceWriteCoordinator experienceWrites;
         public virtual bool IsConnected => websocket != null && websocket.State == WebSocketState.Open;
         public string HttpBaseUrl
@@ -56,21 +52,12 @@ namespace EmbodiedNPC.Communication
         public string DialogueHistoryUrl => HttpUrl("v1/dialogue-history");
         public string ConnectionStatus { get; private set; } = "OFFLINE";
         public int ConnectionAttempts { get; private set; }
-        public int PendingRequestCount => FailureInbox.PendingCount;
         public int PendingExperienceCount => ExperienceWrites.PendingCount;
         public int CognitiveResponseDispatchCount { get; private set; }
         public int CognitiveRequestSendCount { get; private set; }
         public string LastCognitiveIngressStatus { get; private set; } = string.Empty;
         public string ExperienceWriteStatus => ExperienceWrites.LastStatus;
         public int CurrentWorldRevision => worldState == null ? 0 : worldState.WorldRevision;
-        private TaskFailureResponseInbox FailureInbox => failureInbox ??= CreateFailureInbox();
-
-        private TaskFailureResponseInbox CreateFailureInbox()
-        {
-            var inbox = new TaskFailureResponseInbox(() => Time.realtimeSinceStartupAsDouble);
-            inbox.RequestInvalidated += requestId => TaskFailureRequestInvalidated?.Invoke(requestId);
-            return inbox;
-        }
         private ExperienceWriteCoordinator ExperienceWrites
         {
             get
@@ -111,7 +98,6 @@ namespace EmbodiedNPC.Communication
 #if !UNITY_WEBGL || UNITY_EDITOR
             websocket?.DispatchMessageQueue();
 #endif
-            failureInbox?.Expire();
             experienceWrites?.Tick(Time.realtimeSinceStartupAsDouble);
         }
 
@@ -191,7 +177,6 @@ namespace EmbodiedNPC.Communication
                     }
 
                     if (token.IsCancellationRequested) return;
-                    ClearPendingRequests();
                     if (attempt + 1 < maxConnectAttempts)
                     {
                         SetStatus("RETRY_WAIT");
@@ -208,13 +193,18 @@ namespace EmbodiedNPC.Communication
         private void HandleOpen()
         {
             if (!isActiveAndEnabled || lifetime == null || lifetime.IsCancellationRequested) return;
+            // CONNECTED observers may synchronously submit on this new socket.
+            // Only requests retained before opening belong to recovery.
+            var recovering = pendingTaskCommands.Values.ToArray();
             ExperienceWrites.OnConnected();
             SetStatus("CONNECTED");
-            foreach (var original in pendingTaskCommands.Values.ToArray()) _ = QueryTaskCommandAsync(original);
+            foreach (var original in recovering)
+                if (pendingTaskCommands.TryGetValue(original.request_id, out var current) && ReferenceEquals(current, original))
+                    _ = QueryTaskCommandAsync(original);
         }
         private void HandleError(string ignored) => SetStatus("CONNECTION_FAILED");
         private void HandleClose(WebSocketCloseCode ignored)
-        { ClearPendingRequests(); SetStatus("DISCONNECTED"); }
+        { SetStatus("DISCONNECTED"); }
         private void SetStatus(string status)
         {
             if (this == null) return;
@@ -256,12 +246,6 @@ namespace EmbodiedNPC.Communication
                 CognitiveRequestFailed?.Invoke(malformedCognitiveResponse);
                 return true;
             }
-            int revision = worldState == null ? 0 : worldState.WorldRevision;
-            if (FailureInbox.TryAccept(json, revision, out ValidatedTaskFailureResponse failureResponse, out _))
-            {
-                ValidatedTaskFailureResponseReceived?.Invoke(failureResponse);
-                return true;
-            }
             if (ExperienceAppendResultValidator.TryParse(json,
                     out ValidatedExperienceAppendResult experienceResult, out _))
             {
@@ -271,25 +255,6 @@ namespace EmbodiedNPC.Communication
             }
             return false;
         }
-        public void CancelPendingFailureRequest(string requestId) => FailureInbox.Cancel(requestId);
-        public void ClearPendingRequests()
-        {
-            FailureInbox.Clear();
-        }
-
-        public async Task<bool> SendTaskFailureReportAsync(TaskFailureReport report)
-        {
-            if (!IsConnected || report == null || !report.IsValid) return false;
-            if (!FailureInbox.Register(report, responseTimeoutSeconds)) return false;
-            try { await websocket.SendText(report.Serialize()); return true; }
-            catch (Exception)
-            {
-                FailureInbox.Cancel(report.request_id);
-                SetStatus("SEND_FAILED");
-                return false;
-            }
-        }
-
         public virtual async Task<bool> SendCognitiveRequestAsync(CognitiveRequest request)
         {
             if (!IsConnected || request == null || !request.IsValid) return false;
@@ -342,7 +307,7 @@ namespace EmbodiedNPC.Communication
         {
             if (!IsConnected || (request?.context?.current_event?.event_type != "npc.dialogue_continue" &&
                 request?.context?.current_event?.event_type != "player.dwelled_in_service_zone" &&
-                request?.context?.current_event?.event_type != "counter.needs_cleaning" && request?.context?.current_event?.event_type != "npc.task_consideration")) return false;
+                request?.context?.current_event?.event_type != "counter.needs_cleaning" && request?.context?.current_event?.event_type != "npc.task_consideration" && request?.action_feedback == null)) return false;
             try
             {
                 await websocket.SendText(Newtonsoft.Json.JsonConvert.SerializeObject(new {
@@ -369,7 +334,6 @@ namespace EmbodiedNPC.Communication
             var stoppingLifetime = lifetime;
             var stoppingTask = connectionStarting ? null : connectionTask;
             stoppingLifetime?.Cancel();
-            ClearPendingRequests();
             websocket?.CancelConnection();
             // CONNECTING observers can disable us before EnsureConnected assigns the new task.
             if (connectionStarting)

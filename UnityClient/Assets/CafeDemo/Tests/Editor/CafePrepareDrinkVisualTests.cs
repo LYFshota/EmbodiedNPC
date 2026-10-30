@@ -157,7 +157,7 @@ namespace CafeDemo.Tests
             int previous=world.WorldRevision;
             var hand=Character.GetBoneTransform(HumanBodyBones.RightHand);
             GoalOutcome? outcome=null;runner.GoalOutcomePublished+=o=>outcome=o;
-            foreach(var drink in new[]{"latte","cappuccino","americano"})
+            foreach(var drink in DrinkTypes.Ids)
             {
                 outcome=null; Assert.That(Visual,Is.Not.Null);
                 Vector3 idle=merchant.transform.InverseTransformPoint(hand.position);
@@ -282,7 +282,7 @@ namespace CafeDemo.Tests
             var speech=merchant.GetComponent<SpeechPresentationLifecycle>();
             var talking=merchant.GetComponentInChildren<DialogueAnimationPresenter>();
             speech.BeginPlayback("离线表现验证");yield return null;talking.Tick(.3f);
-            Assert.That(talking.CurrentWeight,Is.EqualTo(1));Assert.That(Visual.IsPlaying,Is.False);
+            Assert.That(talking.ActivationWeight,Is.EqualTo(1));Assert.That(Visual.IsPlaying,Is.False);
             GoalOutcome? outcome=null;runner.GoalOutcomePublished+=o=>outcome=o;
             Assert.That(driver.TryConsumeResponse(Propose("latte")),Is.True);
             float until=Time.realtimeSinceStartup+28;
@@ -297,7 +297,7 @@ namespace CafeDemo.Tests
             Motion.SetNavigationActive(false);Visual.Tick(.1f);Assert.That(Visual.IsPlaying,Is.True);
             runner.CancelCurrentPlan();yield return null;Assert.That(Visual.CurrentWeight,Is.Zero);
             yield return ReleaseDialogue();speech.BeginPlayback("制作表现结束后正常交谈");talking.Tick(.3f);
-            Assert.That(talking.CurrentWeight,Is.EqualTo(1));Assert.That(Visual.IsPlaying,Is.False);
+            Assert.That(talking.ActivationWeight,Is.EqualTo(1));Assert.That(Visual.IsPlaying,Is.False);
             Assert.That(world.WorldRevision,Is.Zero);AssertOffline();
         }
     }

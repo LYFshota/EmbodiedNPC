@@ -7,6 +7,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from pydantic import ValidationError
+from app.drink_types import DRINK_TYPE_IDS
 from app.contracts import CognitiveRequest, TaskRuntimeSyncRequest
 from app.cognitive_tasks import CognitiveTasks
 from app.cognitive_entry import CognitiveBackendEntry
@@ -16,6 +17,7 @@ from app.task_repository import TaskRepository
 from app.task_service import TaskService
 from app.task_models import TaskCreate, TaskError
 from tests.test_cognitive_tasks import request, Scripted, task_data
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 class TaskConsiderationTests(unittest.IsolatedAsyncioTestCase):
@@ -61,7 +63,7 @@ class TaskConsiderationTests(unittest.IsolatedAsyncioTestCase):
 
     async def run_scripts(self,req,scripts):
         provider=Scripted(scripts)
-        entry=CognitiveBackendEntry(provider,PrioritizedModelExecutor(),tasks=self.tasks,context_length=16384)
+        entry=CognitiveBackendEntry(provider,PrioritizedModelExecutor(),tasks=self.tasks,context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         result=await entry.run(req)
         return result,provider
 
@@ -96,7 +98,7 @@ class TaskConsiderationTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(TaskError): await self.run_scripts(req,[])
 
     async def test_context_limited_to_three_eligible_and_scoped(self):
-        for drink in ('latte','cappuccino','americano'): self.seed(drink=drink)
+        for drink in DRINK_TYPE_IDS[:3]: self.seed(drink=drink)
         other=self.scope.model_copy(update={'owner':self.scope.owner.model_copy(update={'persistent_id':'other-npc'})})
         self.service.create_task(other,'other_owner',TaskCreate.model_validate(dict(source_kind='player_request',source=dict(event_id='s'),goal=dict(kind='serve_drink',drink_type='latte'),trigger_kind='next_visit')))
         req=self.automatic()
@@ -230,7 +232,7 @@ class TaskConsiderationTests(unittest.IsolatedAsyncioTestCase):
                     started.set(); await asyncio.Event().wait()
                 return ModelResult(text='{"decision_kind":"NO_ACTION"}')
         provider=Provider(); executor=PrioritizedModelExecutor()
-        entry=CognitiveBackendEntry(provider,executor,tasks=self.tasks,context_length=16384)
+        entry=CognitiveBackendEntry(provider,executor,tasks=self.tasks,context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         background=asyncio.create_task(entry.run(req)); await asyncio.wait_for(started.wait(),2)
         foreground=await asyncio.wait_for(entry.run(self.a),2)
         with self.assertRaises(PreemptedByForeground): await background
@@ -251,7 +253,7 @@ class TaskConsiderationTests(unittest.IsolatedAsyncioTestCase):
         self.seed(); socket=SocketHarness(); self.connection=socket.socket
         req=self.automatic()
         provider=Scripted([dict(decision_kind='ACTION_PROPOSAL',action_proposal=dict(action_id='prepare_drink',bindings=dict(drink_type='latte')))])
-        entry=CognitiveBackendEntry(provider,PrioritizedModelExecutor(),tasks=self.tasks,context_length=16384)
+        entry=CognitiveBackendEntry(provider,PrioritizedModelExecutor(),tasks=self.tasks,context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         wire={**req.model_dump(mode='json'), 'recall_identity':req.recall_identity.model_dump(mode='json'),
             'task_runtime':req.task_runtime.model_dump(mode='json'),'task_consideration':req.task_consideration.model_dump(mode='json')}
         with patch.object(m3_main,'task_cognition',self.tasks),patch.object(m3_main,'cognitive_entry',entry), \

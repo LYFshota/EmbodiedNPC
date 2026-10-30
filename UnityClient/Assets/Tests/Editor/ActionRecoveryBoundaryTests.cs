@@ -1,3 +1,4 @@
+using EmbodiedNPC.Cognition;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -143,7 +144,7 @@ namespace EmbodiedNPC.Tests
         }
 
         [Test]
-        public void TaskFailureAlternatives_DoNotDiscoverGloballyRegisteredEntity()
+        public void ActionFeedbackAlternatives_DoNotDiscoverGloballyRegisteredEntity()
         {
             ActionRegistration registration = Registration("bring_object");
             ExecutionAuthorization authorization = Authorization(ActionSelectionMode.Any, "cup_01", "cup_02");
@@ -152,7 +153,7 @@ namespace EmbodiedNPC.Tests
                 type = "bring_object", target_entity_id = "cup_01", destination_entity_id = "player_01",
             };
 
-            TaskAlternative[] alternatives = TaskFailurePolicy.BuildAlternatives(registration,
+            CognitiveActionAlternative[] alternatives = ActionFeedbackPolicy.BuildAlternatives(registration,
                 Context(authorization, new[] { "cup_01", "cup_02", "cup_hidden" }), failedGoal);
 
             Assert.That(alternatives.Select(value => value.goal.target_entity_id), Is.EqualTo(new[] { "cup_02" }));
@@ -160,7 +161,7 @@ namespace EmbodiedNPC.Tests
         }
 
         [Test]
-        public void TaskFailureAlternatives_ExactAuthorizationNeverOffersReplacement()
+        public void ActionFeedbackAlternatives_ExactAuthorizationNeverOffersReplacement()
         {
             ActionRegistration registration = Registration("bring_object");
             ExecutionAuthorization authorization = Authorization(ActionSelectionMode.Exact, "cup_01");
@@ -169,7 +170,7 @@ namespace EmbodiedNPC.Tests
                 type = "bring_object", target_entity_id = "cup_01", destination_entity_id = "player_01",
             };
 
-            TaskAlternative[] alternatives = TaskFailurePolicy.BuildAlternatives(registration,
+            CognitiveActionAlternative[] alternatives = ActionFeedbackPolicy.BuildAlternatives(registration,
                 Context(authorization, new[] { "cup_01", "cup_02", "cup_hidden" }), failedGoal);
 
             Assert.That(alternatives, Is.Empty);

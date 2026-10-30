@@ -456,7 +456,7 @@ class ExperienceLedger:
                 "ON e.source_session_id=p.session AND e.conversation_id=p.conversation "
                 "AND e.clock_domain=p.clock AND e.experience_seq>p.seq "
                 "AND ((e.request_id=p.request AND e.source_event_id=p.event) OR "
-                "(json_extract(e.payload_json,'$.structured_payload.initiative')='dialogue_continuation' "
+                "(json_extract(e.payload_json,'$.structured_payload.initiative') IN ('dialogue_continuation','action_feedback') "
                 "AND json_extract(e.payload_json,'$.structured_payload.parent_request_id')=p.request "
                 "AND json_extract(e.payload_json,'$.structured_payload.parent_event_id')=p.event)) "
                 "WHERE e.observer_id=? AND e.experience_seq>=? AND e.experience_seq<? "
@@ -467,7 +467,8 @@ class ExperienceLedger:
         by_turn = self._verified_dialogue_responses(inputs, responses, boundary, observed_at)
         if timeline:
             return self._project_timeline(inputs, by_turn, max_messages, char_budget,
-                                          boundary_overlap, truncated=truncated)
+                                          boundary_overlap, truncated=truncated,
+                                          current_session_id=boundary["source_session_id"])
         return self._project_dialogue(inputs, by_turn, max_messages, char_budget,
                                       scoped=True, truncated=truncated)
 
@@ -479,13 +480,14 @@ class ExperienceLedger:
             if key in parents:
                 ambiguous.add(key)
             parents[key] = row
-        ordinary, continuations = {}, {}
+        ordinary, continuations, feedbacks = {}, {}, {}
         for row in responses:
             payload = json.loads(row["payload_json"])
             metadata = payload["structured_payload"]
             continuation = metadata.get("initiative") == "dialogue_continuation"
             key = self._turn_key(row)
-            if continuation:
+            feedback = metadata.get("initiative") == "action_feedback"
+            if continuation or feedback:
                 key = (*key[:3], metadata.get("parent_request_id"), metadata.get("parent_event_id"))
             parent = parents.get(key)
             if parent is None or key in ambiguous or not parent["request_id"] or not parent["source_event_id"]:
@@ -498,7 +500,9 @@ class ExperienceLedger:
                 continue
             if row["source_session_id"] == boundary["source_session_id"] and row["occurred_at"] > observed_at:
                 continue
-            (continuations if continuation else ordinary).setdefault(key, []).append(row)
+            if feedback and not self._verified_action_feedback(parent, row):
+                continue
+            (feedbacks if feedback else continuations if continuation else ordinary).setdefault(key, []).append(row)
         result = {}
         for key, replies in ordinary.items():
             if len(replies) != 1:  # Ambiguous displayed speech cannot certify a pair.
@@ -516,9 +520,41 @@ class ExperienceLedger:
                     and row["experience_seq"] > anchor["experience_seq"]
                     and row["occurred_at"] >= anchor["occurred_at"]):
                 result[key].append(row)
+        for key, replies in feedbacks.items():
+            # One actual speech per failed revision, at most the existing two recovery revisions.
+            if len(replies) <= 2 and len({r["source_event_id"] for r in replies}) == len(replies):
+                result.setdefault(key, []).extend(replies)
         return result
 
-    def _project_timeline(self, inputs, by_turn, target, char_budget, overlap, *, truncated=False):
+    def _verified_action_feedback(self, parent, reply):
+        """Join displayed feedback to its original accepted input and trusted failed outcome."""
+        with closing(self._connection_factory()) as connection:
+            rows = connection.execute(
+                "SELECT * FROM experience_events WHERE observer_id=? AND source_session_id=? "
+                "AND clock_domain=? AND source_type='goal_outcome' AND source_event_id=? LIMIT 2",
+                (reply["observer_id"], reply["source_session_id"], reply["clock_domain"], reply["source_event_id"])).fetchall()
+        if len(rows) != 1:
+            return False
+        outcome = rows[0]
+        payload = json.loads(outcome["payload_json"])
+        expected = self._participant_map(json.loads(parent["payload_json"]))
+        identities = {p["entity_id"]: (p["identity_namespace"], p["identity_type"], p["persistent_id"])
+                      for p in payload.get("persistent_participants", ())}
+        return bool(parent["trace_id"] and reply["trace_id"] == parent["trace_id"] == outcome["trace_id"]
+            and outcome["event_type"] in ("goal_failed", "goal_timed_out")
+            and payload["structured_payload"].get("status") ==
+                ("Failed" if outcome["event_type"] == "goal_failed" else "TimedOut")
+            and payload["structured_payload"].get("proposal_revision") in (0, 1)
+            and payload["actor_entity_id"] == reply["observer_id"] and outcome["provenance"] == "EXECUTED_BY_SELF"
+            and identities.get(reply["observer_id"]) == expected.get(reply["observer_id"])
+            and all(expected.get(k) == v for k, v in identities.items())
+            and parent["experience_seq"] < outcome["experience_seq"] < reply["experience_seq"]
+            and parent["occurred_at"] <= outcome["occurred_at"] <= reply["occurred_at"]
+            and outcome["world_revision"] is not None and reply["world_revision"] is not None
+            and outcome["world_revision"] <= reply["world_revision"])
+
+    def _project_timeline(self, inputs, by_turn, target, char_budget, overlap, *, truncated=False,
+                          current_session_id=None):
         messages, sources = [], {}
         for row in inputs:
             if not (json.loads(row["payload_json"]).get("natural_language_payload") or "").strip():
@@ -559,7 +595,8 @@ class ExperienceLedger:
                 # A continuity hint, NOT verified semantic reply pairing or intent.
                 message["context_seq"] = previous["seq"]
         return RecentDialogueTimeline.select(messages, sources, target, char_budget,
-                                              overlap, truncated=truncated)
+                                              overlap, truncated=truncated,
+                                              current_session_id=current_session_id)
 
     def _project_dialogue(self, inputs, by_turn, max_messages, char_budget, *,
                           scoped=False, truncated=False):

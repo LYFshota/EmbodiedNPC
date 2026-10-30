@@ -19,6 +19,7 @@ from app.model_requests import CognitiveModelRequestFactory
 from app.providers import InferenceOptions
 from app.recall_subjects import RecallSubjectCatalogBuilder
 from tests.test_memory_d2_cognitive_steps import cognitive_request, ScriptedProvider, KnownSubjects, MinimalRows, recall
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def request(*, candidates=True, text="薇薇，能帮我拿杯子吗？"):
@@ -57,7 +58,7 @@ def service_zone_request():
 class ServiceZoneContractTests(unittest.IsolatedAsyncioTestCase):
     async def test_existing_mock_provider_uses_silent_system_contract(self):
         from app.providers import MockProvider
-        result = await CognitiveBackendEntry(MockProvider(), PrioritizedModelExecutor(), context_length=16384).run(service_zone_request())
+        result = await CognitiveBackendEntry(MockProvider(), PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(service_zone_request())
         self.assertEqual("NO_ACTION", result.decision.decision_kind)
         self.assertIsNone(result.decision.utterance)
         self.assertIsNone(result.validated_goal)
@@ -97,7 +98,7 @@ class ServiceZoneContractTests(unittest.IsolatedAsyncioTestCase):
             value = service_zone_request().model_dump(); value["context"]["current_event"][field] = replacement
             provider = ScriptedProvider([])
             with self.assertRaisesRegex(ValueError, "SYSTEM_MODE_SOURCE_INVALID"):
-                await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=16384).run(CognitiveRequest.model_validate(value))
+                await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(CognitiveRequest.model_validate(value))
             self.assertEqual([], provider.requests)
 
 
@@ -112,22 +113,22 @@ class DailyBehaviorCognitionTests(unittest.IsolatedAsyncioTestCase):
                 bindings=dict(target="cup_01", destination="player_01")))
         self.assertEqual(CognitiveStepResult.model_validate(combined).root.target_daily_mode, "work")
         result = await CognitiveBackendEntry(ScriptedProvider([combined]), PrioritizedModelExecutor(),
-            context_length=16384).run(request())
+            context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(request())
         self.assertEqual(result.decision.target_daily_mode, "work")
         self.assertEqual(result.validated_goal.type, "bring_object")
         with self.assertRaisesRegex(ValueError, "DAILY_MODE_NOT_ELIGIBLE"):
             await CognitiveBackendEntry(ScriptedProvider([combined]), PrioritizedModelExecutor(),
-                context_length=16384).run(request(candidates=False))
+                context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(request(candidates=False))
         value = request().model_dump()
         value["context"]["capabilities"]["available_actions"] = []
         with self.assertRaises(ActionProposalValidationError):
             await CognitiveBackendEntry(ScriptedProvider([combined]), PrioritizedModelExecutor(),
-                context_length=16384).run(CognitiveRequest.model_validate(value))
+                context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(CognitiveRequest.model_validate(value))
         value = request().model_dump()
         value["context"]["current_event"]["event_type"] = "entity.became_visible"
         with self.assertRaisesRegex(ValueError, "DAILY_MODE_NOT_ELIGIBLE"):
             await CognitiveBackendEntry(ScriptedProvider([combined]), PrioritizedModelExecutor(),
-                context_length=16384).run(CognitiveRequest.model_validate(value))
+                context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(CognitiveRequest.model_validate(value))
 
     def test_contract_allows_direct_or_action_intent_and_legacy_null_context(self):
         self.assertEqual(CognitiveDecision(decision_kind="DIRECT_RESPONSE", utterance="我先恢复工作。",
@@ -154,7 +155,7 @@ class DailyBehaviorCognitionTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("not promise delivery", model.messages[0].content)
             return dict(decision_kind="DIRECT_RESPONSE", utterance="我先恢复工作。", target_daily_mode="work")
         provider = ScriptedProvider([decide])
-        result = await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=16384).run(request())
+        result = await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(request())
         self.assertEqual(result.decision.target_daily_mode, "work")
         self.assertIsNone(result.validated_goal)
         self.assertEqual(len(provider.requests), 1)
@@ -163,7 +164,7 @@ class DailyBehaviorCognitionTests(unittest.IsolatedAsyncioTestCase):
         for current, reply in [(request(text="你好，薇薇。"), "你好，休息时聊聊也好。"),
                                (request(candidates=False), "我现在仍在休息，暂不恢复工作。")]:
             provider = ScriptedProvider([dict(decision_kind="DIRECT_RESPONSE", utterance=reply)])
-            result = await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=16384).run(current)
+            result = await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(current)
             self.assertIsNone(result.decision.target_daily_mode)
             self.assertEqual(current.context.daily_behavior.current_mode, "rest")
             self.assertIsNone(result.validated_goal)
@@ -172,7 +173,7 @@ class DailyBehaviorCognitionTests(unittest.IsolatedAsyncioTestCase):
         action = dict(decision_kind="ACTION_PROPOSAL", action_proposal=dict(action_id="bring_object",
             bindings=dict(target="cup_01", destination="player_01")))
         provider = ScriptedProvider([action])
-        result = await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=16384).run(request())
+        result = await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(request())
         self.assertEqual(result.validated_goal.type, "bring_object")
         self.assertIsNone(result.decision.target_daily_mode)
         value = request().model_dump()
@@ -180,7 +181,7 @@ class DailyBehaviorCognitionTests(unittest.IsolatedAsyncioTestCase):
         value["context"]["daily_behavior"]["candidates"] = []
         value["context"]["capabilities"]["available_actions"] = []
         with self.assertRaises(ActionProposalValidationError):
-            await CognitiveBackendEntry(ScriptedProvider([action]), PrioritizedModelExecutor(), context_length=16384).run(
+            await CognitiveBackendEntry(ScriptedProvider([action]), PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(
                 CognitiveRequest.model_validate(value))
 
     async def test_absent_candidates_context_or_wrong_event_forbid_intent(self):
@@ -191,7 +192,7 @@ class DailyBehaviorCognitionTests(unittest.IsolatedAsyncioTestCase):
         for value in values:
             provider = ScriptedProvider([dict(decision_kind="DIRECT_RESPONSE", utterance="我恢复工作。", target_daily_mode="work")])
             with self.subTest(value=value["context"]["current_event"]), self.assertRaisesRegex(ValueError, "DAILY_MODE_NOT_ELIGIBLE"):
-                await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=16384).run(CognitiveRequest.model_validate(value))
+                await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH).run(CognitiveRequest.model_validate(value))
 
     async def test_two_step_recall_keeps_same_mode_context_and_complete_16k_wire(self):
         current = request(text="你还记得我的偏好吗？")
@@ -237,13 +238,13 @@ class DailyBehaviorCognitionTests(unittest.IsolatedAsyncioTestCase):
         adapter = DeepSeekOfficialResponsesProvider(base_url='https://p2bc.invalid', api_key='test-only', model='p2bc-test')
         for outcome in (None, RecallOutcome(status='NO_MEMORY_FOUND')):
             with self.subTest(step=0 if outcome is None else 1):
-                model = CognitiveModelRequestFactory.create_event(current, recall_outcome=outcome,
+                model = CognitiveModelRequestFactory.create_event(current, cognition_phase=1 if outcome else 0, recall_outcome=outcome,
                     knowledge_context_limit=16384, budget_payload_builder=adapter.budget_payload,
                     inference_options=InferenceOptions(temperature=0, max_output_tokens=1024))
                 wire = adapter.budget_payload(model)
                 system = wire['input'][0]['content']
-                self.assertIn('bring_object.target needs trusted item identity', system)
-                self.assertIn('bring_object.destination needs player identity', system)
+                self.assertIn('The item binding needs trusted item identity', system)
+                self.assertIn('the delivery destination needs player identity', system)
                 self.assertIn('unknown is not item evidence', system)
                 self.assertIn('If no trustworthy item can be bound, use DIRECT_RESPONSE', system)
                 self.assertIn('Action availability is not target availability', system)
@@ -262,7 +263,7 @@ class DailyBehaviorCognitionTests(unittest.IsolatedAsyncioTestCase):
                 value['context']['perception']['entities'][0].update(entity_id='avatar_01', kind=kind,
                     visibility='remembered', capabilities=capabilities)
                 current = CognitiveRequest.model_validate(value)
-                model = CognitiveModelRequestFactory.create_event(current, knowledge_context_limit=16384)
+                model = CognitiveModelRequestFactory.create_event(current, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
                 decoded = CognitiveModelRequestFactory.context_from(model)
                 self.assertEqual(decoded.perception, current.context.perception)
                 self.assertEqual(decoded.perception.entities[0].entity_id, 'avatar_01')

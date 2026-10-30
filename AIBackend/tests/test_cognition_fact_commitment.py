@@ -12,6 +12,7 @@ from app.deepseek_provider import DeepSeekOfficialResponsesProvider
 from app.model_requests import CognitiveModelRequestFactory
 from app.providers import InferenceOptions
 from tests.test_clean_counter import request as cleaning_request, decision as cleaning_decision
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 CASES = (
@@ -31,7 +32,7 @@ class CognitionFactCommitmentTests(unittest.TestCase):
             base_url="https://fact-contract.invalid", api_key="test-only", model="offline")
 
     def model(self, request, **kwargs):
-        return CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384,
+        return CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH,
             budget_payload_builder=self.adapter.budget_payload,
             inference_options=InferenceOptions(temperature=0, think=False, max_output_tokens=1024), **kwargs)
 
@@ -51,7 +52,7 @@ class CognitionFactCommitmentTests(unittest.TestCase):
         self.assertIn("环境报告不自动覆盖可信事实", user)
         self.assertIn("无本轮合法动作提案，不用回复承诺执行或完成", user)
         self.assertLessEqual(ContextTokenEstimator().estimate_text(json.dumps(wire, ensure_ascii=False,
-            separators=(",", ":"))), ContextBudgetPolicy.cognition(16384, 1024).input_hard_cap)
+            separators=(",", ":"))), ContextBudgetPolicy.cognition(DEFAULT_COGNITIVE_CONTEXT_LENGTH, 1024).input_hard_cap)
         self.assertEqual({"effort": "none"}, wire["reasoning"])
         self.assertEqual(1024, wire["max_output_tokens"])
         return wire
@@ -66,7 +67,7 @@ class CognitionFactCommitmentTests(unittest.TestCase):
             request = CognitiveRequest.model_validate(value)
             for outcome in (None, RecallOutcome(status="NO_MEMORY_FOUND")):
                 with self.subTest(case=name, step=int(outcome is not None)):
-                    model = self.model(request, recall_outcome=outcome)
+                    model = self.model(request, cognition_phase=1 if outcome else 0, recall_outcome=outcome)
                     self.assert_contract(model)
                     self.assertEqual(request.context, CognitiveModelRequestFactory.context_from(model))
                     self.assertIn("clean_counter", [a.action_id for a in request.context.capabilities.available_actions])

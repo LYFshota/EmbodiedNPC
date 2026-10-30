@@ -22,6 +22,7 @@ from tests.test_action_proposal_validation import _decision
 from tests.test_memory_d2_cognitive_steps import (
     OWNER, PLAYER, ScriptedProvider, cognitive_request,
 )
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 PLAYER_B = type(PLAYER)("player", "Player", "U20002.private")
@@ -112,7 +113,7 @@ class RelationshipCognitiveContextTests(unittest.IsolatedAsyncioTestCase):
     def setup_entry(self, reader, scripts=None, *, recall=False):
         provider = ScriptedProvider(scripts or [DIRECT])
         entry = CognitiveBackendEntry(
-            provider, PrioritizedModelExecutor(), context_length=16384,
+            provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH,
             memory_recall=RecallAdapter() if recall else None,
             relationship_context_resolver=RelationshipContextResolver(reader),
         )

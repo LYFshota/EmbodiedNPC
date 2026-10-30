@@ -79,14 +79,14 @@ namespace CafeDemo.Tests
             Assert.That(dialogue.SelectTarget(merchant.GetComponent<DialogueParticipant>()), Is.True);
             Assert.That(expression.State, Is.EqualTo(DialoguePresentationState.Listening));
             Assert.That(Present(merchant), Is.True);
-            presenter.Tick(.1f); Assert.That(presenter.CurrentWeight, Is.InRange(.3f, .5f));
-            presenter.Tick(.3f); Assert.That(presenter.CurrentWeight, Is.EqualTo(1));
+            presenter.Tick(.1f); Assert.That(presenter.ActivationWeight, Is.InRange(.3f, .5f));
+            presenter.Tick(.3f); Assert.That(presenter.ActivationWeight, Is.EqualTo(1));
             Assert.That(Present(merchant), Is.True); presenter.Tick(.01f);
-            Assert.That(presenter.CurrentWeight, Is.EqualTo(1));
+            Assert.That(presenter.ActivationWeight, Is.EqualTo(1));
             var channels = expression.MotionChannels;
             channels.SetNavigationActive(true); presenter.Tick(.2f);
             Assert.That(presenter.CurrentWeight, Is.Zero); Assert.That(expression.Speech.IsSpeaking, Is.True);
-            channels.SetNavigationActive(false); presenter.Tick(.25f); Assert.That(presenter.CurrentWeight, Is.EqualTo(1));
+            channels.SetNavigationActive(false); presenter.Tick(.25f); Assert.That(presenter.ActivationWeight, Is.EqualTo(1));
             channels.BeginTaskMotion(); presenter.Tick(.2f); Assert.That(presenter.CurrentWeight, Is.Zero);
             Assert.That(expression.Speech.IsSpeaking, Is.True); channels.EndTaskMotion();
             channels.SetInteractionActive(true); presenter.Tick(.2f); Assert.That(presenter.CurrentWeight, Is.Zero);
@@ -94,8 +94,47 @@ namespace CafeDemo.Tests
             channels.BeginEmergencyMotion(); presenter.Tick(.2f); Assert.That(presenter.CurrentWeight, Is.Zero);
             Assert.That(expression.Speech.IsSpeaking, Is.True); channels.EndEmergencyMotion();
             presenter.Tick(.25f); dialogue.HideDialoguePresentation(); presenter.Tick(.2f);
+            // Closing the input surface intentionally does not terminate displayed world speech.
+            Assert.That(expression.Speech.IsSpeaking, Is.True);
+            Assert.That(presenter.ActivationWeight, Is.EqualTo(1));
+            expression.Speech.Cancel(); presenter.Tick(.2f);
             Assert.That(presenter.CurrentWeight, Is.Zero); Assert.That(expression.Speech.IsSpeaking, Is.False);
             presenter.enabled = false; Assert.That(presenter.CurrentWeight, Is.Zero);
+            yield return null;
+        }
+        [TestCase("neutral"), TestCase("happy"), TestCase("fear"), TestCase("curious")]
+        [TestCase("thoughtful"), TestCase("concerned"), TestCase("surprised")]
+        public void DeliveryTones_AcceptedWithoutChangingActionAuthority(string tone)
+        {
+            Assert.That(new CognitiveDecision { decision_kind = CognitiveDecisionKinds.DirectResponse,
+                utterance = "Hello.", emotion = tone, gesture = "none" }.IsValid, Is.True);
+            Assert.That(new CognitiveDecision { decision_kind = CognitiveDecisionKinds.DirectResponse,
+                utterance = "Hello.", emotion = "unregistered" }.IsValid, Is.False);
+        }
+        [UnityTest] public IEnumerator LongSpeech_HasBoundedAccentsAndRealRest_ThenClears()
+        {
+            Assert.That(dialogue.SelectTarget(merchant.GetComponent<DialogueParticipant>()), Is.True);
+            Assert.That(Present(merchant), Is.True);
+            var expression = merchant.GetComponent<ExpressiveController>();
+            var motion = merchant.GetComponentInChildren<DialogueAnimationPresenter>();
+            // Real playback lifecycle, not a bubble-retention timer, owns the full long sentence.
+            expression.Speech.BeginPlayback("A long explanation with room to pause and listen.");
+            float maximum = 0; int rests = 0;
+            for (int i = 0; i < 240; ++i)
+            {
+                motion.Tick(.05f);
+                maximum = Mathf.Max(maximum, motion.CurrentWeight);
+                if (i > 10 && motion.CurrentWeight < .001f) rests++;
+                Assert.That(motion.HeadPitchAccent, Is.InRange(-3f, 3f));
+                Assert.That(motion.HeadTiltAccent, Is.InRange(-3f, 3f));
+            }
+            Assert.That(maximum, Is.GreaterThan(.1f).And.LessThanOrEqualTo(.5f));
+            Assert.That(rests, Is.GreaterThan(35), "Long speech must contain visible rests, not a constant loop.");
+            Assert.That(motion.ActivationWeight, Is.EqualTo(1));
+            Assert.That(merchant.GetComponentInChildren<Animator>().GetLayerWeight(1), Is.EqualTo(motion.CurrentWeight));
+            expression.Speech.Cancel(); motion.Tick(1);
+            Assert.That(motion.CurrentWeight, Is.Zero);
+            Assert.That(motion.HeadPitchAccent, Is.Zero); Assert.That(motion.HeadTiltAccent, Is.Zero);
             yield return null;
         }
         [UnityTest] public IEnumerator Nod_RealCompletionRetainsAttentionAndReacquiresGaze_BothNpcs()
@@ -117,7 +156,7 @@ namespace CafeDemo.Tests
                 yield return Wait(.35f);
                 Assert.That(gesture.IsNodActive, Is.True); Assert.That(gesture.NodPitch, Is.GreaterThan(4), owner.EntityId + " elapsed=" + gesture.NodElapsed);
                 Assert.That(gaze.CurrentWeight, Is.Zero); Assert.That(attention.CurrentTargetEntityId, Is.EqualTo(player.EntityId));
-                Assert.That(animation.CurrentWeight, Is.GreaterThan(.9f));
+                Assert.That(animation.ActivationWeight, Is.GreaterThan(.9f));
                 yield return Wait(.4f);
                 Assert.That(channels.ActiveGestureId, Is.Zero); Assert.That(ended, Is.EqualTo(1));
                 Assert.That(channels.CompleteGesture(id), Is.False);

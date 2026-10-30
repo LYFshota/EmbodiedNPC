@@ -189,11 +189,11 @@ namespace CafeDemo.Tests
             if(!combined) Assert.That(resumedNavigation,Is.True,"Rest must actually navigate back after task release.");
             AssertOffline();
         }
-        [UnityTest] public IEnumerator Work_ThreeIndependentDrinksAndRevisionReplayAreIdempotent()
+        [UnityTest] public IEnumerator Work_RegisteredDrinksAndRevisionReplayAreIdempotent()
         {
             int revision=world.WorldRevision; GoalOutcome? outcome=null;
             runner.GoalOutcomePublished += v=>outcome=v;
-            foreach(string drink in new[]{"latte","cappuccino","americano","americano"})
+            foreach(string drink in DrinkTypes.Ids.Concat(new[]{"americano"}))
             {
                 int expected=world.GetDrinkCount(player.EntityId,drink)+1;
                 outcome=null;
@@ -225,7 +225,7 @@ namespace CafeDemo.Tests
             Assert.That(outcome.HasValue,Is.True);Assert.That(outcome.Value.Status,Is.EqualTo(PlanExecutionStatus.Succeeded));
             yield return null;
             Assert.That(world.GetDrinkCount(player.EntityId,"americano"),Is.EqualTo(2));
-            Assert.That(world.WorldRevision,Is.EqualTo(revision));Assert.That(feedback.NotificationsShown,Is.EqualTo(4));
+            Assert.That(world.WorldRevision,Is.EqualTo(revision));Assert.That(feedback.NotificationsShown,Is.EqualTo(DrinkTypes.Ids.Count+1));
         }
         [UnityTest] public IEnumerator CancelDuringPreparation_NoDrink() => Failure("cancel");
         [UnityTest] public IEnumerator InvalidParametersAndCustomerCapabilities_CannotStartTask()
@@ -233,8 +233,8 @@ namespace CafeDemo.Tests
             Assert.That(merchant.GetComponent<AgentActionCapabilityProfile>().TryBuildManifest(out var manifest),Is.True);
             var action=manifest.available_actions.Single(x=>x.action_id=="prepare_drink");
             Assert.That(action.bindings.Single().kind,Is.EqualTo("enum"));
-            Assert.That(action.bindings.Single().enum_values,Is.EqualTo(new[]{"latte","cappuccino","americano"}));
-            foreach(var goal in new[]{new GoalProposal{type="prepare_drink"},new GoalProposal{type="prepare_drink",drink_type="mocha"},
+            Assert.That(action.bindings.Single().enum_values,Is.EqualTo(DrinkTypes.Ids));
+            foreach(var goal in new[]{new GoalProposal{type="prepare_drink"},new GoalProposal{type="prepare_drink",drink_type="unregistered_drink"},
                 new GoalProposal{type="prepare_drink",drink_type="latte",destination_entity_id=player.EntityId},
                 new GoalProposal{type="prepare_drink",drink_type="latte",target_entity_id="cup_01"}})
                 Assert.That(runner.TrySubmitGoal(goal,"invalid_drink_trace",Guid.NewGuid().ToString("N"),0,world.WorldRevision,player.EntityId),Is.False);

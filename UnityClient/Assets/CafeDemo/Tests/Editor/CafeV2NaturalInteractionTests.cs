@@ -30,8 +30,8 @@ namespace CafeDemo.Tests
         private WorldEntity player, cup;
         private DialogueController dialogue;
         private WorldStateService world;
-        private string Evidence => Path.GetFullPath(Path.Combine(Application.dataPath,
-            "../../InternalDocs/Reports/NaturalInteractionP0Evidence"));
+        private string Evidence => System.Environment.GetEnvironmentVariable("EMBODIEDNPC_ANIMATION_EVIDENCE_ROOT") ??
+            Path.GetFullPath(Path.Combine(Application.dataPath, "../../InternalDocs/Reports/NaturalInteractionP0Evidence"));
 
         [UnitySetUp] public IEnumerator Load()
         {
@@ -64,6 +64,39 @@ namespace CafeDemo.Tests
                 new CognitivePresentationContext(new CognitiveRequest { request_id = "natural-p0", trace_id = "natural-p0",
                     run = new CognitiveRunDto { run_id = "natural-p0", agent_entity_id = actor.EntityId } },
                     player.EntityId, dialogue.CurrentConversationId));
+
+        [UnityTest] public IEnumerator DeliveryPalette_RealPresetsAndStyles_RespectSuppressionAndCleanup()
+        {
+            var strengths = new List<float>();
+            foreach (var actor in actors)
+            {
+                Select(actor);
+                var face = actor.GetComponent<CafeVrmExpressionPresenter>();
+                var motion = actor.GetComponentInChildren<DialogueAnimationPresenter>();
+                foreach (string tone in new[] { "neutral", "happy", "curious", "thoughtful", "concerned", "surprised", "fear" })
+                {
+                    Assert.That(Present(actor, tone), Is.True);
+                    face.Tick(1); motion.Tick(.8f);
+                    Assert.That(face.HappyWeight, Is.InRange(0, .3f));
+                    Assert.That(face.SadWeight, Is.InRange(0, .1f));
+                    Assert.That(face.SurprisedWeight, Is.InRange(0, .24f));
+                    if (tone == "happy" && face.HasHappy) Assert.That(face.HappyWeight, Is.GreaterThan(.1f));
+                    if (tone == "concerned" && face.HasSad) Assert.That(face.SadWeight, Is.GreaterThan(.03f));
+                    if (tone == "surprised" && face.HasSurprised) Assert.That(face.SurprisedWeight, Is.GreaterThan(.1f));
+                    if (tone == "happy") strengths.Add(motion.CurrentWeight);
+                }
+                var channels = actor.GetComponent<MotionChannelCoordinator>();
+                channels.BeginTaskMotion(); face.Tick(1); motion.Tick(1);
+                Assert.That(face.HappyWeight + face.SadWeight + face.SurprisedWeight, Is.Zero);
+                Assert.That(motion.CurrentWeight, Is.Zero);
+                channels.EndTaskMotion(); dialogue.HideDialoguePresentation();
+                actor.GetComponent<ExpressiveController>().Speech.Cancel(); face.Tick(1); motion.Tick(1);
+                Assert.That(face.SadWeight + face.SurprisedWeight, Is.Zero);
+                Assert.That(motion.CurrentWeight, Is.Zero);
+            }
+            Assert.That(strengths.Distinct().Count(), Is.EqualTo(4), "Serialized styles must actually differ.");
+            yield return null;
+        }
 
         [UnityTest] public IEnumerator Faces_BindingCapability_BlinkSmileFade_SeatsAndAuthorityUnchanged()
         {
@@ -191,8 +224,11 @@ namespace CafeDemo.Tests
             channels.SetNavigationActive(true); Assert.That(channels.ActiveGestureId, Is.Zero);
             channels.SetNavigationActive(false); Assert.That(Present(actor, "happy", "wave"), Is.True);
             talking.Tick(.3f); Assert.That(talking.CurrentWeight, Is.Zero);
-            channels.CancelGesture(); talking.Tick(.3f); Assert.That(talking.CurrentWeight, Is.EqualTo(1));
-            dialogue.HideDialoguePresentation(); talking.Tick(.3f); Assert.That(talking.CurrentWeight, Is.Zero);
+            channels.CancelGesture(); talking.Tick(.3f); Assert.That(talking.ActivationWeight, Is.EqualTo(1));
+            dialogue.HideDialoguePresentation();
+            Assert.That(actor.GetComponent<ExpressiveController>().Speech.IsSpeaking, Is.True);
+            actor.GetComponent<ExpressiveController>().Speech.Cancel();
+            talking.Tick(.3f); Assert.That(talking.CurrentWeight, Is.Zero);
             Assert.That(held.HolderEntityId, Is.EqualTo(player.EntityId));
             Assert.That(world.WorldRevision, Is.EqualTo(revision + 1));
         }
@@ -283,7 +319,45 @@ namespace CafeDemo.Tests
             yield return null; carry.Tick(.3f);
             Assert.That(carry.CurrentWeight, Is.Zero); Assert.That(actor.GetComponent<MotionChannelCoordinator>().IsCarryPresentationActive, Is.False);
         }
-        private void Capture(WorldEntity actor, string name)
+        [UnityTest] public IEnumerator DeliveryVisualSamples_SevenTonesFourStylesAndLongSpeech()
+        {
+            var audit = new List<string>();
+            foreach (var actor in actors)
+            {
+                Select(actor);
+                foreach (string tone in new[] { "neutral", "happy", "curious", "thoughtful", "concerned", "surprised", "fear" })
+                {
+                    Assert.That(Present(actor, tone), Is.True);
+                    yield return Advance(.75f);
+                    var face = actor.GetComponent<CafeVrmExpressionPresenter>();
+                    var motion = actor.GetComponentInChildren<DialogueAnimationPresenter>();
+                    if (tone == "happy" && face.HasHappy) Assert.That(face.HappyWeight, Is.GreaterThan(.1f));
+                    Capture(actor, actor.EntityId + "-tone-" + tone);
+                    audit.Add(actor.EntityId + "," + tone + ",happy=" + face.HappyWeight + ",sad=" + face.SadWeight +
+                        ",surprise=" + face.SurprisedWeight + ",arms=" + motion.CurrentWeight + ",tilt=" + motion.HeadTiltAccent);
+                }
+                Assert.That(Present(actor, "happy"), Is.True);
+                actor.GetComponent<ExpressiveController>().Speech.BeginPlayback("A long, relaxed conversation.");
+                for (int i = 0; i < 12; ++i)
+                {
+                    yield return Advance(.3f);
+                    Capture(actor, actor.EntityId + "-phrase-" + i, true);
+                }
+                actor.GetComponent<ExpressiveController>().Speech.Cancel();
+                yield return Advance(.7f);
+                Capture(actor, actor.EntityId + "-finished", true);
+            }
+            Directory.CreateDirectory(Evidence); File.WriteAllLines(Path.Combine(Evidence, "delivery-visual-audit.csv"), audit);
+        }
+
+        private static IEnumerator Advance(float seconds)
+        {
+            // The EditMode runner does not time WaitForSeconds, even after entering Play Mode.
+            float until = Time.time + seconds;
+            while (Time.time < until) yield return null;
+        }
+
+        private void Capture(WorldEntity actor, string name, bool wide = false)
         {
             var camera = Camera.main;
             if (camera == null) return;
@@ -291,8 +365,8 @@ namespace CafeDemo.Tests
             if (orbit != null) orbit.enabled = false;
             Vector3 position = camera.transform.position; Quaternion rotation = camera.transform.rotation;
             var animator = actor.GetComponentInChildren<Animator>(); var head = animator.GetBoneTransform(HumanBodyBones.Head);
-            camera.transform.position = head.position + actor.transform.forward * 1.15f + Vector3.up * .05f;
-            camera.transform.LookAt(head.position - Vector3.up * .13f);
+            camera.transform.position = head.position + actor.transform.forward * (wide ? 2.3f : .85f) + Vector3.up * (wide ? -.25f : .05f);
+            camera.transform.LookAt(head.position - Vector3.up * (wide ? .45f : .1f));
             var previous = camera.targetTexture; var active = RenderTexture.active;
             // The close inspection camera can enter the test player's head; hide only those renderers for capture.
             var playerRenderers = player.GetComponentsInChildren<Renderer>();

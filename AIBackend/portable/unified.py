@@ -183,14 +183,7 @@ def layout(backend):
     if any(not path.is_file() for path in required):
         raise LaunchError("UNIFIED_RESOURCE_MISSING")
     spec = json.loads((backend / "app/builtin_embedding_resources.json").read_text(encoding="utf-8"))
-    policy_path = backend / "portable_resource_policy.json"
-    optional_builtin = False
-    if policy_path.is_file():
-        policy = json.loads(policy_path.read_text(encoding="utf-8"))
-        if policy != {"schema_version": 1, "builtin_embedding": "not_bundled"}:
-            raise LaunchError("UNIFIED_RESOURCE_POLICY_INVALID")
-        optional_builtin = True
-    if not optional_builtin and any(not (backend / "models/embeddinggemma-300m-q4" / name).is_file() for name in spec["files"]):
+    if any(not (backend / "models/embeddinggemma-300m-q4" / name).is_file() for name in spec["files"]):
         raise LaunchError("UNIFIED_MODEL_RESOURCES_MISSING")
     return game, root, player
 

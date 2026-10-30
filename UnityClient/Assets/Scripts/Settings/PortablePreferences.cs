@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Globalization;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -24,6 +25,9 @@ namespace EmbodiedNPC.Settings
         public string DisplayResolution { get; private set; }
         public bool FreeCameraEnabled { get; private set; }
         public bool ContextWarningDismissed { get; private set; }
+        public string PlayerAvatar { get; private set; }
+        public PlayerNamePreference PlayerProfile { get; private set; }
+        public string PlayerAppearanceDescription { get; private set; }
         public string Error { get; private set; }
 
         public PortablePreferenceFile(PortablePathSet paths)
@@ -46,6 +50,21 @@ namespace EmbodiedNPC.Settings
                     (document["bgm_volume"]?.Type != JTokenType.Float && document["bgm_volume"]?.Type != JTokenType.Integer)) throw new FormatException();
                 float volume = (float)document["bgm_volume"];
                 if (float.IsNaN(volume) || float.IsInfinity(volume) || volume < 0 || volume > 1) throw new FormatException();
+                // Avatar references are optional. Invalid references fall back independently of other settings.
+                if (document["player_avatar"]?.Type == JTokenType.String)
+                    PlayerAvatar = (string)document["player_avatar"];
+                // Optional manual description belongs only to the selected model; invalid metadata is unknown.
+                if (document["player_appearance"] is JObject appearance &&
+                    appearance["avatar"]?.Type == JTokenType.String &&
+                    (string)appearance["avatar"] == (PlayerAvatar ?? "builtin:default") &&
+                    appearance["description"]?.Type == JTokenType.String &&
+                    TryValidateAppearanceDescription((string)appearance["description"], out string description))
+                    PlayerAppearanceDescription = description;
+                if (document["player_profile"] != null)
+                {
+                    PlayerProfile = document["player_profile"].ToObject<PlayerNamePreference>();
+                    if (PlayerProfile?.IsValid != true) throw new FormatException();
+                }
                 Language = (int)document["language"]; BgmVolume = volume;
                 if (document["context_warning_dismissed"] != null)
                 {
@@ -74,6 +93,44 @@ namespace EmbodiedNPC.Settings
             { Error = "PORTABLE_SETTINGS_UNREADABLE"; }
         }
 
+        public bool SetPlayerProfile(PlayerNamePreference value)
+        {
+            if (Error != null || value?.IsValid != true) return false;
+            var previous = PlayerProfile; PlayerProfile = value; dirty = true;
+            if (Flush()) return true;
+            PlayerProfile = previous; return false;
+        }
+        public bool SetPlayerAvatar(string relativePath)
+        {
+            if (Error != null) return false;
+            string previous = PlayerAvatar, description = PlayerAppearanceDescription;
+            if (PlayerAvatar != relativePath) PlayerAppearanceDescription = null;
+            PlayerAvatar = relativePath; dirty = true;
+            if (Flush()) return true;
+            PlayerAvatar = previous; PlayerAppearanceDescription = description; return false;
+        }
+        public static bool TryValidateAppearanceDescription(string value, out string description)
+        {
+            description = (value ?? "").Replace("\r\n", "\n").Replace("\r", "\n").Trim(); int count = 0;
+            for (int i = 0; i < description.Length; i++)
+            {
+                var category = CharUnicodeInfo.GetUnicodeCategory(description, i);
+                if ((category == UnicodeCategory.Control && description[i] != '\n') || category == UnicodeCategory.Format ||
+                    category == UnicodeCategory.LineSeparator || category == UnicodeCategory.ParagraphSeparator) return false;
+                if (char.IsSurrogate(description[i]))
+                { if (!char.IsHighSurrogate(description[i]) || i + 1 >= description.Length || !char.IsLowSurrogate(description[i + 1])) return false; i++; }
+                if (++count > 160) return false;
+            }
+            if (description.Length == 0) description = null;
+            return true;
+        }
+        public bool SetPlayerAppearanceDescription(string value)
+        {
+            if (Error != null || !TryValidateAppearanceDescription(value, out string description)) return false;
+            string previous = PlayerAppearanceDescription; PlayerAppearanceDescription = description; dirty = true;
+            if (Flush()) return true;
+            PlayerAppearanceDescription = previous; return false;
+        }
         public void SetLanguage(bool english)
         { if (Error != null) return; Language = english ? 1 : 0; dirty = true; Flush(); }
         public bool SetNpcReplyLanguage(int value)
@@ -114,6 +171,10 @@ namespace EmbodiedNPC.Settings
             try
             {
                 var document = new JObject { ["schema_version"] = 1, ["language"] = Language, ["bgm_volume"] = BgmVolume };
+                if (PlayerAvatar != null) document["player_avatar"] = PlayerAvatar;
+                if (PlayerProfile != null) document["player_profile"] = JObject.FromObject(PlayerProfile);
+                if (PlayerAppearanceDescription != null) document["player_appearance"] = new JObject {
+                    ["avatar"] = PlayerAvatar ?? "builtin:default", ["description"] = PlayerAppearanceDescription };
                 document["free_camera_enabled"] = FreeCameraEnabled;
                 document["npc_reply_language"] = NpcReplyLanguage;
                 document["context_warning_dismissed"] = ContextWarningDismissed;

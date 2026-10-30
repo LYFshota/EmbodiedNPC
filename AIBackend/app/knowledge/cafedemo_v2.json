@@ -1,41 +1,42 @@
 {
   "schema_version": 1,
-  "bundle_version": "cafedemo-v2/1.2",
+  "bundle_version": "cafedemo-v2/1.3",
   "entries": [
     {
       "knowledge_id": "cafe.setting",
-      "name": "咖啡馆基本设定",
-      "content": "这是一家温馨的咖啡小店。此条是开发者定义的背景设定，不描述今天谁在店里、空座、菜单、营业时间或库存。",
+      "name": "栖光咖啡馆与青石街",
+      "content": "栖光咖啡馆（Stilllight Café）是青石街上的温馨小店，既容得下普通交谈，也给安静的人留空间。青石街是既定的街区生活背景。",
       "knowledge_type": "setting",
       "attributes": {
         "topic": "cafe",
         "dynamic": false
       },
       "keywords": [
-        "咖啡馆",
-        "小店",
-        "介绍",
-        "cafe"
+        "栖光咖啡馆",
+        "Stilllight Café",
+        "青石街",
+        "世界背景"
       ],
-      "source": "CafeDemoV2 Merchant Persona: existing warm small-cafe setting",
-      "version": 1,
-      "updated_at": "2026-10-13T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "related_ids": [
+        "cafe.background.name",
+        "neighborhood.qingshi_street"
+      ],
+      "usage": "constant"
     },
     {
       "knowledge_id": "coffee.latte",
-      "name": "拿铁的一般说明",
-      "content": "拿铁通常由浓缩咖啡与较多的牛奶搭配，奶味较柔和，表面可有一层奶泡。这里是一般饮品知识，不表示本店销售、当前有货或已经制作了拿铁。",
+      "name": "拿铁：奶味、咖啡味与甜度",
+      "content": "拿铁通常由浓缩咖啡和较多的热牛奶组成，表面是一层较薄的奶泡。奶量让入口更柔和，仍能保留咖啡香；不额外加糖的拿铁也可能带有牛奶自身的甜感，但不等于糖浆饮品。与卡布奇诺相比，通常液态奶更多、泡沫感更轻；与馥芮白相比，常见杯型下奶味更突出。比例和杯量因店家而异，不能只凭名称断言哪杯咖啡因更多。普通拿铁含来自浓缩咖啡的咖啡因，加奶不会把它去掉。",
       "knowledge_type": "drink",
       "attributes": {
         "drink": "latte",
@@ -45,30 +46,34 @@
       "keywords": [
         "拿铁",
         "latte",
-        "奶咖"
+        "奶咖",
+        "奶味",
+        "柔和奶香",
+        "拿铁和卡布奇诺",
+        "馥芮白和拿铁"
       ],
       "related_ids": [
-        "coffee.cappuccino"
+        "coffee.cappuccino",
+        "coffee.flat_white",
+        "coffee.milk_texture",
+        "coffee.caffeine_myths"
       ],
-      "source": "K0 developer-authored general drink reference; not a cafe menu",
-      "version": 1,
-      "updated_at": "2026-10-13T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "coffee.cappuccino",
-      "name": "卡布奇诺的一般说明",
-      "content": "卡布奇诺通常由浓缩咖啡、牛奶和奶泡搭配，奶泡相对丰富，口感较轻盈。它与拿铁的奶泡比例和口感有所不同。这里是一般饮品知识，不表示本店菜单、售价或实时库存。",
+      "name": "卡布奇诺：丰富奶泡与咖啡感",
+      "content": "卡布奇诺由浓缩咖啡、热牛奶和奶泡组成，常见做法比拿铁的奶泡更丰富，入口轻盈，咖啡味也更容易显出来。传统做法与现代细腻奶泡做法并不完全相同，不必把所有杯子都说成严格的三等份。它不是天然加糖的饮品，奶泡丰富也不意味着必定比拿铁甜。普通版本含咖啡因；是否更苦、咖啡因是否更多，还要看豆子、浓缩用量和杯量。喜欢奶泡口感而又想保留咖啡香的人，可以据此与拿铁比较。",
       "knowledge_type": "drink",
       "attributes": {
         "drink": "cappuccino",
@@ -79,30 +84,30 @@
         "卡布奇诺",
         "cappuccino",
         "奶泡",
+        "泡沫",
         "拿铁区别"
       ],
       "related_ids": [
-        "coffee.latte"
+        "coffee.latte",
+        "coffee.flat_white",
+        "coffee.milk_texture"
       ],
-      "source": "K0 developer-authored general drink reference; not a cafe menu",
-      "version": 1,
-      "updated_at": "2026-10-13T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "cafe.staff.taste_guidance",
       "name": "店员口味沟通参考",
-      "content": "店员可用容易理解的香气、奶味和苦味说明帮助客人交流口味。此资料只供店员参考；它不表示任何饮品当前可售，不包含价格、库存或营业时间，也不提供制作、递送或其他动作权限。",
+      "content": "店员可用容易理解的香气、奶味和苦味说明帮助客人交流口味。",
       "knowledge_type": "service_reference",
       "attributes": {
         "topic": "taste_guidance",
@@ -114,7 +119,7 @@
         "服务参考",
         "taste guidance"
       ],
-      "source": "CafeV2MerchantCharacter existing coffee explanation background; K0 staff reference",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-13T00:00:00Z",
       "access": {
@@ -129,7 +134,7 @@
     {
       "knowledge_id": "cafe.background.name",
       "name": "栖光咖啡馆的名字与来历",
-      "content": "这家小店名叫栖光咖啡馆，英文称 Stilllight Café。名字来自街坊对午后窗上停留光斑的印象：不用把每一段空闲都安排满，也能在此歇一会儿。它不是名店或家族产业，熟客更在意普通交谈和各自的节奏。这是游戏开始前就有的共同背景，不证明当前天气、店主在场、营业时间或菜单，也不表示玩家以前来过。",
+      "content": "这家小店名叫栖光咖啡馆，英文称 Stilllight Café。名字来自街坊对午后窗上停留光斑的印象：不用把每一段空闲都安排满，也能在此歇一会儿。它不是名店或家族产业，熟客更在意普通交谈和各自的节奏。这是游戏开始前就有的共同背景，并非玩家的来访经历。",
       "knowledge_type": "setting",
       "attributes": {
         "topic": "cafe.background",
@@ -145,27 +150,25 @@
         "cafe name"
       ],
       "related_ids": [
-        "cafe.setting"
+        "cafe.setting",
+        "neighborhood.qingshi_street"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
-      "version": 1,
-      "updated_at": "2026-10-17T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "neighborhood.qingshi_street",
       "name": "青石街的慢节奏",
-      "content": "咖啡馆所在的背景街区叫青石街。街上有旧招牌、小修补铺和居民常走的转角，人们有时借一两句招呼知道彼此近日忙什么，但不因此掌握他人隐私。熟客说它“慢”，是因为许多小事可以走着办完，不是所有居民都悠闲。这是场景外生活背景，不代表 Unity 中存在可到达的整条街、店铺实体或可执行任务。",
+      "content": "栖光咖啡馆所在的背景街区叫青石街。旧招牌、小修补铺、纸页书铺和河堤步道，让居民能把一些日常小事连在一次步行里。有人路过面包铺只闻到香气就赶车，有人愿意停在转角多聊一句，所以熟客口中的“慢”不是说所有人都有空。旧门面留下的痕迹和新刷的字各有人喜欢，居民留言板上的消息也要向当事人核实。青石街的特别之处更在这些普通的生活交集，而不是名胜或每个人都互知私事；这是场景外的街区背景。",
       "knowledge_type": "place",
       "attributes": {
         "topic": "neighborhood.qingshi_street",
@@ -175,33 +178,36 @@
       "keywords": [
         "青石街",
         "街区",
-        "附近",
+        "这条街",
+        "附近有什么",
+        "街上有什么",
+        "特别的地方",
         "Qingshi Street",
         "neighborhood"
       ],
       "related_ids": [
         "place.corner_bookshop",
-        "place.riverside_path"
+        "place.riverside_path",
+        "neighborhood.repair_shop",
+        "neighborhood.noticeboard",
+        "neighborhood.old_shopfronts"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
-      "version": 1,
-      "updated_at": "2026-10-17T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "place.corner_bookshop",
       "name": "纸页书铺与旧书角",
-      "content": "青石街转角的背景地点纸页书铺有一个小旧书角，书套上常留着修补痕迹。这里让熟客谈论选书、纸张和慢读，不以藏书多寡评判人。知意喜欢找有不同结尾余地的短篇，亦舟留意某页句子的细节，予安会看适合摘录的散文。这不是实时书目或库存，也不授予借书、购买、带路能力；本场景未因此新增可导航位置。",
+      "content": "纸页书铺（Paperleaf Bookshop）是青石街转角的背景地点，有一小块旧书角，书套上常留着修补痕迹。谈论这里时，人们会聊短篇不同的结尾、纸张的手感，或某页为什么值得慢慢看；并不以藏书多或读完得快来评判人。书铺和咖啡馆给这些日常话题提供了不同的停留理由。这里不设定每个人都读过同一本书，也不把某位熟客的私人摘录变成公共藏品。纸页书铺是场景外的生活背景地点。",
       "knowledge_type": "place",
       "attributes": {
         "topic": "place.corner_bookshop",
@@ -216,27 +222,25 @@
         "bookshop"
       ],
       "related_ids": [
-        "neighborhood.qingshi_street"
+        "neighborhood.qingshi_street",
+        "neighborhood.community_room"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
-      "version": 1,
-      "updated_at": "2026-10-17T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "place.riverside_path",
       "name": "河堤小路的背景",
-      "content": "青石街外有一条居民称作河堤小路的背景步道，沿途有矮栏和树影。予安喜欢散步时不替任何人排下一件事，亦舟会注意同一路面在不同光线下的变化；两人关注不同，并不总是结伴。它可作为谈生活节奏的地点，不能据此断言现在天气、路况、安全状态或某人在那里，也不是本轮新增的 Unity 可到达区域。",
+      "content": "青石街外的背景步道被居民叫作河堤小路，沿途有矮栏、树影和一段老台阶。人们可以聊水边光线怎样变化、走一小段路能不能让心绪慢下来，也有人把它当作普通绕行，不必赋予每次散步特殊意义。它与街上的招牌、书铺是同一片生活环境里的不同话题。这里并不规定哪位人物每天走同一路线，熟悉地名也不代表知道别人当天去了哪里。河堤小路是场景外的生活背景地点。",
       "knowledge_type": "place",
       "attributes": {
         "topic": "place.riverside_path",
@@ -251,27 +255,25 @@
         "riverside walk"
       ],
       "related_ids": [
-        "neighborhood.qingshi_street"
+        "neighborhood.qingshi_street",
+        "neighborhood.river_steps"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
-      "version": 1,
-      "updated_at": "2026-10-17T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "cafe.custom.quiet_company",
       "name": "小店安静共处的习惯",
-      "content": "栖光的熟客逐渐形成一种习惯：想说话先打个招呼，对方只读书时也不把安静当作冒犯。书签小聚以后，薇薇更愿意给暂不加入的人留位置。这只是往常相处的偏好，不是禁止聊天的规章，也不能替当前任何人同意、拒绝或承诺。知意可以热情分享，亦舟也可以短暂回应后继续阅读，彼此不必变成同一种节奏。",
+      "content": "栖光的熟客逐渐形成一种安静共处的习惯：想说话先打招呼，对方只想读书时，不把简短回应当作冒犯。热情分享的人可以讲一段，想听的人也可以只接一句，不必让所有人变成同一种节奏。这是一种往常相处的偏好，不是禁止聊天的店规；安静也不意味着拒绝一切交流。",
       "knowledge_type": "custom",
       "attributes": {
         "topic": "cafe.custom",
@@ -286,63 +288,59 @@
         "cafe customs"
       ],
       "related_ids": [
-        "event.bookmark_afternoon"
+        "cafe.setting",
+        "cafe.custom.taste_conversation"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
-      "version": 1,
-      "updated_at": "2026-10-17T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "drink.tea_taste",
       "name": "清淡茶味、奶味与甜味",
-      "content": "茶味清淡不等于没有味道，可以聊香气、涩感与温度；加奶会改变口感，加糖又是另一种选择。无糖红茶、清淡乌龙和微甜奶茶能承载不同偏好，不必把任何一种说成更成熟或更高贵。讨论时可以先问对方喜欢怎样的味道，而不是替人下结论。这是一般饮品常识，不说明本店售卖、当前库存、价格或已经冲泡。",
+      "content": "清淡茶味不等于没有味道，也不等于没有咖啡因。红茶、乌龙等茶饮可以从香气、涩感和余味来比较；涩是口腔收紧或发干的触感，和苦味并非同一件事。加奶改变奶味与口感，加糖改变甜度，它们是不同选择。无糖红茶、清淡乌龙和微甜奶茶可以对应不同口味，没有哪一种代表更成熟或更高贵。谈论这些一般差别，不等于小店承诺有任一种具体配方。",
       "knowledge_type": "drink",
       "attributes": {
         "topic": "drink.tea_taste",
-        "timeline": "pre_game_background",
-        "fictional_background": true
+        "dynamic": false
       },
       "keywords": [
-        "红茶",
+        "清淡茶味",
+        "茶味",
         "乌龙",
         "奶茶",
-        "清淡茶味",
-        "tea milk sweetness",
+        "涩感",
         "tea taste"
       ],
       "related_ids": [
-        "coffee.latte"
+        "drink.black_tea",
+        "drink.matcha_latte",
+        "drink.preference_guidance"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
-      "version": 1,
-      "updated_at": "2026-10-17T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "merchant.cookie_pairing",
       "name": "薇薇的柠檬饼搭配试验",
-      "content": "游戏开始前，薇薇在自己的搭配笔记里试过柠檬饼配少糖拿铁。第一版饼的酸香太突出，她觉得把拿铁柔和的奶味抢走了，便在纸上写“饼小一点，先分开尝”。她没有把不满意的试作说成新品，只把发现留下，想等有空再比较。对她而言，承认哪一步不合口味比急着请人夸好喝更有趣；此事不是本店已上架菜单或正式 Action 结果。",
+      "content": "游戏开始前，薇薇在自己的搭配笔记里试过柠檬饼配少糖拿铁。第一版饼的酸香太突出，她觉得把拿铁柔和的奶味抢走了，便在纸上写“饼小一点，先分开尝”。她没有把不满意的试作说成新品，只把发现留下，想等有空再比较。对她而言，承认哪一步不合口味比急着请人夸好喝更有趣。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "merchant.cookie_pairing",
@@ -360,7 +358,7 @@
         "coffee.latte",
         "merchant.handover_note"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -375,7 +373,7 @@
     {
       "knowledge_id": "merchant.sign_sketches",
       "name": "薇薇的招牌速写本",
-      "content": "薇薇下班后的独立爱好是用铅笔画青石街的旧招牌。她不追求画得像，常只记一道翘起的边、一块褪色和当时听见雨声的节奏；一页画坏了就翻过去，不把它变成另一份工作。她愿聊颜色与小观察，不替路人编身世。速写本属于她的个人生活，其他三人未被设定为读过全本，也不证明当前 NPC 感知到了任何声音或人物。",
+      "content": "薇薇下班后的独立爱好是用铅笔画青石街的旧招牌。她不追求画得像，常只记一道翘起的边、一块褪色和当时听见雨声的节奏；一页画坏了就翻过去，不把它变成另一份工作。她愿聊颜色与小观察，不替路人编身世。速写本属于她的个人生活，其他三人未被设定为读过全本。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "merchant.sign_sketches",
@@ -392,7 +390,7 @@
       "related_ids": [
         "neighborhood.qingshi_street"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -407,7 +405,7 @@
     {
       "knowledge_id": "merchant.handover_note",
       "name": "薇薇的三页笔记与交接目标",
-      "content": "薇薇曾把纸质搭配卡的一行说明写反，自己发现后很懊恼，还想把所有便条重抄。后来她只改清楚那一行，给自己定了个小目标：把三页搭配笔记整理好，交接时说清哪些完成、哪些需要别人判断，不先把每件事都揽下。计划尚未完成，她可以谈难点而不是假称已经改变。它不建立游戏中的排班、交接任务或制作能力。",
+      "content": "薇薇曾把纸质搭配卡的一行说明写反，自己发现后很懊恼，还想把所有便条重抄。后来她只改清楚那一行，给自己定了个小目标：把三页搭配笔记整理好，交接时说清哪些完成、哪些需要别人判断，不先把每件事都揽下。计划尚未完成，她仍在摸索怎样把难点说清楚。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "merchant.handover_note",
@@ -424,7 +422,7 @@
       "related_ids": [
         "merchant.cookie_pairing"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -439,7 +437,7 @@
     {
       "knowledge_id": "regular.six_panel_story",
       "name": "知意的六格故事结尾",
-      "content": "14岁的知意正在给一个短篇画六格分镜。她不满意“主人公一听劝就全懂了”的结尾，想让人物自己做一次小选择，再看后果；却还没决定最后一格画什么。她怕别人一夸“大小姐画得真好”就不再讲理由，所以暂时没把全稿给人看。她可以认真讨论情节，也会因为想不出而小小赌气；这是适龄创作项目，不是成人职业或玩家共同经历。",
+      "content": "14岁的知意正在给一个短篇画六格分镜。她不满意“主人公一听劝就全懂了”的结尾，想让人物自己做一次小选择，再看后果；却还没决定最后一格画什么。她怕别人一夸“大小姐画得真好”就不再讲理由，所以暂时没把全稿给人看。她可以认真讨论情节，也会因为想不出而小小赌气；这是她自己的适龄创作项目，不是玩家共同经历。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "regular.six_panel_story",
@@ -456,7 +454,7 @@
       "related_ids": [
         "place.corner_bookshop"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -471,7 +469,7 @@
     {
       "knowledge_id": "regular.paper_bridge",
       "name": "知意重做纸桥的小较劲",
-      "content": "在游戏开始前的一次学习小练习里，知意折的纸桥第一次比不过同组的承重结果。她先说“我只是没认真”，回去重做才发现自己没看清折痕方向，后来愿意承认不是别人故意难她。她仍想再试一次，却不再把输赢当聪明与否的证明。这件小事体现她14岁的好胜与反省，不赋予任何特殊工程技能，也不设定其他咖啡馆 NPC 亲历了练习。",
+      "content": "在游戏开始前的一次学习小练习里，知意折的纸桥第一次比不过同组的承重结果。她先说“我只是没认真”，回去重做才发现自己没看清折痕方向，后来愿意承认不是别人故意难她。她仍想再试一次，却不再把输赢当聪明与否的证明。这件小事体现她14岁的好胜与反省，这段背景未设定其他咖啡馆 NPC 亲历练习。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "regular.paper_bridge",
@@ -488,7 +486,7 @@
       "related_ids": [
         "regular.group_reading"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -520,7 +518,7 @@
       "related_ids": [
         "regular.six_panel_story"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -552,7 +550,7 @@
       "related_ids": [
         "place.corner_bookshop"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -567,7 +565,7 @@
     {
       "knowledge_id": "companion.river_walk",
       "name": "予安给自己留的散步时间",
-      "content": "予安喜欢沿河堤走一小段，练习不在心里替所有人列下一件事。她曾散步到一半又开始盘算别人的安排，索性停下来只看树影，发现不把每段时间用出成果也没有亏欠谁。近期她想留出一段属于自己的休闲，而不是承诺每天固定路线。她可以谈休息的难处，不把知意当负担，也不据这个背景宣称现在正在散步或可为玩家带路。",
+      "content": "予安喜欢沿河堤走一小段，练习不在心里替所有人列下一件事。她曾散步到一半又开始盘算别人的安排，索性停下来只看树影，发现不把每段时间用出成果也没有亏欠谁。近期她想留出一段属于自己的休闲，而不是承诺每天固定路线。她可以谈休息的难处，不把知意当负担。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "companion.river_walk",
@@ -584,7 +582,7 @@
       "related_ids": [
         "place.riverside_path"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -599,7 +597,7 @@
     {
       "knowledge_id": "companion.clear_help",
       "name": "予安练习说清能帮哪一部分",
-      "content": "予安过去有过一口应下几件琐事、最后把自己的阅读时间挤掉的经历。她没有因此觉得别人都在占便宜，而是发现自己把“愿意帮忙”和“必须全部做完”混在了一起。现在她练习先说明能帮哪一部分、何时需要休息；对知意也会讲清理由而非一味同意。这是她26岁成年人的个人边界与经验，不授予她店员权限，也不代表当前接受了任何玩家任务。",
+      "content": "予安过去有过一口应下几件琐事、最后把自己的阅读时间挤掉的经历。她没有因此觉得别人都在占便宜，而是发现自己把“愿意帮忙”和“必须全部做完”混在了一起。现在她练习先说明能帮哪一部分、何时需要休息；对知意也会讲清理由而非一味同意。这是她26岁成年人的个人边界与经验。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "companion.clear_help",
@@ -616,7 +614,7 @@
       "related_ids": [
         "companion.stitched_notebook"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -631,7 +629,7 @@
     {
       "knowledge_id": "quiet.one_line_notebook",
       "name": "亦舟的每页一句小册",
-      "content": "亦舟正在整理一本“每页一句”的读书小册：每次只选一句让自己停下来的描述，再写很短的旁注，不追求每天打卡。他想把零散纸片排成能翻阅的顺序，却舍不得删掉以前笨拙的注释，因为那也是当时读懂的部分。可以问他为什么留下旧句子，不必替他安排效率目标。这是个人阅读习惯与未完成项目，不是他已读完某本书或玩家听过这些内容的证据。",
+      "content": "亦舟正在整理一本“每页一句”的读书小册：每次只选一句让自己停下来的描述，再写很短的旁注，不追求每天打卡。他想把零散纸片排成能翻阅的顺序，却舍不得删掉以前笨拙的注释，因为那也是当时读懂的部分。可以问他为什么留下旧句子，不必替他安排效率目标。这是个人阅读习惯与未完成项目；他还没有整理完这本小册。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "quiet.one_line_notebook",
@@ -648,7 +646,7 @@
       "related_ids": [
         "place.corner_bookshop"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -663,7 +661,7 @@
     {
       "knowledge_id": "quiet.bookmark_pocket",
       "name": "亦舟找回夹错的书签",
-      "content": "游戏开始前，亦舟曾把借来的普通纸书签夹进另一册，找不到时先不好意思开口。后来他沿自己的阅读顺序翻回去找到了，归还后在书套内添了一个小纸袋，觉得慢一点检查比装作没事省心。他能自嘲当时绕的弯，不把它讲成惊险故事。事件没有指定其他三人为书签主人，也不让他们自动知道细节；纸袋不代表当前场景里存在可拿取物品。",
+      "content": "游戏开始前，亦舟曾把借来的普通纸书签夹进另一册，找不到时先不好意思开口。后来他沿自己的阅读顺序翻回去找到了，归还后在书套内添了一个小纸袋，觉得慢一点检查比装作没事省心。他能自嘲当时绕的弯，不把它讲成惊险故事。事件没有指定其他三人为书签主人，也不让他们自动知道细节。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "quiet.bookmark_pocket",
@@ -680,7 +678,7 @@
       "related_ids": [
         "quiet.one_line_notebook"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -695,7 +693,7 @@
     {
       "knowledge_id": "quiet.plain_refusal",
       "name": "亦舟一次没说清的拒绝",
-      "content": "亦舟曾在熟人邀他参加很吵的聚会时含糊说“再看看”，对方误以为他已经答应。他后来补了一句“我今晚想安静待着，这次不去”，发现直接一点没有想象中那么伤人。现在他仍需练习把边界说清，而不是用慢热替自己免去回应。这位熟人没有被设定为咖啡馆三人或玩家，也不确立游戏今晚的活动、行程或任何人的态度。",
+      "content": "亦舟曾在熟人邀他参加很吵的聚会时含糊说“再看看”，对方误以为他已经答应。他后来补了一句“我今晚想安静待着，这次不去”，发现直接一点没有想象中那么伤人。现在他仍需练习把边界说清，而不是用慢热替自己免去回应。这位熟人没有被设定为咖啡馆三人或玩家。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "quiet.plain_refusal",
@@ -712,7 +710,7 @@
       "related_ids": [
         "cafe.custom.quiet_company"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -744,7 +742,7 @@
       "related_ids": [
         "cafe.custom.quiet_company"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -774,14 +772,16 @@
         "自己安排",
         "知意予安",
         "bookshop route disagreement",
-        "independent outing"
+        "independent outing",
+        "书铺那边",
+        "书铺分歧"
       ],
       "related_ids": [
         "place.corner_bookshop"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
-      "version": 1,
-      "updated_at": "2026-10-17T00:00:00Z",
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
         "character_ids": [
           "cafe.regular_customer",
@@ -789,8 +789,10 @@
         ],
         "deployment_ids": [
           "cafedemo-v2"
-        ]
-      }
+        ],
+        "mode": "restricted"
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "event.slow_reading_exchange",
@@ -813,7 +815,7 @@
         "quiet.one_line_notebook",
         "merchant.handover_note"
       ],
-      "source": "P4-B developer-authored static background; not player Memory or current world/action evidence",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-17T00:00:00Z",
       "access": {
@@ -842,7 +844,7 @@
         "taste words"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -870,7 +872,7 @@
         "pocket notes"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -898,7 +900,7 @@
         "simple supper"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -926,7 +928,7 @@
         "unfinished sign"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -954,7 +956,7 @@
         "pencil colours"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -969,7 +971,7 @@
     {
       "knowledge_id": "merchant.window_plant",
       "name": "薇薇照料窗边小盆栽",
-      "content": "薇薇在自己的住处养过一盆不知该往哪边长的小绿植，起初天天挪位置，后来才学着少折腾、耐心看变化。她觉得照料和不停干预并不是一回事。这是她私下讲得出的生活小事，不表示咖啡馆现有植物由她种植或正在缺水。",
+      "content": "薇薇在自己的住处养过一盆不知该往哪边长的小绿植，起初天天挪位置，后来才学着少折腾、耐心看变化。她觉得照料和不停干预并不是一回事。这是她私下讲得出的生活小事。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "merchant.window_plant",
@@ -982,7 +984,7 @@
         "window plant"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1010,7 +1012,7 @@
         "asking before fixing"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1038,7 +1040,7 @@
         "regulars small talk"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1053,7 +1055,7 @@
     {
       "knowledge_id": "merchant.recipe_margin",
       "name": "薇薇写在食谱边上的问号",
-      "content": "薇薇自己看简易食谱时，会在“适量”和“差不多”旁边画问号，再记录自己实际尝到的差别。她并不讨厌凭感觉做事，只是想知道哪里值得记、哪里可以放松。这本家用练习笔记没有成为店内标准，也不新增任何饮品制作权限。",
+      "content": "薇薇自己看简易食谱时，会在“适量”和“差不多”旁边画问号，再记录自己实际尝到的差别。她并不讨厌凭感觉做事，只是想知道哪里值得记、哪里可以放松。这本家用练习笔记没有成为店内标准。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "merchant.recipe_margin",
@@ -1066,7 +1068,7 @@
         "recipe margin"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1094,7 +1096,7 @@
         "day off letter"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1122,7 +1124,7 @@
         "question page"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1150,7 +1152,7 @@
         "fraction recipe"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1178,7 +1180,7 @@
         "presentation card"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1206,7 +1208,7 @@
         "paper windmill"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1234,7 +1236,7 @@
         "side character"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1262,7 +1264,7 @@
         "two endings"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1290,7 +1292,7 @@
         "small gift"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1305,7 +1307,7 @@
     {
       "knowledge_id": "regular.advert_words",
       "name": "知意会比较说明文字",
-      "content": "知意看过两张说法完全不同却讲同一件物品的宣传页，才意识到“大家都喜欢”不算具体理由。她有时会拿这种句子开小玩笑，也提醒自己别因为讲得响亮就跟着点头。这是适龄的观察和学习，不赋予她专业鉴定能力。",
+      "content": "知意看过两张说法完全不同却讲同一件物品的宣传页，才意识到“大家都喜欢”不算具体理由。她有时会拿这种句子开小玩笑，也提醒自己别因为讲得响亮就跟着点头。这是适龄的观察和学习。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "regular.advert_words",
@@ -1318,7 +1320,7 @@
         "advertising words"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1346,7 +1348,7 @@
         "desk choices"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1374,7 +1376,7 @@
         "waiting to share"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1389,7 +1391,7 @@
     {
       "knowledge_id": "companion.soup_for_one",
       "name": "予安给自己煮的一小锅汤",
-      "content": "予安曾按习惯准备了太多配菜，想到只有自己吃，才把其中一部分留到别的安排里。她发现为自己做一顿合适的饭，也需要认真考虑自己的胃口和时间，而不是只问别人想吃什么。这不改变她既定的清淡红茶偏好，也不是店内菜品信息。",
+      "content": "予安曾按习惯准备了太多配菜，想到只有自己吃，才把其中一部分留到别的安排里。她发现为自己做一顿合适的饭，也需要认真考虑自己的胃口和时间，而不是只问别人想吃什么。这是她为自己做饭的经历。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "companion.soup_for_one",
@@ -1402,7 +1404,7 @@
         "soup for one"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1430,7 +1432,7 @@
         "mending test"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1458,7 +1460,7 @@
         "small budget"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1486,7 +1488,7 @@
         "essay disagreement"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1501,7 +1503,7 @@
     {
       "knowledge_id": "companion.help_in_parts",
       "name": "予安把帮助拆成几步",
-      "content": "予安过去帮熟人整理过一份很乱的资料，起初想一口气替对方全部排好，后来改成先问最急的是哪部分。她发现只帮完一小段也可以是实在的帮助。该熟人没有被设定为玩家，资料内容没有公开，也不代表她已经接受了当前任务。",
+      "content": "予安过去帮熟人整理过一份很乱的资料，起初想一口气替对方全部排好，后来改成先问最急的是哪部分。她发现只帮完一小段也可以是实在的帮助。该熟人没有被设定为玩家，资料内容没有公开。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "companion.help_in_parts",
@@ -1514,7 +1516,7 @@
         "help in parts"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1542,7 +1544,7 @@
         "quiet window"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1557,7 +1559,7 @@
     {
       "knowledge_id": "companion.rough_map",
       "name": "予安画得不漂亮的路线图",
-      "content": "予安给自己画背景街区的简图时，只记了转角和容易看错的岔口，比例并不准确。她知道一份说明能让人看懂，比替人把所有决定都画好重要。图上背景地点不等于游戏中的导航点，也不能据此声称现在能给玩家带路。",
+      "content": "予安给自己画背景街区的简图时，只记了转角和容易看错的岔口，比例并不准确。她知道一份说明能让人看懂，比替人把所有决定都画好重要。图上是场景外的背景地点。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "companion.rough_map",
@@ -1570,7 +1572,7 @@
         "rough map"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1585,7 +1587,7 @@
     {
       "knowledge_id": "companion.radio_pause",
       "name": "予安听完的一段广播",
-      "content": "予安过去整理房间时听过一段谈日常手工的广播，难得停下手里的事把结尾听完。她原以为有空就应多做一点，后来觉得专心听完也算一种选择。广播内容只是背景经历，不对应本游戏新增的音频、版权作品或实时播放功能。",
+      "content": "予安过去整理房间时听过一段谈日常手工的广播，难得停下手里的事把结尾听完。她原以为有空就应多做一点，后来觉得专心听完也算一种选择。这是她过去听广播的生活经历。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "companion.radio_pause",
@@ -1598,7 +1600,7 @@
         "radio pause"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1613,7 +1615,7 @@
     {
       "knowledge_id": "companion.notes_to_keep",
       "name": "予安舍不得丢的小纸片",
-      "content": "予安整理摘录时，会把“以后也许用得上”的纸条越留越多。她试着只选真想再读的一小叠，不为舍掉一张纸解释半天；偶尔仍会把一张又放回去。这是整理私人物件的习惯，不意味着会删除自己的经历或游戏记忆。",
+      "content": "予安整理摘录时，会把“以后也许用得上”的纸条越留越多。她试着只选真想再读的一小叠，不为舍掉一张纸解释半天；偶尔仍会把一张又放回去。这是她整理私人物件的习惯。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "companion.notes_to_keep",
@@ -1626,7 +1628,7 @@
         "notes to keep"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1654,7 +1656,7 @@
         "learning slowly"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1669,7 +1671,7 @@
     {
       "knowledge_id": "quiet.crooked_omelette",
       "name": "亦舟翻坏的一次煎蛋",
-      "content": "亦舟有次想把煎蛋完整翻面，太犹豫，最后变成了不太整齐的碎块。他仍把饭吃完，还给自己记了一句“形状没有影响晚饭”。他愿拿这种小失败开玩笑，生活不全围绕读书；这不是咖啡馆提供的菜品，也不表示他会为顾客烹饪。",
+      "content": "亦舟有次想把煎蛋完整翻面，太犹豫，最后变成了不太整齐的碎块。他仍把饭吃完，还给自己记了一句“形状没有影响晚饭”。他愿拿这种小失败开玩笑，生活不全围绕读书。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "quiet.crooked_omelette",
@@ -1682,7 +1684,7 @@
         "crooked omelette"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1697,7 +1699,7 @@
     {
       "knowledge_id": "quiet.short_cycle",
       "name": "亦舟的一段短骑行",
-      "content": "亦舟过去骑普通自行车绕背景街区办一件小事，回来发现最记得的是一处新刷的栏杆。他不把路程变成锻炼成绩，也知道有时赶时间就该直走。这只是日常出行经历，不是运动特长，场景没有因此新增车辆或骑行能力。",
+      "content": "亦舟过去骑普通自行车绕背景街区办一件小事，回来发现最记得的是一处新刷的栏杆。他不把路程变成锻炼成绩，也知道有时赶时间就该直走。这只是日常出行经历，不是运动特长。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "quiet.short_cycle",
@@ -1710,7 +1712,7 @@
         "short cycle"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1738,7 +1740,7 @@
         "ordinary chores"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1766,7 +1768,7 @@
         "old radio"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1794,7 +1796,7 @@
         "local postcard"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1809,7 +1811,7 @@
     {
       "knowledge_id": "quiet.casual_ballgame",
       "name": "亦舟偶尔参加的随意球局",
-      "content": "亦舟过去被普通熟人叫去随便打过一小会儿球，接球慢了半拍，自己先笑了。他发现愿意参加和擅长是两回事，不必因为不厉害就一直站在旁边。熟人身份没有展开，这不改变他慢热的关系节奏，也不是新增的体育职业或游戏功能。",
+      "content": "亦舟过去被普通熟人叫去随便打过一小会儿球，接球慢了半拍，自己先笑了。他发现愿意参加和擅长是两回事，不必因为不厉害就一直站在旁边。熟人身份没有展开，这不改变他慢热的关系节奏。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "quiet.casual_ballgame",
@@ -1822,7 +1824,7 @@
         "casual ballgame"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1837,7 +1839,7 @@
     {
       "knowledge_id": "quiet.balcony_leaves",
       "name": "亦舟看窗边叶片的耐心",
-      "content": "亦舟照料自己住处的小绿植时，起初总想看出每天有什么变化，后来才发觉有些天就是差不多。他可以安静看一会儿，也会忘记自己本来想记哪一片叶子。这是生活观察，不表示能凭一眼判断植物健康或知道店里植物的状态。",
+      "content": "亦舟照料自己住处的小绿植时，起初总想看出每天有什么变化，后来才发觉有些天就是差不多。他可以安静看一会儿，也会忘记自己本来想记哪一片叶子。这是他在自己住处的生活观察。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "quiet.balcony_leaves",
@@ -1850,7 +1852,7 @@
         "balcony leaves"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1865,7 +1867,7 @@
     {
       "knowledge_id": "quiet.rain_detour",
       "name": "亦舟过去绕过积水的小路",
-      "content": "亦舟过去走青石街时碰到过一处积水，绕路后多看见一家不起眼的门面。他不把绕路都说成好事：鞋子湿了仍然烦，只是那天也有一点可记的细节。事情发生在游戏开始前，不证明现在下雨、哪段路可走或安全。",
+      "content": "亦舟过去走青石街时碰到过一处积水，绕路后多看见一家不起眼的门面。他不把绕路都说成好事：鞋子湿了仍然烦，只是那天也有一点可记的细节。事情发生在游戏开始前。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "quiet.rain_detour",
@@ -1878,7 +1880,7 @@
         "rain detour"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1893,7 +1895,7 @@
     {
       "knowledge_id": "quiet.notebook_purchase",
       "name": "亦舟挑本子时的实际顾虑",
-      "content": "亦舟挑记句子的小册时，也会考虑纸会不会透、口袋装不装得下，不只想封面好不好看。他曾买过一本太厚的，出门嫌重，才知道“看起来能记很多”未必合用。纸品价格和商店库存没有被设定，这也不改变他的固定饮品口味。",
+      "content": "亦舟挑记句子的小册时，也会考虑纸会不会透、口袋装不装得下，不只想封面好不好看。他曾买过一本太厚的，出门嫌重，才知道“看起来能记很多”未必合用。",
       "knowledge_type": "personal_background",
       "attributes": {
         "topic": "quiet.notebook_purchase",
@@ -1906,7 +1908,7 @@
         "notebook purchase"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1934,7 +1936,7 @@
         "childhood street"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -1949,7 +1951,7 @@
     {
       "knowledge_id": "neighborhood.repair_shop",
       "name": "青石街的小修补铺",
-      "content": "街区背景里有间小修补铺，门口的字常被路人念漏一个。居民会拿普通旧物去问还能不能修，师傅不把每次检查都说成一定能修好。这里提供聊爱惜物品与取舍的话题，不是本游戏新增的店铺实体、服务或可导航目标。",
+      "content": "青石街背景里有间小修补铺，门口的字常被路人念漏一个。居民会带普通旧物去问还能不能修，师傅先看坏在哪里，不把每次检查都说成一定能修好。围绕它的日常话题常是修补值不值得、旧东西的痕迹该不该留下；有人重视实用，也有人舍不得熟悉的样子。这是场景外的生活背景地点，不提供今天接活或修理进度的信息。",
       "knowledge_type": "place_background",
       "attributes": {
         "topic": "neighborhood.repair_shop",
@@ -1961,26 +1963,26 @@
         "修旧物",
         "repair shop"
       ],
-      "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
-      "version": 1,
-      "updated_at": "2026-10-21T00:00:00Z",
+      "related_ids": [
+        "neighborhood.qingshi_street",
+        "neighborhood.custom.mending"
+      ],
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "neighborhood.bread_corner",
       "name": "街角面包香的背景",
-      "content": "青石街的生活背景包括一家普通面包小铺。路过的人有时先被香气吸引，也有人只匆匆经过；街区并非每个人都把下午过成闲游。这是场景外的日常印象，不提供具体品牌、营业时间、现货、购买任务或店内点心来源。",
+      "content": "青石街的生活背景包括一家普通面包小铺。路过的人有时先被香气吸引，也有人惦记下一件事，只匆匆经过。有人觉得这种熟悉的气味让街角好认，有人反而会注意旧招牌有没有换字；他们不必拥有相同的午后。这是场景外的日常印象，不说明今天出炉什么，也不说明栖光的点心来自哪里。",
       "knowledge_type": "place_background",
       "attributes": {
         "topic": "neighborhood.bread_corner",
@@ -1992,26 +1994,26 @@
         "街角生活",
         "bread corner"
       ],
-      "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
-      "version": 1,
-      "updated_at": "2026-10-21T00:00:00Z",
+      "related_ids": [
+        "neighborhood.qingshi_street",
+        "neighborhood.old_shopfronts"
+      ],
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "neighborhood.noticeboard",
       "name": "居民留言板上的普通小事",
-      "content": "背景街区的居民留言板常被用来写失物线索、借用工具的询问或活动结束后的感谢。旧纸张撤得不总及时，居民知道要再向当事人核实。它可供谈邻里沟通，不代表当前真的有人遗失物品，也不生成玩家的待办或场景交互。",
+      "content": "背景街区的居民留言板常被用来写失物线索、借用工具的询问或活动结束后的感谢。旧纸张撤得不总及时，居民知道要再向当事人核实；一个写了很久的消息不代表事情今天仍未解决。有人愿意多写一句归还方式，有人只留下简短致谢，这些小差别也能成为聊天的话题。它描述的是邻里沟通习惯，不是一份正在生效的任务表。",
       "knowledge_type": "place_background",
       "attributes": {
         "topic": "neighborhood.noticeboard",
@@ -2023,26 +2025,26 @@
         "邻里沟通",
         "noticeboard"
       ],
-      "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
-      "version": 1,
-      "updated_at": "2026-10-21T00:00:00Z",
+      "related_ids": [
+        "neighborhood.qingshi_street",
+        "neighborhood.community_room"
+      ],
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "neighborhood.community_room",
       "name": "街区公共活动室的背景",
-      "content": "青石街附近有一间背景中的小活动室，居民偶尔借它交换读物或做简单手工。不是每次聚集都要有作品和名次，有人来看看也可以。这里不设定NPC曾固定参加，也不新增开放时段、课程、可到达房间或即时活动。",
+      "content": "青石街附近有一间背景中的小活动室，居民偶尔借它交换读物或做简单手工。不是每次聚集都要交出作品或评名次，有人带一段读到一半的文字，也有人只来看看。分享时可以解释自己为什么喜欢，也可以承认还没想好；参加不等于公开全部私人笔记。这是场景外的生活背景，不设定四名熟客固定参加，也没有约定当前开放时段或正在举行的活动。",
       "knowledge_type": "place_background",
       "attributes": {
         "topic": "neighborhood.community_room",
@@ -2054,26 +2056,27 @@
         "邻里手工",
         "community room"
       ],
-      "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
-      "version": 1,
-      "updated_at": "2026-10-21T00:00:00Z",
+      "related_ids": [
+        "neighborhood.qingshi_street",
+        "neighborhood.custom.reading_exchange",
+        "place.corner_bookshop"
+      ],
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "neighborhood.bus_stop",
       "name": "街口等车时的生活话题",
-      "content": "街区故事里的街口有一个普通公交站，人们等车时会看路边的树或手里的小纸条。有人把短暂等待看成空档，也有人嫌被打乱安排；两种感受都很平常。它不对应当前时刻的班次、路线或车辆，也不是Unity新增的交通系统。",
+      "content": "青石街的背景街口有一个普通公交站，人们等车时会看路边的树或手里的小纸条。有人把等待看成短暂空档，有人嫌它打乱安排；也有人只是想赶快回去处理琐事。这些感受不必被分成谁更懂生活。它是场景外的普通地点，不提供实时车次、到站时间或当前人物的行程。",
       "knowledge_type": "place_background",
       "attributes": {
         "topic": "neighborhood.bus_stop",
@@ -2085,26 +2088,25 @@
         "等待",
         "bus stop"
       ],
-      "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
-      "version": 1,
-      "updated_at": "2026-10-21T00:00:00Z",
+      "related_ids": [
+        "neighborhood.qingshi_street"
+      ],
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "neighborhood.river_steps",
       "name": "河堤台阶的旧印象",
-      "content": "青石街的河堤步道背景中有一段老台阶，不同角度的栏杆影子会落成细线。有人记得走路时要顾脚下，有人喜欢停下来辨认线条。这是可聊的地点印象，不能据此判断现在地面干湿、安全状况或谁正在河边。",
+      "content": "青石街的河堤步道背景中有一段老台阶，不同角度的栏杆影子会落成细线。居民会提醒彼此留意脚下，也有人喜欢比较同一处影子长短的变化。这类普通观察能聊光线、走路的节奏和一个地方为什么让人记得，而不需要编出重大往事。这是场景外步道的地点印象。",
       "knowledge_type": "place_background",
       "attributes": {
         "topic": "neighborhood.river_steps",
@@ -2116,26 +2118,25 @@
         "栏杆影子",
         "river steps"
       ],
-      "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
-      "version": 1,
-      "updated_at": "2026-10-21T00:00:00Z",
+      "related_ids": [
+        "place.riverside_path"
+      ],
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "neighborhood.old_shopfronts",
       "name": "街区新旧门面的共处",
-      "content": "青石街既有旧招牌，也有重新刷过的门面。街坊对变化的意见不总相同：有人喜欢更清楚的字，有人舍不得磨损留下的样子。这个背景让角色能谈习惯与变化，不指定谁有改造权，也不把旧或新写成唯一正确。",
+      "content": "青石街既有旧招牌，也有重新刷过的门面。街坊对变化的意见不总相同：有人喜欢字更清楚，有人舍不得磨损留下的样子；一块牌子是否好认，与它是否勾起熟悉感，也是不同的判断。讨论可以落在颜色、字迹和日常使用上，不必把新旧分成唯一正确的一边。这是既定街区背景，不涉及某项改造正在实施或由谁决定。",
       "knowledge_type": "place_background",
       "attributes": {
         "topic": "neighborhood.old_shopfronts",
@@ -2147,26 +2148,26 @@
         "街区变化",
         "old shopfronts"
       ],
-      "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
-      "version": 1,
-      "updated_at": "2026-10-21T00:00:00Z",
+      "related_ids": [
+        "neighborhood.qingshi_street",
+        "neighborhood.repair_shop"
+      ],
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "cafe.background.small_details",
       "name": "小店普通细节的意义",
-      "content": "栖光的背景故事重视普通细节：一张纸卡留没留空白，一句说明是否好懂，一次聊天是否给人留余地。四人可以从不同角度谈这些小事，不必都认同“慢才好”。这不是店规清单，也不宣称场景当前摆着某种纸卡或正在开展活动。",
+      "content": "栖光的背景故事重视普通细节：纸卡留没留空白，一句说明是否好懂，一次聊天是否给人留余地。它们让人有机会谈认真做事，也谈留下一点不必展示成果的时间。这不是把“慢”定成标准；赶着处理生活的人同样有自己的理由。不同熟客可以从这些小事里聊出不相同的意见，而不必都赞成同一种生活方式。",
       "knowledge_type": "place_background",
       "attributes": {
         "topic": "cafe.background.small_details",
@@ -2178,21 +2179,21 @@
         "生活节奏",
         "small cafe details"
       ],
-      "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
-      "version": 1,
-      "updated_at": "2026-10-21T00:00:00Z",
+      "related_ids": [
+        "cafe.custom.quiet_company",
+        "cafe.custom.taste_conversation"
+      ],
+      "source": "builtin",
+      "version": 2,
+      "updated_at": "2026-10-29T00:00:00Z",
       "access": {
-        "character_ids": [
-          "cafe.merchant",
-          "cafe.regular_customer",
-          "cafe.companion_customer",
-          "cafe.quiet_customer"
-        ],
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]
-      }
+      },
+      "usage": "retrieval"
     },
     {
       "knowledge_id": "event.bookmark_card_edges",
@@ -2212,7 +2213,7 @@
       "related_ids": [
         "event.bookmark_afternoon"
       ],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2230,7 +2231,7 @@
     {
       "knowledge_id": "event.bookmark_last_minute",
       "name": "书签小聚收尾时的小分工",
-      "content": "既有书签小聚收尾时，薇薇顺口想把余下零碎都揽走，予安提醒先说清还差哪几件；知意坚持自己收好自己的草稿，亦舟把自己用过的纸归拢。大家各做一点，没人因此答应长期帮忙。过去的分工不是当前已执行的动作，也不新增任何角色的店员权限。",
+      "content": "既有书签小聚收尾时，薇薇顺口想把余下零碎都揽走，予安提醒先说清还差哪几件；知意坚持自己收好自己的草稿，亦舟把自己用过的纸归拢。大家各做一点，没人因此答应长期帮忙。这是游戏开始前那次小聚的分工。",
       "knowledge_type": "shared_background",
       "attributes": {
         "topic": "event.bookmark_last_minute",
@@ -2245,7 +2246,7 @@
       "related_ids": [
         "event.bookmark_afternoon"
       ],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2263,7 +2264,7 @@
     {
       "knowledge_id": "event.route_landmark",
       "name": "知意与予安选路线时的分歧",
-      "content": "在既有纸页书铺路线小分歧里，知意说“认那个蓝色门面就行”，予安担心门面会变，想让她再说一个转角。知意起初嫌多余，后来自己补上一处容易记的方向。两人争的是说明够不够清楚，不是谁永远听谁；这不是对当前街区路标的定位。",
+      "content": "在既有纸页书铺路线小分歧里，知意说“认那个蓝色门面就行”，予安担心门面会变，想让她再说一个转角。知意起初嫌多余，后来自己补上一处容易记的方向。两人争的是说明够不够清楚，不是谁永远听谁。",
       "knowledge_type": "shared_background",
       "attributes": {
         "topic": "event.route_landmark",
@@ -2276,7 +2277,7 @@
         "route landmark"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2292,7 +2293,7 @@
     {
       "knowledge_id": "event.route_return_plan",
       "name": "知意学着把返程也说清楚",
-      "content": "既有去书铺的计划讨论里，知意只讲了怎么去，忘了说明遇到看不懂路牌怎么办。予安没有直接替她重排，而是请她补一条自己的应对办法。知意仍有一点不服气，却发现补充计划不等于把决定权交出去；不据此断言该计划现在正在执行。",
+      "content": "既有去书铺的计划讨论里，知意只讲了怎么去，忘了说明遇到看不懂路牌怎么办。予安没有直接替她重排，而是请她补一条自己的应对办法。知意仍有一点不服气，却发现补充计划不等于把决定权交出去；这是游戏开始前的计划讨论。",
       "knowledge_type": "shared_background",
       "attributes": {
         "topic": "event.route_return_plan",
@@ -2305,7 +2306,7 @@
         "return plan"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2334,7 +2335,7 @@
         "lettering"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2363,7 +2364,7 @@
         "drafts"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2392,7 +2393,7 @@
         "help boundaries"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2421,7 +2422,7 @@
         "quiet support"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2450,7 +2451,7 @@
         "reading margin"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2479,7 +2480,7 @@
         "reading progress"
       ],
       "related_ids": [],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2510,7 +2511,7 @@
       "related_ids": [
         "event.bookmark_afternoon"
       ],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2541,7 +2542,7 @@
       "related_ids": [
         "event.bookmark_afternoon"
       ],
-      "source": "Developer-authored v0.1.1 static background; not player memory, current world state or action authorization",
+      "source": "builtin",
       "version": 1,
       "updated_at": "2026-10-21T00:00:00Z",
       "access": {
@@ -2553,6 +2554,824 @@
           "cafedemo-v2"
         ]
       }
+    },
+    {
+      "knowledge_id": "coffee.americano",
+      "name": "美式：浓缩加水与黑咖啡的区别",
+      "content": "美式通常是在浓缩咖啡中加入热水，基础版本不含奶，也不会因为名字而自带糖。它比同一份未稀释的浓缩更清淡，能呈现咖啡本身的酸、苦、香气和余味；不加奶不等于一定很苦，豆子和萃取都会影响风味。美式与手冲都可作为黑咖啡饮用，但美式先以压力萃取浓缩再加水，手冲则让水流经过咖啡粉。给同一份浓缩加水会降低每口浓度，却不减少整杯原有的咖啡因。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "americano",
+        "milk": false,
+        "coffee_based": true,
+        "menu_claim": false
+      },
+      "keywords": [
+        "美式",
+        "americano",
+        "黑咖啡",
+        "加水",
+        "美式和手冲"
+      ],
+      "related_ids": [
+        "coffee.espresso",
+        "coffee.brew_methods",
+        "coffee.acidity",
+        "coffee.caffeine_myths"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.espresso",
+      "name": "浓缩咖啡：小杯浓度与整杯咖啡因",
+      "content": "意式浓缩咖啡是让热水在压力下通过细研磨咖啡粉得到的少量咖啡液，风味集中，口感往往比滤泡咖啡厚。表面的油脂泡沫叫 crema，但泡沫多不自动等于品质高。它可以有果酸、坚果或烘烤香，并非只有苦味。普通浓缩含咖啡因，每口浓度高不等于小小一杯的咖啡因一定超过大杯咖啡；要比较总粉量、份数和杯量。拿铁、美式等常以浓缩为基础。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "espresso",
+        "milk": false,
+        "coffee_based": true,
+        "menu_claim": false
+      },
+      "keywords": [
+        "浓缩咖啡",
+        "espresso",
+        "意式浓缩",
+        "小杯",
+        "crema"
+      ],
+      "related_ids": [
+        "coffee.americano",
+        "coffee.latte",
+        "coffee.strength_vs_extraction"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.flat_white",
+      "name": "馥芮白和拿铁：咖啡感与细腻奶泡",
+      "content": "馥芮白（flat white）通常由浓缩咖啡和细腻热牛奶组成，表面奶泡薄，口感融合而绵密。常见做法杯量较小、相对奶量较少，因此比常见拿铁更突出咖啡味；这是一种典型差别，不是各家通用的固定比例。有些版本用双份或短萃浓缩，也不能据名称推定本店采用哪种做法。它不像卡布奇诺那样强调厚泡沫，也不默认加糖。普通版本含咖啡因，量由实际浓缩用量决定；咖啡感强不等于一定更苦。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "flat_white",
+        "milk": true,
+        "coffee_based": true,
+        "menu_claim": false
+      },
+      "keywords": [
+        "馥芮白",
+        "flat white",
+        "flat_white",
+        "馥芮白和拿铁",
+        "薄奶泡",
+        "咖啡感"
+      ],
+      "related_ids": [
+        "coffee.latte",
+        "coffee.cappuccino",
+        "coffee.milk_texture"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.mocha",
+      "name": "摩卡：咖啡、可可与奶的结合",
+      "content": "作为饮品的摩卡通常由浓缩咖啡、牛奶与巧克力酱或可可配料组成，兼有咖啡香、可可香和奶的柔和口感，甜度随所用酱料及加糖量变化。它与普通拿铁的主要差别在于巧克力风味，不等于所有摩卡都很甜或完全不苦。它与热巧克力的关键差别是通常还含咖啡；不喜欢咖啡苦味的人可能更接受这种搭配，但可可本身也有苦味。普通摩卡含咖啡因，咖啡和可可都可能贡献其中一部分。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "mocha",
+        "milk": true,
+        "coffee_based": true,
+        "menu_claim": false
+      },
+      "keywords": [
+        "摩卡",
+        "mocha",
+        "巧克力咖啡",
+        "可可",
+        "摩卡和热巧克力"
+      ],
+      "related_ids": [
+        "drink.hot_chocolate",
+        "coffee.latte",
+        "drink.preference_guidance"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.caramel_macchiato",
+      "name": "焦糖玛奇朵：焦糖甜香与奶咖层次",
+      "content": "现代咖啡馆常见的焦糖玛奇朵，是热牛奶、浓缩咖啡与焦糖酱组合的奶咖，常有香草糖浆，闻起来偏焦糖甜香，入口兼有奶味与咖啡味。具体配方和甜度因店家而异，不能从名称推定一定使用某品牌的糖浆或份量。它通常比不加糖的拿铁更甜，却并不去除咖啡的苦味或咖啡因。它与传统在浓缩上点少量奶泡的意式玛奇朵不是同一种比例；喜欢焦糖风味和较明显甜感时，可以比较这类饮品，而非把它说成无咖啡因甜牛奶。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "caramel_macchiato",
+        "milk": true,
+        "coffee_based": true,
+        "menu_claim": false
+      },
+      "keywords": [
+        "焦糖玛奇朵",
+        "caramel macchiato",
+        "caramel_macchiato",
+        "焦糖",
+        "糖浆",
+        "甜香"
+      ],
+      "related_ids": [
+        "coffee.latte",
+        "coffee.mocha",
+        "coffee.caffeine_myths"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "drink.hot_chocolate",
+      "name": "热巧克力：可可风味与咖啡因误区",
+      "content": "热巧克力通常用可可粉或巧克力与热牛奶调和，也有加水或使用其他奶类的版本。可可比例较高时风味更浓，也可能更苦；糖和奶会改变甜度与顺滑感，所以不能把热巧克力一概说成甜得发腻。它通常不以咖啡为基础，和通常含浓缩咖啡的摩卡有别。但可可本身可能含咖啡因，实际含量取决于可可种类、用量及其他配料，不能承诺无咖啡因。喜欢巧克力香而不想要咖啡味，是不同于要求完全无咖啡因的一种口味需求。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "hot_chocolate",
+        "coffee_based": false,
+        "menu_claim": false
+      },
+      "keywords": [
+        "热巧克力",
+        "hot chocolate",
+        "hot_chocolate",
+        "热可可",
+        "不喝咖啡",
+        "巧克力咖啡因"
+      ],
+      "related_ids": [
+        "coffee.mocha",
+        "coffee.caffeine_myths",
+        "drink.preference_guidance"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "drink.matcha_latte",
+      "name": "抹茶拿铁：茶粉、奶与甜度",
+      "content": "抹茶拿铁通常把抹茶粉先与少量水调匀，再加入热牛奶或其他奶类。它的主要香气来自茶，不是浓缩咖啡；拿铁在这里指带奶的搭配，并不保证含咖啡。抹茶可有鲜味、青叶香、轻苦和涩感，牛奶带来柔和口感；无糖抹茶粉与预先加糖的抹茶混合粉会造成很不同的甜度。抹茶本身通常含咖啡因，不能因为不含咖啡便说成无咖啡因。喜欢茶香又接受奶味的人，可以把它与普通拿铁或不加奶的红茶比较。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "matcha_latte",
+        "milk": true,
+        "coffee_based": false,
+        "menu_claim": false
+      },
+      "keywords": [
+        "抹茶拿铁",
+        "matcha latte",
+        "matcha_latte",
+        "抹茶",
+        "茶粉",
+        "抹茶咖啡因"
+      ],
+      "related_ids": [
+        "drink.black_tea",
+        "coffee.latte",
+        "coffee.caffeine_myths"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "drink.black_tea",
+      "name": "红茶：清淡、涩感与咖啡因",
+      "content": "红茶是经过较充分氧化处理的茶叶，用热水浸泡后饮用，基本茶汤不必加奶或糖。不同茶叶可以带麦芽、花果或蜜香，茶香中的甜感不等于加过糖；加奶的红茶又会有不同口感。浸泡时间、用量和水温会改变浓淡与涩感，泡得很浓或很久可能更苦涩，不能以一个固定时间概括所有红茶。红茶通常含咖啡因，清淡或不加糖也不等于没有咖啡因。它与抹茶拿铁的差别在于浸泡茶叶和奶味、茶粉口感，不能只用谁更高级来比较。",
+      "knowledge_type": "drink",
+      "attributes": {
+        "drink": "black_tea",
+        "milk": false,
+        "coffee_based": false,
+        "menu_claim": false
+      },
+      "keywords": [
+        "红茶",
+        "black tea",
+        "black_tea",
+        "无糖红茶",
+        "麦芽香",
+        "红茶咖啡因"
+      ],
+      "related_ids": [
+        "drink.tea_taste",
+        "drink.matcha_latte",
+        "coffee.caffeine_myths"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "drink.preference_guidance",
+      "name": "从苦味、奶味、甜度和咖啡因比较口味",
+      "content": "不太喜欢苦的，不必立刻被归为只爱甜饮。可以先分清想减弱咖啡感、想要更多奶味，还是希望明显甜一些：奶量较多的拿铁常显得柔和；摩卡或焦糖奶咖多了可可或焦糖风味，却可能同时更甜。想保留咖啡香而不喜欢厚泡沫，与喜欢卡布奇诺的轻盈奶泡，也是不同偏好。若不想要咖啡味，可以比较茶类或可可饮品，但它们仍可能含咖啡因。甜度、苦味和咖啡因应分别说明，不能把清淡、甜或加奶当作无咖啡因的证明。",
+      "knowledge_type": "reference",
+      "attributes": {
+        "topic": "drink.preference_guidance",
+        "dynamic": false
+      },
+      "keywords": [
+        "口味推荐",
+        "不太喜欢苦",
+        "不喜欢苦",
+        "怕苦",
+        "奶味",
+        "不太甜",
+        "不想喝咖啡",
+        "recommendation"
+      ],
+      "related_ids": [
+        "coffee.latte",
+        "coffee.mocha",
+        "coffee.caramel_macchiato",
+        "drink.hot_chocolate",
+        "drink.matcha_latte",
+        "drink.black_tea"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.species",
+      "name": "阿拉比卡和罗布斯塔：豆种不等于好坏等级",
+      "content": "阿拉比卡与罗布斯塔是两类广泛栽培的咖啡。阿拉比卡常被描述为香气层次较多，罗布斯塔通常苦感更明显、咖啡因含量也往往较高，在意式拼配中很常见；两者内部都有不同品种和品质。产地环境、成熟度、采收处理和烘焙同样重要，不能把阿拉比卡直接等同于好喝，把罗布斯塔等同于劣质。拼配可以是为了调和口感与风味，而非自动表示偷工减料；评价应回到具体批次和杯中表现。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.species",
+        "dynamic": false
+      },
+      "keywords": [
+        "阿拉比卡",
+        "罗布斯塔",
+        "arabica",
+        "robusta",
+        "豆种",
+        "拼配",
+        "咖啡品种"
+      ],
+      "related_ids": [
+        "coffee.origins",
+        "coffee.roasting",
+        "coffee.caffeine_myths"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.origins",
+      "name": "常见咖啡产地：风味线索与批次差异",
+      "content": "产地是理解咖啡的线索，而不是保证味道的标签。巴西咖啡常见较温和酸感和甜感；哥伦比亚常被介绍为均衡而有明亮酸感；埃塞俄比亚的部分咖啡有花香或果香；印度尼西亚的部分咖啡以较厚口感和泥土、香料一类描述为人熟悉。同一国家内部也会差别很大，品种、海拔气候、成熟度、处理法和烘焙都会影响结果。聊某包豆时，具体产区、批次和处理信息比仅凭国家推断更有用；这些一般介绍不说明栖光正在使用哪种豆。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.origins",
+        "dynamic": false
+      },
+      "keywords": [
+        "咖啡产地",
+        "产区",
+        "巴西",
+        "哥伦比亚",
+        "埃塞俄比亚",
+        "印度尼西亚",
+        "豆子哪里",
+        "origin"
+      ],
+      "related_ids": [
+        "coffee.species",
+        "coffee.processing",
+        "coffee.roasting"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.processing",
+      "name": "水洗、日晒和蜜处理：不是甜度排行榜",
+      "content": "处理法指咖啡果实采下后怎样去除果皮、果肉和果胶并干燥。水洗通常先去果肉、去除果胶，再干燥带壳的种子；日晒通常带着整颗果实干燥后再脱壳；蜜处理则在去皮后保留部分或较多果胶进行干燥，并不是往咖啡里加蜂蜜。水洗常被描述为风味清晰，日晒可能有较明显果香或发酵感，蜜处理也可能呈现甜香和较圆润口感。水洗和日晒哪个更甜没有固定答案：成熟度、发酵与干燥控制、品种、烘焙和冲煮都重要，果香浓也不等于糖含量必定更高。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.processing",
+        "dynamic": false
+      },
+      "keywords": [
+        "水洗",
+        "日晒",
+        "蜜处理",
+        "水洗和日晒",
+        "处理法",
+        "washed",
+        "natural",
+        "honey process"
+      ],
+      "related_ids": [
+        "coffee.origins",
+        "coffee.flavor_language",
+        "coffee.grind_extraction"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.roasting",
+      "name": "浅中深烘焙：香气、酸苦与偏好",
+      "content": "烘焙让生咖啡豆发展出可饮用的香气和风味。一般比较同一豆子时，浅烘常保留较明显的酸感、花果香；中烘可能让果香、甜香与烘烤香更均衡；深烘往往烘烤气息和苦感更突出、果酸感较弱。这是常见趋势，烘焙曲线和豆子本身会改变结果，颜色也不能完整解释口感。深烘不自动意味着咖啡因更多，浅烘也不保证一杯就很酸。想选咖啡时，先分清是否喜欢果香、烘烤香或较柔和酸感，比争论哪种烘焙更高级更有帮助。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.roasting",
+        "dynamic": false
+      },
+      "keywords": [
+        "浅烘",
+        "中烘",
+        "深烘",
+        "烘焙",
+        "烘烤香",
+        "roast"
+      ],
+      "related_ids": [
+        "coffee.acidity",
+        "coffee.caffeine_myths",
+        "coffee.origins"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.grind_extraction",
+      "name": "研磨与萃取：调粗细时也要看时间和水流",
+      "content": "萃取是水把咖啡粉中的可溶物带进杯里的过程。研磨更细会增加接触面积，在滤泡或意式中也常增加水流阻力；更粗通常让水流更快，所以要连同时间、粉水比和注水方式一起判断。萃取不足时可能显得尖酸、单薄，过多或不均匀的萃取可能带来苦涩和干口，但不能把所有酸或苦都归咎于一个旋钮。粉层有通道时，某些地方接触太多、另一些太少，酸苦可能同时出现。比较参数时一次只改少量，结合杯中感受，比追求一个适用于所有豆子的刻度更可靠。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.grind_extraction",
+        "dynamic": false
+      },
+      "keywords": [
+        "研磨",
+        "粗细",
+        "萃取",
+        "萃取不足",
+        "过度萃取",
+        "通道",
+        "grind",
+        "extraction"
+      ],
+      "related_ids": [
+        "coffee.strength_vs_extraction",
+        "coffee.acidity",
+        "coffee.brew_methods"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.brew_methods",
+      "name": "意式、手冲和冷萃的原理差别",
+      "content": "意式浓缩用压力让热水通过较细的咖啡粉，得到少量而浓的咖啡液；手冲通常靠重力让热水经过粉层并过滤，注水和研磨会影响接触与流速；冷萃常以冷水或室温水较长时间浸泡，再过滤。冷萃不是给热咖啡直接加冰，冰手冲仍属于热萃后降温。研究中的冷萃常呈现较低的苦酸感，但豆子、浓度与萃取条件仍会改变结果，不能保证永远更甜或无酸。冷萃也可制成需要稀释的浓缩液，不能只凭名称判断咖啡因或浓淡。这些是冲煮知识，不表示任何地点当前提供这些方式。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.brew_methods",
+        "dynamic": false
+      },
+      "keywords": [
+        "意式",
+        "手冲",
+        "冷萃",
+        "冰手冲",
+        "冷萃和冰咖啡",
+        "冲煮方法",
+        "pour over",
+        "cold brew"
+      ],
+      "related_ids": [
+        "coffee.espresso",
+        "coffee.americano",
+        "coffee.strength_vs_extraction"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.flavor_language",
+      "name": "酸甜苦、醇厚度和香气怎样分开描述",
+      "content": "酸、甜、苦是味觉描述；花香、果香、坚果或巧克力香常涉及嗅觉；醇厚度说的是入口的厚薄、重量与包裹感，不等于味道浓或品质好。可以先说“较清爽还是较厚”“像柑橘还是烘烤谷物”，再说自己喜不喜欢。风味轮和感官词典帮助人交流感受，不是要求每个人尝出同一串词。“巧克力、蜂蜜、莓果风味”通常是类比，并不说明加了这些原料；甜香也不证明有额外加糖。不同人经验不同，描述不必成为答题或优劣排名。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.flavor_language",
+        "dynamic": false
+      },
+      "keywords": [
+        "酸甜苦",
+        "醇厚度",
+        "香气",
+        "风味描述",
+        "风味轮",
+        "巧克力风味",
+        "甜香",
+        "body",
+        "aroma"
+      ],
+      "related_ids": [
+        "coffee.acidity",
+        "coffee.processing",
+        "coffee.milk_texture"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.acidity",
+      "name": "喝咖啡一定很酸吗：明亮酸感与不舒服的尖酸",
+      "content": "咖啡不一定喝起来很酸。酸感的强弱和类型受豆种、产地、处理、烘焙与萃取共同影响，也会和甜香、苦味及饮用温度相互影响。有人喜欢像柑橘般明亮的感觉，有人更喜欢较柔和的坚果或烘烤方向；偏好不同不代表谁不会喝。让人不舒服的尖酸、单薄可能与萃取不足有关，但不能把所有果酸都判作冲坏了。深烘常降低感受到的果酸，加奶也可能使入口柔和，却不能保证绝无酸味；感官上的酸与化学测得的酸度也不完全是一回事。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.acidity",
+        "dynamic": false
+      },
+      "keywords": [
+        "咖啡很酸",
+        "一定会很酸",
+        "酸味",
+        "果酸",
+        "尖酸",
+        "不喜欢酸",
+        "acidity"
+      ],
+      "related_ids": [
+        "coffee.roasting",
+        "coffee.grind_extraction",
+        "coffee.flavor_language"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.milk_texture",
+      "name": "牛奶与奶泡：奶味、泡沫和咖啡的平衡",
+      "content": "蒸汽打奶时把空气带进奶里，奶中的蛋白质帮助稳定小气泡，脂肪和处理方式也会影响口感。细腻奶泡喝起来更连贯，粗大的泡沫则容易显得松散；奶泡厚薄和奶量可以分别变化。奶味增加通常让咖啡入口更柔和，不等于去掉咖啡因，也不代表必须加糖。卡布奇诺常强调较丰富奶泡，馥芮白强调细腻薄泡与咖啡感，拿铁常有更多液态奶。奶的种类、温度和比例都会影响结果，不能把更多泡沫、更多奶或更热说成必然更好。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.milk_texture",
+        "dynamic": false
+      },
+      "keywords": [
+        "奶泡",
+        "牛奶",
+        "蒸汽奶泡",
+        "细腻奶泡",
+        "奶味",
+        "milk foam",
+        "microfoam"
+      ],
+      "related_ids": [
+        "coffee.cappuccino",
+        "coffee.flat_white",
+        "coffee.latte"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.caffeine_myths",
+      "name": "咖啡因常见误区：不苦、不甜或不含咖啡都不够",
+      "content": "普通咖啡、红茶和抹茶通常含咖啡因，可可制品也可能贡献咖啡因。加奶、加糖或加水能改变口味或每口浓度，却不会凭空除去原来那份饮品中的咖啡因。整杯含量要看原料种类、咖啡粉或茶粉用量、浓缩份数、萃取与杯量，不能用苦味、颜色或烘焙深浅直接换算。低因也不等于完全无咖啡因；热巧克力、茶拿铁不含咖啡，不代表一定无咖啡因。若需要确定是否含咖啡因，应核对具体配方或产品信息，而不是只凭饮品名字承诺。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.caffeine_myths",
+        "dynamic": false
+      },
+      "keywords": [
+        "咖啡因",
+        "无咖啡因",
+        "低因",
+        "加奶",
+        "加水",
+        "不苦",
+        "深烘咖啡因",
+        "caffeine",
+        "decaf"
+      ],
+      "related_ids": [
+        "coffee.espresso",
+        "coffee.americano",
+        "drink.hot_chocolate",
+        "drink.matcha_latte",
+        "drink.black_tea"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "coffee.strength_vs_extraction",
+      "name": "浓度、萃取率和苦味不是同一个量",
+      "content": "浓度是杯中可溶物有多集中，萃取率是从咖啡粉取出了多少可溶物；前者常用 TDS 描述，后者相对投下的咖啡粉计算。同一杯咖啡加水会变淡，但不是继续从粉里萃取；用更多粉也不等于每一克粉都萃取更充分。意式浓缩每口很浓，而一大杯滤泡可能用了更多粉，整杯咖啡因未必较少。高浓度可能增强苦感，不过苦味还受烘焙和原料等影响。讨论“浓不浓”时，先说明是在说入口强度、咖啡味、苦味，还是咖啡因，才能避免彼此答非所问。",
+      "knowledge_type": "coffee_reference",
+      "attributes": {
+        "topic": "coffee.strength_vs_extraction",
+        "dynamic": false
+      },
+      "keywords": [
+        "浓度",
+        "萃取率",
+        "浓不浓",
+        "浓咖啡",
+        "TDS",
+        "strength",
+        "extraction yield"
+      ],
+      "related_ids": [
+        "coffee.grind_extraction",
+        "coffee.espresso",
+        "coffee.caffeine_myths"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "cafe.custom.taste_conversation",
+      "name": "栖光的日常交谈与不同口味",
+      "content": "栖光的普通交谈并不总围着点单：读到一半的故事、修补过的旧物，或一段想安静待着的时间，都可以成为话题。聊饮品时，说清自己喜欢的奶味、香气或甜度，比装懂术语更自在；喜欢清淡茶味和喜欢浓咖啡的人也可以各自保留选择。热情不需要变成不断推销，愿意听和愿意留白都属于这家温馨小店的背景氛围。",
+      "knowledge_type": "custom",
+      "attributes": {
+        "topic": "cafe.custom.taste_conversation",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "小店氛围",
+        "聊什么",
+        "口味不同",
+        "日常交谈",
+        "栖光习惯"
+      ],
+      "related_ids": [
+        "cafe.setting",
+        "cafe.custom.quiet_company",
+        "drink.preference_guidance"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "neighborhood.custom.mending",
+      "name": "青石街聊修补与旧物的习惯",
+      "content": "青石街小修补铺周围的普通谈话，常从“还能不能用”延伸到“为什么想留下”。有人想省下一次更换，有人喜欢熟悉的手感，也有人觉得不值得再折腾。保留补痕不一定是怀旧，换新也不一定是不珍惜；知道怎样使用一件旧物，有时比把它修得毫无痕迹更重要。这是沿着既有修补铺设定展开的公共生活习惯，不属于某位人物的秘密或一段新发生的事件。",
+      "knowledge_type": "custom",
+      "attributes": {
+        "topic": "neighborhood.custom.mending",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "修补习惯",
+        "旧物",
+        "补痕",
+        "换新",
+        "街区文化"
+      ],
+      "related_ids": [
+        "neighborhood.repair_shop",
+        "neighborhood.old_shopfronts"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "neighborhood.custom.reading_exchange",
+      "name": "街区交换读物与手工的日常形式",
+      "content": "青石街的背景生活里，纸页书铺和公共活动室让居民有机会交换阅读与手工感受。分享可以只是谈一页哪里没看懂，或解释纸卡为什么留了一块空白；不必先读完整本或做出漂亮成品。听的人可以给具体理由，也可以暂时没有同感，不以赞美代替认真看。这说的是街区往常的活动形式，没有新增某次活动的日期、参与名单或已经兑现的计划。",
+      "knowledge_type": "custom",
+      "attributes": {
+        "topic": "neighborhood.custom.reading_exchange",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "读物交流",
+        "公共活动",
+        "阅读分享",
+        "手工",
+        "活动室习惯"
+      ],
+      "related_ids": [
+        "neighborhood.community_room",
+        "place.corner_bookshop"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-10-29T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
     }
   ]
 }

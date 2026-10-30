@@ -53,7 +53,7 @@ namespace EmbodiedNPC.Settings
         private bool busy;
         private bool savedThisSession;
         private TMP_Dropdown contextPresets;
-        private static readonly int[] ContextPresetLengths = { 8192, 16384, 32768, 65536 };
+        private static readonly int[] ContextPresetLengths = { 16384, 32768, 65536 };
         private readonly List<int> availableContextLengths = new(ContextPresetLengths);
         private int loadedLegacyContextLength;
         private bool controlsPrepared;
@@ -260,7 +260,6 @@ namespace EmbodiedNPC.Settings
                 contextPresets = Instantiate(mainCandidates, contextLength.transform);
                 contextPresets.name = "ContextPresets";
                 contextPresets.ClearOptions();
-                contextPresets.AddOptions(new List<string> { "8K", "16K", "32K", "64K" });
                 RefreshContextPreset();
                 ConfigureComboRow(contextLength, contextPresets);
                 // Model candidates start disabled; fixed context presets are immediately available.
@@ -296,7 +295,7 @@ namespace EmbodiedNPC.Settings
             button.offsetMin = new Vector2(-42, 0);
             button.offsetMax = Vector2.zero;
             bool capacity = choices.name is "ContextPresets" or "RecentDialoguePresets";
-            float width = capacity ? 116 : 42;
+            float width = choices.name == "ContextPresets" ? 204 : capacity ? 116 : 42;
             button.offsetMin = new Vector2(-width, 0);
             if (input.textViewport != null)
             {
@@ -367,6 +366,7 @@ namespace EmbodiedNPC.Settings
             if (TryContextPreset(contextLength.text, out _) && !availableContextLengths.Contains(value))
                 availableContextLengths.Add(value);
             contextPresets.options = availableContextLengths.ConvertAll(v => new TMP_Dropdown.OptionData(
+                v == 32768 ? SettingsUiLanguage.T("32K（推荐）", "32K (Recommended)") :
                 v % 1024 == 0 ? (v / 1024) + "K" : SettingsUiLanguage.T("当前自定义：", "Current custom: ") + v));
             int index = availableContextLengths.IndexOf(value);
             EnsureDropdownPlaceholder(contextPresets, SettingsUiLanguage.T("旧配置", "Legacy"));
@@ -397,6 +397,7 @@ namespace EmbodiedNPC.Settings
             SetRow(thinking, "思考模式", "Thinking");
             SetRow(maxOutputTokens, "最大输出 Token", "Max output tokens");
             SetRow(contextLength, "主模型上下文长度", "Main Model Context Length");
+            RefreshContextPreset();
             SetRow(mainTimeout, "主模型超时（秒）", "Main timeout (seconds)");
             SetRow(embeddingEnabled, "启用 Embedding", "Enable embedding");
             SetRow(reuseMainApi, "复用主模型 API", "Reuse main model API");

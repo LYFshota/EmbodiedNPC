@@ -31,6 +31,16 @@ namespace EmbodiedNPC.Animation
         public float PlaybackTimeout(string gesture) => gesture == "nod" ? NodDuration + .5f :
             gesture == "wave" && waveClip != null && animator != null && animator.speed > 0 ?
                 waveClip.length / (WaveStateSpeed * animator.speed) + .75f : 0;
+        public AnimationClip WaveClip => waveClip;
+        public void RebindAnimator(Animator character)
+        {
+            OnDisable();
+            animator = character;
+            waveController = character == null ? null : character.runtimeAnimatorController;
+            waveLayer = -1;
+            if (isActiveAndEnabled) OnEnable();
+        }
+
         public void Configure(Animator character, MotionChannelCoordinator channels, HeadGazeController gaze)
         {
             OnDisable(); animator = character; motionChannels = channels; headGaze = gaze;

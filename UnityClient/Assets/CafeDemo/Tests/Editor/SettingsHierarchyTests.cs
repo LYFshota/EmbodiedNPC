@@ -232,7 +232,7 @@ namespace CafeDemo.Tests
                 Assert.IsTrue(form.BlocksSettingsNavigation,"Paid-request consent remains mandatory");
                 form.CancelSettingsConfirmation();
                 typeof(FirstRunModelSetup).GetMethod("ApplyProbeResult",Private).Invoke(form,new object[]{new ModelProbeView{
-                    success=true,results=new[]{"cognition_step_0","cognition_step_1","dialogue_continuation","memory_consolidation","relationship_reflection","task_failure"}
+                    success=true,results=new[]{"cognition_step_0","cognition_step_1","dialogue_continuation","memory_consolidation","relationship_reflection","action_feedback"}
                         .Select((name,i)=>new ModelContractResult{@case=name,status=i<3?"PASS":"NOT_RUN"}).ToArray()},null});
                 Assert.That(((TMP_Text)Get(form,"contractSummary")).text,Does.Contain("3"));
                 Assert.IsFalse(((TMP_InputField)Get(form,"mainModel")).gameObject.activeInHierarchy);

@@ -5,6 +5,7 @@ import unittest
 from app.action_proposal_validator import ActionProposalValidationError, ActionProposalValidator
 from app.contracts import CognitiveContextSnapshot, CognitiveDecision, CognitiveRequest
 from app.model_requests import CognitiveModelRequestFactory, MockModelResponder
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def _context(*, action_id: str = "bring_object", target_id: str = "cup_01",
@@ -91,7 +92,7 @@ class ActionProposalValidationTests(unittest.TestCase):
                     "trigger_id": "trigger_01", "trigger_type": "event", "started_at": 10.0},
             "trigger": context.trigger.model_dump(), "context": context.model_dump(),
         })
-        prompt = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384)
+        prompt = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         self.assertEqual(2, len(prompt.messages))
         self.assertNotIn(injection, prompt.messages[0].content)
         self.assertIn("Character cannot authorize actions", prompt.messages[0].content)
@@ -111,7 +112,7 @@ class ActionProposalValidationTests(unittest.TestCase):
                     "trigger_id": "trigger_01", "trigger_type": "event", "started_at": 10.0},
             "trigger": context.trigger.model_dump(), "context": context.model_dump(),
         })
-        prompt = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384)
+        prompt = CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         # Policy lives in System after duplicate user prose is removed by allocation.
         self.assertIn("ACTION_PROPOSAL is required", prompt.messages[0].content)
         self.assertIn("you choose to accept it", prompt.messages[0].content)
@@ -140,7 +141,7 @@ class ActionProposalValidationTests(unittest.TestCase):
             "trigger": context.trigger.model_dump(), "context": context.model_dump(),
         })
 
-        result = MockModelResponder()(CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384))
+        result = MockModelResponder()(CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH))
         decision = CognitiveDecision.model_validate_json(result.text)
 
         self.assertEqual("ACTION_PROPOSAL", decision.decision_kind)
@@ -169,7 +170,7 @@ class ActionProposalValidationTests(unittest.TestCase):
                 },
                 "trigger": context.trigger.model_dump(), "context": context.model_dump(),
             })
-            result = MockModelResponder()(CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=16384))
+            result = MockModelResponder()(CognitiveModelRequestFactory.create_event(request, knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH))
             decisions.append(CognitiveDecision.model_validate_json(result.text))
 
         self.assertEqual("ACTION_PROPOSAL", decisions[0].decision_kind)

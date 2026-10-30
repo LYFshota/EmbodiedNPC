@@ -19,6 +19,8 @@ namespace EmbodiedNPC.Animation
         public bool IsReady => playback?.IsReady == true;
         public bool PropVisible => rag != null && rag.activeInHierarchy;
         public float CurrentWeight => playback?.Weight ?? 0;
+        public void RebindAnimator(Animator character) => Configure(runner, motion, capability, character, rag);
+
         public void Configure(GoalPlanRunner task, MotionChannelCoordinator channels, CounterCleaningCapability station, Animator character, GameObject prop)
         { Unsubscribe(); playback?.Reset(); runner = task; motion = channels; capability = station; animator = character; rag = prop; Initialize(); if (isActiveAndEnabled) Subscribe(); }
         private void Initialize() { playback?.Reset(); playback = new InteractionLayerPlayback(animator, LayerName, "CleanCounter", rag); }

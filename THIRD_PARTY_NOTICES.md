@@ -11,7 +11,7 @@ Copyright 2026 LYFshota
 | Ao / 温予安 | 白い白米 / siroihakumai；具体 VRoid Hub 模型 5095341574274335587，VRM Public License 1.0 与本文件内设置共同适用。允许原始/改作再分发及个人/公司商用；保留政治宗教、反社会/仇恨表达限制。不是 CC0。页面来源已确认，精确发布修订对应缺口仍记录于角色来源。 |
 | Xingmang / 星芒 | 已正式采用[独立项目内非商业许可](UnityClient/Assets/VRMCompatibilityTest/Xingmang.LICENSE.md)：允许 EmbodiedNPC 及 Fork 内非商业使用、修改、改作及随源码/构建分发原模型或修改版，禁止未经单独授权商用、单独销售或独立素材包分发；保留辉歪歪署名及现有暴力/性用途限制。OWNER CONFIRMED；独立部件例外及商业标志 Disallow 见[资产清单](ThirdPartyNotices/Xingmang_Assets.md)，不限制 Apache-2.0 代码商用。 |
 | Cafe / CozyCafe 及派生纹理 | fangzhangmnm 原作、Wacky 改作贡献 CC BY 4.0；VamTastic 的 Anime Cafe 补片贡献来源 CC BY 已确认，具体版本未核实。各贡献分开记录，见 [来源与修改说明](ThirdPartyNotices/Cafe_Attribution.md)，不能把上游 4.0 自动套到 VaM 贡献。 |
-| KayKit / Quaternius 动画 | 保留各自 CC0 来源：[KayKit](UnityClient/Assets/CafeDemo/Animations/ThirdParty/KayKit/SOURCE.md)、[Quaternius](UnityClient/Assets/CafeDemo/Animations/ThirdParty/Quaternius/SOURCE.md) 及随附许可。本版站立及对话待机采用 KayKit 派生 Idle；原始动画授权和 Quaternius 来源记录继续保留。 |
+| KayKit / Quaternius 动画 | 保留各自 CC0 来源：[KayKit](UnityClient/Assets/CafeDemo/Animations/ThirdParty/KayKit/SOURCE.md)、[Quaternius](UnityClient/Assets/CafeDemo/Animations/ThirdParty/Quaternius/SOURCE.md) 及随附许可。站立姿态沿用已验收的派生 Idle；对话复用既有 Quaternius Idle_Talking_Loop / Sitting_Talking_Loop，并由项目表现层控制节奏和幅度。原始动画授权及来源继续保留；四种情绪图标使用现有 Noto 字体，没有新增外部图标素材。 |
 | Kenney Food Kit 2.0 / Furniture Kit 2.0 | 保留 [Kenney 原许可](ThirdPartyNotices/Kenney)，CC0；不由项目美术声明二次授权。 |
 | Coffee House Bump — OatCog；little_cafe.mp3 | [来源及 CC0 1.0](UnityClient/Assets/CafeDemo/Audio/BGM/SOURCE_AND_LICENSE.md)。项目方由原 WAV 转 MP3；自愿署名不新增 CC0 条件。 |
 | Noto Sans CJK | [SIL OFL 1.1](UnityClient/Assets/Fonts/NotoSansCJKsc/LICENSE-OFL-1.1.txt)，源 OTF、TMP 与许可保留；微软雅黑已排除。 |

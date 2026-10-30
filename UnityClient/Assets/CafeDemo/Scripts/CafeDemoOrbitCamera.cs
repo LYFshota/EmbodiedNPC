@@ -86,9 +86,7 @@ namespace CafeDemo
         private void Awake()
         {
             yaw = initialYaw; pitch = Mathf.Clamp(initialPitch, pitchLimits.x, pitchLimits.y); actualDistance = distance;
-            playerRenderers = playerRoot ? playerRoot.GetComponentsInChildren<Renderer>() : new Renderer[0];
-            originalVisibility = new bool[playerRenderers.Length];
-            for(int i=0;i<playerRenderers.Length;i++) originalVisibility[i]=playerRenderers[i].enabled;
+            RefreshPlayerVisual();
             InitializePresentationCamera();
         }
         private void OnEnable()
@@ -171,6 +169,15 @@ namespace CafeDemo
             transform.SetPositionAndRotation(target.position + direction * actualDistance, rotation);
             // In tight corners the capsule would otherwise fill the entire view. No walls are faded.
             SetPlayerVisible(actualDistance >= hidePlayerBelowDistance);
+        }
+        public void RefreshPlayerVisual()
+        {
+            // Restore the old cache before recaching, including a currently camera-hidden default.
+            SetPlayerVisible(true);
+            playerRenderers = playerRoot ? playerRoot.GetComponentsInChildren<Renderer>() : new Renderer[0];
+            originalVisibility = new bool[playerRenderers.Length];
+            for (int i = 0; i < playerRenderers.Length; i++) originalVisibility[i] = playerRenderers[i].enabled;
+            SetPlayerVisible(IsPresentationCameraActive || actualDistance >= hidePlayerBelowDistance);
         }
         private void SetPlayerVisible(bool visible)
         {

@@ -524,7 +524,9 @@ namespace CafeDemo.Tests
             return request;
         }
         private CognitiveResponse ModeResponse(CognitiveRequest request, string target, string text) => new() {
-            message_type = "cognitive_response", schema_version = "1.0", request_id = request.request_id,
+            // Follow the real captured envelope (Task 1.1 may already be admitted by startup).
+            message_type = "cognitive_response", schema_version = request.schema_version,
+            task_result = request.schema_version == "1.1" ? "none" : null, request_id = request.request_id,
             trace_id = request.trace_id, run_id = request.run.run_id, agent_entity_id = merchant.EntityId,
             decision = new CognitiveDecision { decision_kind = CognitiveDecisionKinds.DirectResponse,
                 utterance = text, target_daily_mode = target } };
@@ -866,7 +868,7 @@ namespace CafeDemo.Tests
             daily.WindowRestPoint.position = originalPoint;
         }
 
-        [UnityTest] public IEnumerator P2Cognition_RestChatThenWorkIntent_CommitsBeforeReplyAndSettingsStillWorks()
+        [UnityTest] public IEnumerator P2Cognition_RestChatThenWorkIntent_CommitsIndependentlyAndSettingsStillWorks()
         {
             Prepare(); Place(new Vector3(-5, .03f, -4));
             source.RequestMode(DailyBehaviorMode.Rest); yield return WaitMode(DailyBehaviorMode.Rest);
@@ -891,20 +893,23 @@ namespace CafeDemo.Tests
             Assert.That(driver.TryConsumeResponse(parsed), Is.True);
             Assert.That(daily.CurrentMode, Is.EqualTo(DailyBehaviorMode.Work), driver.LastDailyModeResult);
             Assert.That(whenPresented, Is.EqualTo(DailyBehaviorMode.Work));
-            Assert.That(presented, Is.EqualTo("好，那我接着忙了。"));
+            Assert.That(presented, Is.EqualTo(response.decision.utterance));
             Assert.That(driver.TryConsumeResponse(parsed), Is.False);
             Assert.That(daily.ModeRevision, Is.EqualTo(2));
             Assert.That(source.BreakRequested, Is.False, "Cognitive commit must synchronize the manual source condition.");
             Assert.That(merchant.GetComponent<GoalPlanRunner>().HasActiveTask, Is.False);
             Assert.That(world.WorldRevision, Is.EqualTo(revision));
             merchant.GetComponent<SpeechPresentationLifecycle>().Cancel();
-            yield return PrepareLocalSettings();
-            Object.FindAnyObjectByType<CafeDailyBehaviorSettings>().ModeDropdown.value = 1;
+            // Exercise the existing local mode control without rebuilding the unrelated model form.
+            var settings = Object.FindAnyObjectByType<CafeDailyBehaviorSettings>();
+            var root = new GameObject("OfflineDailyDebugRoot", typeof(RectTransform));
+            settings.BindDebugRoot(root.transform);
+            Assert.That(settings.ModeDropdown, Is.Not.Null); settings.ModeDropdown.value = 1;
             yield return WaitMode(DailyBehaviorMode.Rest);
-            Assert.That(daily.ModeRevision, Is.EqualTo(3)); AssertOffline();
+            Assert.That(daily.ModeRevision, Is.EqualTo(3)); AssertOffline(); Object.Destroy(root);
         }
 
-        [UnityTest] public IEnumerator P2Cognition_InvalidStaleAndBusyIntents_TruthfulFallbackAndPresentationRollback()
+        [UnityTest] public IEnumerator P2Cognition_InvalidStaleAndBusyIntents_PreserveReplyAndIndependentCommit()
         {
             Prepare(); Place(new Vector3(-5, .03f, -4));
             source.RequestMode(DailyBehaviorMode.Rest); yield return WaitMode(DailyBehaviorMode.Rest);
@@ -918,7 +923,7 @@ namespace CafeDemo.Tests
             driver.UtterancePresented += value => shown = value.Utterance;
             int revision = world.WorldRevision;
             foreach (string scenario in new[] { "illegal", "wrong_npc", "wrong_run", "profile_changed", "condition_changed", "expired",
-                "busy", "tampered_context", "presentation_failure", "no_candidates" })
+                "busy", "tampered_context", "no_candidates" })
             {
                 merchant.GetComponent<SpeechPresentationLifecycle>().Cancel();
                 shown = null;
@@ -936,22 +941,41 @@ namespace CafeDemo.Tests
                     .SetValue(daily, Time.unscaledTimeAsDouble - 31);
                 if (scenario == "busy") channels.BeginTaskMotion();
                 if (scenario == "tampered_context") request.context.daily_behavior.objective += " changed";
-                if (scenario == "presentation_failure") presenter.enabled = false;
                 if (scenario == "no_candidates") Assert.That(request.context.daily_behavior.candidates, Is.Empty);
                 int modeRevision = daily.ModeRevision;
                 bool consumed = driver.TryConsumeResponse(result);
+                // Retired: mode rejection replaced all dialogue. Presentation failure has its own fresh-scene case.
                 Assert.That(daily.CurrentMode, Is.EqualTo(DailyBehaviorMode.Rest), scenario);
                 Assert.That(daily.ModeRevision, Is.EqualTo(modeRevision), scenario);
-                Assert.That(shown, Is.Not.EqualTo(result.decision.utterance), scenario);
-                if (scenario == "wrong_npc" || scenario == "wrong_run" || scenario == "presentation_failure")
+                if (scenario == "wrong_npc" || scenario == "wrong_run")
                 { Assert.That(consumed, Is.False, scenario); Assert.That(shown, Is.Null, scenario); }
-                else { Assert.That(consumed, Is.True, scenario); Assert.That(shown, Does.Contain("还在休息"), scenario); }
+                else { Assert.That(consumed, Is.True, scenario); Assert.That(shown, Is.EqualTo(result.decision.utterance), scenario); }
                 channels.EndTaskMotion(); presenter.enabled = true;
                 fields.FindProperty("profile").objectReferenceValue = originalProfile; fields.ApplyModifiedPropertiesWithoutUndo();
                 orchestrator.CancelCurrentRun();
                 Assert.That(world.WorldRevision, Is.EqualTo(revision)); AssertOffline();
+                yield return null; // Let the real mode controller drain the condition-change event.
             }
             Object.Destroy(changed);
+        }
+
+        [UnityTest] public IEnumerator P2Cognition_PresentationFailure_PreservesIndependentModeCommit()
+        {
+            // Isolate speech failure from the preceding profile/condition/occupancy injections.
+            yield return PrepareRestForCombinedAction();
+            var driver = merchant.GetComponent<CognitiveRunDriver>();
+            var request = OwnPlayerRequest("回来工作吧，你最喜欢画什么？");
+            var presenter = merchant.GetComponent<DialogueBubbleCognitivePresenter>();
+            int modeRevision = daily.ModeRevision, worldRevision = world.WorldRevision;
+            string shown = null; driver.UtterancePresented += value => shown = value.Utterance;
+            presenter.enabled = false;
+            Assert.That(driver.TryConsumeResponse(ModeResponse(request, "work", "我喜欢画招牌。")), Is.False);
+            Assert.That(daily.CurrentMode, Is.EqualTo(DailyBehaviorMode.Work), driver.LastDailyModeResult);
+            Assert.That(daily.ModeRevision, Is.EqualTo(modeRevision + 1));
+            Assert.That(driver.LastDailyModeResult, Is.EqualTo("cognition_mode_applied"));
+            Assert.That(shown, Is.Null); Assert.That(merchant.GetComponent<GoalPlanRunner>().HasActiveTask, Is.False);
+            Assert.That(world.WorldRevision, Is.EqualTo(worldRevision));
+            presenter.enabled = true; AssertOffline();
         }
 
         private IEnumerator PrepareRestForCombinedAction()
@@ -1157,7 +1181,7 @@ namespace CafeDemo.Tests
             presenter.enabled = true;
         }
 
-        [UnityTest] public IEnumerator P2BClosure_CancelFeedbackAndClosedConversation_DoNotShowSuccessOrReopen()
+        [UnityTest] public IEnumerator P2BClosure_CancelFeedbackAcrossInputSessions_DoesNotShowSuccessOrReopen()
         {
             Prepare(); Place(merchant.transform.position + merchant.transform.forward * 1.3f);
             int worldBefore = world.WorldRevision;
@@ -1193,17 +1217,13 @@ namespace CafeDemo.Tests
                 Assert.That(driver.HasPendingActionOutcome || runner.HasActiveTask, Is.False);
                 var messages = bubbles.GetMessages(merchant.EntityId);
                 Assert.That(messages.Any(x => x.Text == "给你。"), Is.False);
-                if (lifecycle == "open")
+                Assert.That(messages.Last().Text, Is.EqualTo("这次没能把它拿给你。"));
+                Assert.That(messages.Last().Sequence, Is.GreaterThan(before));
+                Assert.That(driver.LastActionOutcomePresentationResult, Is.EqualTo("displayed"));
+                if (lifecycle != "open")
                 {
-                    Assert.That(messages.Last().Text, Is.EqualTo("这次没能把它拿给你。"));
-                    Assert.That(driver.LastActionOutcomePresentationResult, Is.EqualTo("displayed"));
-                }
-                else
-                {
-                    Assert.That(messages.Last().Sequence, Is.EqualTo(before), lifecycle);
                     if (lifecycle == "switch") Assert.That(dialogue.SelectedTarget.Entity, Is.EqualTo(customer));
                     else Assert.That(dialogue.IsPresentationVisible, Is.False);
-                    Assert.That(driver.LastActionOutcomePresentationResult, Is.EqualTo("lifecycle_unavailable"));
                 }
                 dialogue.ClearSession("closure_next"); AssertOffline(); yield return null;
             }
@@ -1228,16 +1248,16 @@ namespace CafeDemo.Tests
             AssertOffline();
         }
 
-        [UnityTest] public IEnumerator ModeReplyNaturalPolish_T1_RestCommitsBeforeConversationalBubble()
+        [UnityTest] public IEnumerator ModeDialogue_T1_RestCommitsAndPreservesConversationalBubble()
         {
             Prepare(); Place(new Vector3(-5, .03f, -4)); yield return Wait(1.2f);
             Assert.That(daily.CurrentMode, Is.EqualTo(DailyBehaviorMode.Work));
             var request = OwnPlayerRequest("你忙了这么久，不休息一下吗？");
             AssertModeReply(request, ModeResponse(request, "rest", "谢谢你惦记，我想缓一缓。"),
-                DailyBehaviorMode.Rest, "好，那我先歇会儿。");
+                DailyBehaviorMode.Rest, "谢谢你惦记，我想缓一缓。");
         }
 
-        [UnityTest] public IEnumerator ModeReplyNaturalPolish_T2_WorkDoesNotPromiseUnsubmittedCoffee()
+        [UnityTest] public IEnumerator ModeDialogue_T2_WorkSpeechCannotExecuteUnsubmittedCoffee()
         {
             Prepare(); Place(new Vector3(-5, .03f, -4));
             source.RequestMode(DailyBehaviorMode.Rest); yield return WaitMode(DailyBehaviorMode.Rest);
@@ -1258,26 +1278,26 @@ namespace CafeDemo.Tests
                     gesture=channels.ActiveGestureId, speech=merchant.GetComponent<SpeechPresentationLifecycle>().IsSpeaking }));
             // Existing real sample D: a mode-only decision also promised an unsubmitted latte.
             AssertModeReply(request, ModeResponse(request, "work", "好呀，我这就回来。拿铁要热的吧？先给我两分钟。"),
-                DailyBehaviorMode.Work, "好，那我接着忙了。");
+                DailyBehaviorMode.Work, "好呀，我这就回来。拿铁要热的吧？先给我两分钟。");
         }
 
-        [UnityTest] public IEnumerator ModeReplyNaturalPolish_T3_ContradictionAndFailedCommitStayTruthful()
+        [UnityTest] public IEnumerator ModeDialogue_T3_LanguageRiskDoesNotOverrideActualMode()
         {
             Prepare(); Place(new Vector3(-5, .03f, -4)); yield return Wait(1.2f);
             var request = OwnPlayerRequest("现在好像没什么要忙的，你要不要先去休息一会儿？");
             // Existing real sample B: Rest was selected while the text declined to rest.
             AssertModeReply(request, ModeResponse(request, "rest", "我还不累呀，店里待着就好。你要是想安静坐会儿，我一会儿不打扰你。"),
-                DailyBehaviorMode.Rest, "好，那我先歇会儿。");
+                DailyBehaviorMode.Rest, "我还不累呀，店里待着就好。你要是想安静坐会儿，我一会儿不打扰你。");
             merchant.GetComponent<SpeechPresentationLifecycle>().Cancel(); yield return Wait(1.2f);
             var expired = OwnPlayerRequest("回来工作吧。"); int modeRevision = daily.ModeRevision;
             typeof(DailyBehaviorController).GetField("capturedAt", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(daily, Time.unscaledTimeAsDouble - 31);
             AssertModeReply(expired, ModeResponse(expired, "work", "我已经回到吧台，拿铁也做好了。"),
-                DailyBehaviorMode.Rest, "我还在休息，这会儿先照旧。");
+                DailyBehaviorMode.Rest, "我已经回到吧台，拿铁也做好了。");
             Assert.That(daily.ModeRevision, Is.EqualTo(modeRevision));
         }
 
-        [UnityTest] public IEnumerator P2BModeOnly_OriginalRealPromise_IsReplacedWithoutCreatingAction()
+        [UnityTest] public IEnumerator P2BModeOnly_OriginalRealPromise_RemainsDialogueWithoutCreatingAction()
         {
             yield return PrepareRestForCombinedAction();
             var request = OwnPlayerRequest("薇薇，可以先结束休息，帮我拿个杯子吗？");
@@ -1286,7 +1306,7 @@ namespace CafeDemo.Tests
             int revision = world.WorldRevision;
             var failedSample = ModeResponse(request, "work", "好呀，休息先放一放。杯子我这就去拿，稍等一下。");
             Assert.That(driver.TryConsumeResponse(failedSample), Is.True);
-            Assert.That(shown, Is.EqualTo("好，那我接着忙了。"));
+            Assert.That(shown, Is.EqualTo(failedSample.decision.utterance));
             Assert.That(failedSample.decision.utterance, Is.EqualTo("好呀，休息先放一放。杯子我这就去拿，稍等一下。"));
             Assert.That(driver.LastValidatedGoalProposal, Is.Null);
             Assert.That(driver.HasPendingActionOutcome || merchant.GetComponent<GoalPlanRunner>().HasActiveTask, Is.False);

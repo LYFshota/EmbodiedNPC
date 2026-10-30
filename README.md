@@ -27,11 +27,21 @@ Unity 6 · Python / FastAPI · 长期记忆 · 本地 / 远程 LLM
 - **📅 持久任务与见面约定**：支持保存有限的委托，在下次来访或空闲时考虑执行，也可以延期或取消；口头答应不等于已保存任务，保存也不保证立即执行。
 - **⚙️ 模型配置**：主模型与 Embedding 可以分别配置，支持接入本地或远程模型服务。
 
-本版改善基础待机、轻微呼吸、自然垂臂和放松手型，并让玩家挥手时的非挥手侧更安静、上半身更稳定。
+本版新增可编辑的完整世界知识库（108 条默认知识）、世界知识与长期记忆的混合检索、十种热饮，以及更有变化的对话动作、面部表情和偶尔出现的四种情绪图标。玩家可在设置中导出完整体验数据 ZIP，用于自愿反馈分析。
+
+### 本版体验重点
+
+- **世界知识管理**：搜索、编辑、公共/指定 NPC 权限、常驻/按需模式、完整 JSON 导入导出与恢复默认。已有玩家目录不会被新版默认内容自动覆盖。
+- **历史与记忆**：世界知识预检索与模型按需补查知识/记忆，最多两次认知推理；区分计划、已发生经历和真正呈现过的对话，仍可能出错。
+- **十种热饮**：拿铁、卡布奇诺、美式、浓缩、馥芮白、摩卡、焦糖玛奇朵、热巧克力、抹茶拿铁、红茶，复用同一制作流程。
+- **角色表现**：四名 NPC 的动作幅度、节奏和表情略有区别；开心、疑惑、惊讶、思考图标仅偶尔出现。
+- **完整体验导出**：设置 → 通用与操作 → 支持与诊断。ZIP 包含聊天、记忆、人设、知识、关系及任务/行动等实际保存的数据；可能包含个人信息，请自行检查后决定是否分享。不会自动上传，API 凭据不在导出范围。
 
 ## 🚧 当前还有哪些不足？
 
 目前的实现主要围绕固定的咖啡馆 Demo 展开，对场景的依赖较强，NPC 的自主性和行为丰富度也比较有限。
+
+不同 VRM 的表情能力和视觉效果可能不同。
 
 模型仍可能理解偏差、重复提问，或给出不够自然、缺乏依据的回复，记忆整理与召回也可能出错。
 
@@ -49,7 +59,7 @@ Unity 6 · Python / FastAPI · 长期记忆 · 本地 / 远程 LLM
 
 ## 下载试玩
 
-[下载 Windows x64 试玩 ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.2-preview/EmbodiedNPC-Windows-x64-v0.1.2-preview.zip) · [Pre-release 说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.2-preview)。完整解压后运行 `Start.cmd`。试玩包内置 EmbeddingGemma-300M Q4 ONNX，用于记忆向量，不需要额外下载或配置 Embedding API；主模型（Main LLM，用于对话与决策）仍需自行配置。外部 Embedding 和关闭向量能力选项继续保留。
+[下载 Windows x64 试玩 ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.3-preview/EmbodiedNPC-Windows-x64-v0.1.3-preview.zip) · [Pre-release 说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.3-preview)。完整解压后运行 `Start.cmd`，无需安装 Unity Editor 或单独安装 Python。个人设置和记忆保存在包内 `UserData`，更新前请正常退出并备份。试玩包内置 EmbeddingGemma-300M Q4 ONNX，用于记忆向量，不需要额外下载或配置 Embedding API；主模型（Main LLM，用于对话与决策）仍需自行配置。外部 Embedding 和关闭向量能力选项继续保留。
 
 ## 🚀 如何从源码运行？
 

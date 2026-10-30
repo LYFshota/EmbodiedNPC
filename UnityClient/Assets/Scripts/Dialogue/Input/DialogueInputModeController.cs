@@ -75,7 +75,7 @@ namespace EmbodiedNPC.Dialogue.Input
             // Other UI (including a settings entry or modal) owns its pointer click.
             foreach (RaycastResult hit in pointerHits)
                 if (hit.module is GraphicRaycaster) return false;
-            dialogueController.HideDialoguePresentation();
+            dialogueController.HideDialoguePresentation("outside_click");
             return true;
         }
 

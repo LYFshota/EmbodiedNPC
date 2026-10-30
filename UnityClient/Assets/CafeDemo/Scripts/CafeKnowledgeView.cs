@@ -50,9 +50,9 @@ namespace CafeDemo
             input.richText = false; input.resetOnDeActivation = false;
             if (input.placeholder is TMP_Text placeholder)
             {
-                string zh = name == "KnowledgeSearch" ? "搜索名称或内容" : name == "RelatedKnowledgeSearch" ? "搜索关联知识名称" :
+                string zh = name == "KnowledgeSearch" ? "搜索名称、ID 或正文" : name == "RelatedKnowledgeSearch" ? "搜索关联知识名称" :
                     name == "AttributeKey" ? "属性名称" : name == "AttributeValue" ? "属性值" : "输入内容";
-                string en = name == "KnowledgeSearch" ? "Search name or content" : name == "RelatedKnowledgeSearch" ? "Search related knowledge" :
+                string en = name == "KnowledgeSearch" ? "Search name, ID or content" : name == "RelatedKnowledgeSearch" ? "Search related knowledge" :
                     name == "AttributeKey" ? "Attribute key" : name == "AttributeValue" ? "Attribute value" : "Enter text";
                 labels.Add((placeholder, zh, en)); placeholder.text = SettingsUiLanguage.T(zh, en);
             }
@@ -64,8 +64,7 @@ namespace CafeDemo
                 var scrollbar = bar.GetComponent<Scrollbar>(); scrollbar.direction = Scrollbar.Direction.BottomToTop;
                 input.verticalScrollbar = scrollbar;
                 input.textViewport.offsetMax = new Vector2(-19, input.textViewport.offsetMax.y);
-                SettingsPanelTheme.Surface(bar.GetComponent<Image>(), SettingsPanelTheme.Row);
-                SettingsPanelTheme.Surface(scrollbar.handleRect.GetComponent<Image>(), SettingsPanelTheme.Muted);
+                SettingsPanelTheme.StyleScrollbar(scrollbar);
             }
             SettingsPanelTheme.Apply(go); return input;
         }
@@ -74,6 +73,13 @@ namespace CafeDemo
             var go = TMP_DefaultControls.CreateDropdown(default); go.name = name; go.transform.SetParent(parent, false);
             var dropdown = go.GetComponent<TMP_Dropdown>();
             foreach (var text in go.GetComponentsInChildren<TMP_Text>(true)) text.font = font;
+            SettingsDropdownClickToggle.Ensure(dropdown, CafeKnowledgeDropdownBounds.MaxHeight);
+            var scroll = dropdown.template.GetComponent<ScrollRect>();
+            scroll.vertical = true; scroll.horizontal = false; scroll.scrollSensitivity = 32;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            scroll.verticalScrollbar.gameObject.SetActive(true);
+            go.AddComponent<CafeKnowledgeDropdownBounds>();
             choices.Add((dropdown, zh, en)); SetChoices(dropdown, zh, en);
             SettingsPanelTheme.Apply(go); return dropdown;
         }
@@ -99,6 +105,7 @@ namespace CafeDemo
         {
             var go = DefaultControls.CreateScrollView(default); go.name = name; go.transform.SetParent(parent, false);
             var scroll = go.GetComponent<ScrollRect>(); scroll.horizontal = false; scroll.scrollSensitivity = 32;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
             if (scroll.horizontalScrollbar != null) scroll.horizontalScrollbar.gameObject.SetActive(false);
             var content = scroll.content; content.anchorMin = new Vector2(0, 1); content.anchorMax = Vector2.one;
             content.pivot = new Vector2(.5f, 1); content.sizeDelta = Vector2.zero;
@@ -107,8 +114,7 @@ namespace CafeDemo
             layout.childForceExpandWidth = true; layout.childForceExpandHeight = false;
             content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             go.GetComponent<Image>().color = new Color(0, 0, 0, 0);
-            SettingsPanelTheme.Surface(scroll.verticalScrollbar.GetComponent<Image>(), SettingsPanelTheme.Row);
-            SettingsPanelTheme.Surface(scroll.verticalScrollbar.handleRect.GetComponent<Image>(), SettingsPanelTheme.Muted);
+            SettingsPanelTheme.StyleScrollbar(scroll.verticalScrollbar);
             return content;
         }
         public void RefreshLanguage()

@@ -116,7 +116,7 @@ namespace CafeDemo.Tests
                 yield return Wait(.3f);
                 Assert.That(gesture.WaveWeight, Is.Zero); Assert.That(animator.GetCurrentAnimatorStateInfo(2).fullPathHash,
                     Is.EqualTo(Animator.StringToHash(GestureController.EmptyStateName)));
-                Assert.That(expression.Speech.IsSpeaking, Is.True); Assert.That(talking.CurrentWeight, Is.GreaterThan(.9f));
+                Assert.That(expression.Speech.IsSpeaking, Is.True); Assert.That(talking.ActivationWeight, Is.GreaterThan(.9f));
                 Assert.That(animator.GetCurrentAnimatorStateInfo(1).normalizedTime, Is.GreaterThan(phase + .5f));
                 expression.Speech.EndPlayback(expression.Speech.Current.Id); yield return Wait(.3f);
                 Assert.That(expression.State, Is.EqualTo(DialoguePresentationState.Listening)); Assert.That(talking.CurrentWeight, Is.Zero);
@@ -174,12 +174,7 @@ namespace CafeDemo.Tests
             Assert.That(Present(merchant), Is.True); Assert.That(channels.ActiveGestureId, Is.Zero);
             so.FindProperty("waveClip").objectReferenceValue = clip; so.ApplyModifiedPropertiesWithoutUndo();
             var cafeController = animator.runtimeAnimatorController;
-            var idleController = new AnimatorController { name = "MissingWaveLayerTestFixture" };
-            idleController.AddParameter("Speed", AnimatorControllerParameterType.Float);
-            idleController.AddLayer("Base Layer");
-            var idleState = idleController.layers[0].stateMachine.AddState("Idle");
-            idleState.motion = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/CafeDemo/Animations/ThirdParty/Quaternius/Idle_Loop.anim");
-            idleController.layers[0].stateMachine.defaultState = idleState;
+            var idleController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Pack_Character_LowPoly/Animations/Char_Lowpoly_AC.controller");
             // Match the configured controller, so the missing-layer gate is exercised independently.
             so.FindProperty("waveController").objectReferenceValue = idleController; so.ApplyModifiedPropertiesWithoutUndo();
             animator.runtimeAnimatorController = idleController; animator.Rebind(); animator.Update(0);
@@ -187,7 +182,6 @@ namespace CafeDemo.Tests
             Assert.That(gesture.CanPlay("wave"), Is.False);
             so.FindProperty("waveController").objectReferenceValue = cafeController; so.ApplyModifiedPropertiesWithoutUndo();
             animator.runtimeAnimatorController = cafeController; animator.Rebind(); animator.Update(0);
-            Object.Destroy(idleController);
             Assert.That(gesture.CanPlay("wave"), Is.True);
             Start(merchant); animator.Update(.01f); // Evaluate the queued Play before forcing the failed-entry state.
             animator.Play(Animator.StringToHash(GestureController.EmptyStateName), 2); animator.Update(.01f);

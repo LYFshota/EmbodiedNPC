@@ -28,9 +28,10 @@ def embedding_text(entry: KnowledgeEntry) -> str:
 
 
 def content_hash(entry: KnowledgeEntry, bundle_version: str) -> str:
-    # Include version/source/access too: metadata-only changes must invalidate derived rows.
-    document = compact(dict(projection_version=TEXT_VERSION, bundle_version=bundle_version,
-                            entry=entry.model_dump(mode="json")))
+    # Keep bundle_version in the calling contract; it is not encoder input.
+    # Exactly the encoder input plus its projection version. Catalog revisions,
+    # ACL, usage and bookkeeping cannot change a semantic vector.
+    document = compact(dict(projection_version=TEXT_VERSION, text=embedding_text(entry)))
     return hashlib.sha256(document.encode("utf-8")).hexdigest()
 
 
@@ -48,15 +49,22 @@ class KnowledgeEmbeddingIndex:
     def __init__(self, store, path: Path):
         self.store, self.path = store, Path(path)
 
-    def connect(self):
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        db = sqlite3.connect(self.path, timeout=2)
+    def connect(self, *, readonly=False):
+        if readonly:
+            db = sqlite3.connect(self.path.resolve().as_uri() + "?mode=ro", uri=True, timeout=2)
+        else:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            db = sqlite3.connect(self.path, timeout=2)
         db.row_factory = sqlite3.Row
         try:
             # Refuse a Memory database instead of installing Knowledge tables into it.
             names = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             if names - {"knowledge_embeddings"} or db.execute("PRAGMA user_version").fetchone()[0] not in (0, 1):
                 raise ValueError("KNOWLEDGE_INDEX_DATABASE_INCOMPATIBLE")
+            if readonly:
+                if "knowledge_embeddings" not in names:
+                    raise ValueError("KNOWLEDGE_INDEX_DATABASE_INCOMPATIBLE")
+                return db
             db.execute("CREATE TABLE IF NOT EXISTS knowledge_embeddings ("
                        "knowledge_id TEXT NOT NULL, space_key TEXT NOT NULL, content_hash TEXT NOT NULL, "
                        "dimension INTEGER NOT NULL, vector_blob BLOB NOT NULL, "
@@ -69,32 +77,40 @@ class KnowledgeEmbeddingIndex:
             raise
 
     def load_valid(self, entries, bundle_version, space_key, dimensions=None):
-        if not entries:
+        if not entries or not self.path.exists():
             return {}
         by_id = {e.knowledge_id: e for e in entries}
-        # Only these authorized IDs are read for a foreground query. No global ANN search.
-        with closing(self.connect()) as db:
-            rows = db.execute("SELECT * FROM knowledge_embeddings WHERE space_key=? AND knowledge_id IN ("
-                              + ",".join("?" for _ in by_id) + ")", (space_key, *by_id))
+        # Foreground reads neither initialize nor migrate the derived database.
+        # Every batch contains only IDs already authorized by the caller.
+        with closing(self.connect(readonly=True)) as db:
+            batch_size = min(512, db.getlimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER) - 1)
+            if batch_size < 1:
+                raise ValueError("KNOWLEDGE_INDEX_PARAMETER_LIMIT")
+            ids = tuple(by_id)
             result = {}
-            for row in rows:
-                if (row["content_hash"] != content_hash(by_id[row["knowledge_id"]], bundle_version)
-                        or dimensions not in (None, row["dimension"])):
-                    continue
-                vector = decode(row["vector_blob"], row["dimension"])
-                if vector is not None:
-                    result[row["knowledge_id"]] = vector
+            for offset in range(0, len(ids), batch_size):
+                batch = ids[offset:offset + batch_size]
+                rows = db.execute("SELECT * FROM knowledge_embeddings WHERE space_key=? AND knowledge_id IN ("
+                                  + ",".join("?" for _ in batch) + ")", (space_key, *batch))
+                for row in rows:
+                    if (row["content_hash"] != content_hash(by_id[row["knowledge_id"]], bundle_version)
+                            or dimensions not in (None, row["dimension"])):
+                        continue
+                    vector = decode(row["vector_blob"], row["dimension"])
+                    if vector is not None:
+                        result[row["knowledge_id"]] = vector
             return result
 
     def pending(self, space_key, limit, dimensions=None):
         bundle, _, entries = self.store.snapshot()
-        ids = [e.knowledge_id for e in entries]
+        ids = {e.knowledge_id for e in entries}
         with closing(self.connect()) as db, db:
-            if ids:
-                db.execute("DELETE FROM knowledge_embeddings WHERE knowledge_id NOT IN ("
-                           + ",".join("?" for _ in ids) + ")", ids)
-            else:
-                db.execute("DELETE FROM knowledge_embeddings")
+            stored_ids = {row[0] for row in db.execute("SELECT DISTINCT knowledge_id FROM knowledge_embeddings")}
+            # Chunking NOT IN would delete still-current IDs from other chunks.
+            # Delete only the proven set difference with one bound ID at a time.
+            db.executemany("DELETE FROM knowledge_embeddings WHERE knowledge_id=?",
+                           ((key,) for key in sorted(stored_ids - ids)))
+        entries = tuple(e for e in entries if e.usage == "retrieval")
         valid = self.load_valid(entries, bundle.bundle_version, space_key, dimensions)
         return [(e, bundle.bundle_version) for e in entries if e.knowledge_id not in valid][:limit]
 
@@ -103,7 +119,8 @@ class KnowledgeEmbeddingIndex:
         current_bundle, _, current_entries = self.store.snapshot()
         current = next((e for e in current_entries if e.knowledge_id == entry.knowledge_id), None)
         expected = content_hash(entry, bundle_version)
-        if current is None or content_hash(current, current_bundle.bundle_version) != expected:
+        if (current is None or current.usage != "retrieval"
+                or content_hash(current, current_bundle.bundle_version) != expected):
             return False
         with closing(self.connect()) as db, db:
             db.execute("INSERT INTO knowledge_embeddings VALUES(?,?,?,?,?) "
@@ -131,9 +148,9 @@ class KnowledgeEmbeddingIndexer(CanonicalEmbeddingIndexer):
             return 0  # Reuse the same pause/Cloud-consent gate as Memory.
         space = knowledge_space(self.provider)
         dimensions = getattr(self.provider, "dimensions", None)
-        # Inspect the bounded catalog, not only the first batch: lexical-only
-        # long documents must not starve shorter entries behind them.
-        pending = await _worker_call(self.index.pending, space, 128, dimensions)
+        # Inspect the complete bounded-file catalog. A fixed prefix can consist
+        # entirely of lexical-only long entries; encoding attempts remain limited.
+        pending = await _worker_call(self.index.pending, space, None, dimensions)
         count = attempted = 0
         for entry, version in pending:
             try:

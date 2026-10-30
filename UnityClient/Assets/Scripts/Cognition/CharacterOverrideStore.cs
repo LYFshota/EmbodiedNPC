@@ -50,6 +50,7 @@ namespace EmbodiedNPC.Cognition
         private CharacterOverrideStore() { loadRejected = true; }
         public string FilePath => filePath;
         public bool LoadRejected => loadRejected;
+        public CharacterOverride[] Snapshot() => characters.Values.OrderBy(x => x.character_id, StringComparer.Ordinal).Select(Copy).ToArray();
 
         public CharacterOverrideStore(string path)
         {

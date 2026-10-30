@@ -10,6 +10,7 @@ from app.contracts import CognitiveContextSnapshot, CognitiveRequest
 from app.local_model_scheduler import PrioritizedModelExecutor
 from app.providers import ModelResult
 from test_action_proposal_validation import _context
+from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
 
 def request(text: str, *, agent_id: str = "npc_cafe_01",
@@ -53,7 +54,7 @@ class RecordingLedger:
 class RecordingProvider:
     name = "scripted"
     model = "recent-dialogue-test"
-    context_length = 16384
+    context_length = DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
     def __init__(self):
         self.prompts = []
@@ -89,7 +90,7 @@ class RecentDialogueCognitionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("PRIOR DIALOGUE TURNS JSON: []", provider.prompts[0])
         # The allocator removes duplicate user prose; inspect the policy actually sent in System.
         from app.model_requests import CognitiveModelRequestFactory
-        wire = CognitiveModelRequestFactory.create_event(request("我之前最喜欢喝什么茶？"), knowledge_context_limit=16384)
+        wire = CognitiveModelRequestFactory.create_event(request("我之前最喜欢喝什么茶？"), knowledge_context_limit=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
         self.assertIn("Missing history means uncertainty, not proof of absence", wire.messages[0].content)
         self.assertIn("about a favorite coffee does not establish a favorite tea", wire.messages[0].content)
 

@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using EmbodiedNPC.Cognition;
 using EmbodiedNPC.Communication;
+using EmbodiedNPC.Dialogue;
+using EmbodiedNPC.Dialogue.Validation;
 using EmbodiedNPC.Events;
 using EmbodiedNPC.Memory;
 using EmbodiedNPC.Planning;
@@ -107,6 +109,28 @@ namespace EmbodiedNPC.Tests
             Assert.AreEqual("conversation_01", feedback[0].ConversationId);
             Assert.AreEqual(category ?? "COGNITIVE_REQUEST_FAILED", feedback[0].Reason);
         }
+        [Test]
+        public void MissingRecoveryEndsRunAndLateOldResultCannotEnterNextRun()
+        {
+            Setup(out var orchestrator, out var driver, out var presenter, out var request);
+            Assert.That(driver.TryConsumeFailure(new CognitiveTransportFailure(request.request_id,
+                request.run.run_id, request.run.agent_entity_id, "COGNITIVE_TASK_COMMAND_NOT_FOUND", request.trace_id)), Is.True);
+            Assert.That(orchestrator.LastRun.State, Is.EqualTo(CognitiveRunState.Failed));
+            Assert.That(driver.TryConsumeResponse(Response(request, "DIRECT_RESPONSE")), Is.False);
+            var trigger = new CognitiveTrigger("after_missing", CognitiveTriggerTypes.Event,
+                request.run.agent_entity_id, "next_event", 2d, AgentEventTypes.PlayerEnteredArea);
+            Assert.That(orchestrator.TryStartRun(trigger, out var nextRun), Is.True);
+            var next = Request(nextRun, trigger);
+            next.request_id = "after_missing"; next.trace_id = "next_trace";
+            next.context.current_event.event_id = "next_event";
+            Assert.That(driver.TryOwnRequest(next), Is.True);
+            Assert.That(driver.TryConsumeResponse(Response(request, "DIRECT_RESPONSE")), Is.False);
+            Assert.That(driver.PendingRequest, Is.SameAs(next));
+            Assert.That(driver.TryConsumeResponse(Response(next, "DIRECT_RESPONSE")), Is.True);
+            Assert.That(driver.TryConsumeResponse(Response(next, "DIRECT_RESPONSE")), Is.False);
+            Assert.That(presenter.Count, Is.EqualTo(1));
+        }
+
         [Test] public void CapacityFailureRejectsStaleOwnershipBeforeUpdatingPersistentFeedback()
         {
             Setup(out _,out var driver,out _,out var request);
@@ -368,7 +392,7 @@ namespace EmbodiedNPC.Tests
         }
 
         [Test]
-        public void SuccessfulActionHandoff_WaitsWithSameActiveRunAndOwnership()
+        public void AcceptedActionHandoff_ReleasesForegroundRunAndRetainsOwnership()
         {
             Setup(out AgentOrchestrator orchestrator, out CognitiveRunDriver driver,
                 out _, out _);
@@ -377,8 +401,10 @@ namespace EmbodiedNPC.Tests
 
             Assert.That(driver.TryBeginActionWait(ownership), Is.True);
             Assert.That(run.State, Is.EqualTo(CognitiveRunState.WaitingActionResult));
-            Assert.That(orchestrator.CurrentRun, Is.SameAs(run));
-            Assert.That(orchestrator.HasActiveRun, Is.True);
+            Assert.That(driver.CompleteAcceptedActionRun(ownership), Is.True);
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
+            Assert.That(orchestrator.CurrentRun, Is.Null);
+            Assert.That(orchestrator.HasActiveRun, Is.False);
             Assert.That(driver.PendingActionOutcome, Is.SameAs(ownership));
         }
 
@@ -396,7 +422,7 @@ namespace EmbodiedNPC.Tests
         }
 
         [Test]
-        public void CorrelatedFailedOutcome_FailsSameRunWithoutCreatingSecondRun()
+        public void CorrelatedFailedOutcome_PreservesCompletedCognitionWithoutCreatingSecondRun()
         {
             SetupWaiting(out AgentOrchestrator orchestrator, out CognitiveRunDriver driver,
                 out CognitiveRun run, out CognitiveActionOutcomeOwnership ownership);
@@ -406,7 +432,7 @@ namespace EmbodiedNPC.Tests
             Assert.That(driver.TryConsumeActionOutcome(Outcome(ownership, PlanExecutionStatus.Failed)), Is.True);
             Assert.That(receiver.Receive(ActionFailedEvent(ownership)), Is.True);
 
-            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Failed));
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
             Assert.That(orchestrator.LastRun, Is.SameAs(run));
             Assert.That(orchestrator.CurrentRun, Is.Null);
             Assert.That(bridge.LastTrigger, Is.Null);
@@ -415,27 +441,27 @@ namespace EmbodiedNPC.Tests
         }
 
         [Test]
-        public void CorrelatedCancelledOutcome_CancelsSameRun()
+        public void CorrelatedCancelledOutcome_DoesNotRewriteCompletedCognition()
         {
             SetupWaiting(out _, out CognitiveRunDriver driver,
                 out CognitiveRun run, out CognitiveActionOutcomeOwnership ownership);
 
             Assert.That(driver.TryConsumeActionOutcome(Outcome(ownership, PlanExecutionStatus.Cancelled)), Is.True);
-            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Cancelled));
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
         }
 
         [Test]
-        public void CorrelatedTimedOutOutcome_FailsSameRun()
+        public void CorrelatedTimedOutOutcome_DoesNotRewriteCompletedCognition()
         {
             SetupWaiting(out _, out CognitiveRunDriver driver,
                 out CognitiveRun run, out CognitiveActionOutcomeOwnership ownership);
 
             Assert.That(driver.TryConsumeActionOutcome(Outcome(ownership, PlanExecutionStatus.TimedOut)), Is.True);
-            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Failed));
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
         }
 
         [Test]
-        public void WrongProposalId_IsIgnoredWhileRunKeepsWaiting()
+        public void WrongProposalId_IsIgnoredWhileExecutionKeepsOwnership()
         {
             SetupWaiting(out AgentOrchestrator orchestrator, out CognitiveRunDriver driver,
                 out CognitiveRun run, out CognitiveActionOutcomeOwnership ownership);
@@ -444,13 +470,13 @@ namespace EmbodiedNPC.Tests
                 ownership.TraceId, "bring_object", ownership.AgentEntityId, "cup_01", "player_01",
                 PlanExecutionStatus.Succeeded, string.Empty, 99, 2d);
             Assert.That(driver.TryConsumeActionOutcome(wrong), Is.False);
-            Assert.That(run.State, Is.EqualTo(CognitiveRunState.WaitingActionResult));
-            Assert.That(orchestrator.HasActiveRun, Is.True);
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
+            Assert.That(orchestrator.HasActiveRun, Is.False);
             Assert.That(driver.PendingActionOutcome, Is.SameAs(ownership));
         }
 
         [Test]
-        public void WrongProposalRevision_IsIgnoredWhileRunKeepsWaiting()
+        public void WrongProposalRevision_IsIgnoredWhileExecutionKeepsOwnership()
         {
             SetupWaiting(out AgentOrchestrator orchestrator, out CognitiveRunDriver driver,
                 out CognitiveRun run, out CognitiveActionOutcomeOwnership ownership);
@@ -459,8 +485,8 @@ namespace EmbodiedNPC.Tests
                 ownership.TraceId, "bring_object", ownership.AgentEntityId, "cup_01", "player_01",
                 PlanExecutionStatus.Succeeded, string.Empty, 0, 2d);
             Assert.That(driver.TryConsumeActionOutcome(wrong), Is.False);
-            Assert.That(run.State, Is.EqualTo(CognitiveRunState.WaitingActionResult));
-            Assert.That(orchestrator.HasActiveRun, Is.True);
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
+            Assert.That(orchestrator.HasActiveRun, Is.False);
         }
 
         [Test]
@@ -530,232 +556,6 @@ namespace EmbodiedNPC.Tests
         }
 
         [Test]
-        public void FailedCognitiveRun_TaskFailureTicketCanOnlyExplainItsOwnedProposal()
-        {
-            Setup(out AgentOrchestrator orchestrator, out CognitiveRunDriver driver,
-                out CognitiveTestPresenter presenter, out CognitiveRequest request);
-            request.context.current_event.event_type = AgentEventTypes.PlayerUtterance;
-            request.context.current_event.target_entity_id = request.run.agent_entity_id;
-            request.context.relevant_player = new CognitivePlayerDto
-                { player_entity_id = "player_01", display_name = "玩家" };
-            GoalPlanRunner runner = AttachRejectingHandoff(driver, orchestrator, presenter);
-            BackendWebSocketClient backend = driver.gameObject.AddComponent<BackendWebSocketClient>();
-            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
-            typeof(GoalPlanRunner).GetMethod("OnDisable", flags).Invoke(runner, null);
-            typeof(GoalPlanRunner).GetField("backendClient", flags).SetValue(runner, backend);
-            typeof(GoalPlanRunner).GetMethod("OnEnable", flags).Invoke(runner, null);
-            CognitiveRun originalRun = orchestrator.CurrentRun;
-            int outcomes = 0;
-            runner.GoalOutcomePublished += _ => outcomes++;
-            LogAssert.Expect(LogType.Warning, new Regex("\\[GoalPlan\\] REJECTED code=GoalMissing"));
-
-            Assert.That(driver.TryConsumeResponse(ActionResponse(request)), Is.False);
-            Assert.That(originalRun.State, Is.EqualTo(CognitiveRunState.Failed));
-            Assert.That(orchestrator.CurrentRun, Is.Null);
-            Assert.That(driver.PendingActionOutcome, Is.Null);
-            Assert.That(runner.ActiveProposalId,
-                Is.EqualTo(GoalPlanRunner.NormalizeProposalId(request.request_id)));
-            Assert.That(runner.ActiveProposalRevision, Is.Zero);
-            Assert.That(runner.ActiveTraceId, Is.EqualTo(request.trace_id));
-            Assert.That(runner.HasActiveTask, Is.False);
-
-            // Simulate the exact ticket that SendSemanticFailureAsync registers only when connected.
-            // Initial exact admission has no authorized replacement, so revision cannot start an action.
-            TaskFailureReport report = new()
-            {
-                request_id = "failure-request-owned", trace_id = "failure-trace-owned",
-                world_revision = 0, proposal_id = runner.ActiveProposalId,
-                proposal_revision = runner.ActiveProposalRevision,
-                failure_stage = "proposal_validation", failure_code = "GoalMissing",
-                failed_goal = ActionResponse(request).validated_goal,
-                involved_entity_ids = new[] { "cup_01", "player_01" },
-                retryable = false, allowed_alternatives = System.Array.Empty<TaskAlternative>(),
-            };
-            Assert.That(report.IsValid, Is.True);
-            var inbox = (TaskFailureResponseInbox)typeof(BackendWebSocketClient)
-                .GetProperty("FailureInbox", flags).GetValue(backend);
-            Assert.That(inbox.Register(report), Is.True);
-            typeof(GoalPlanRunner).GetField("pendingFailureRequestId", flags)
-                .SetValue(runner, report.request_id);
-            Assert.That(backend.PendingRequestCount, Is.EqualTo(1));
-            Assert.That(runner.HasActiveTask, Is.True); // Owned continuation ticket, no executing plan.
-
-            string Reply(string requestId, string traceId, string proposalId, int revision,
-                string resolution, string selected) =>
-                "{\"message_type\":\"task_failure_response\",\"schema_version\":\"1.0\"," +
-                $"\"request_id\":\"{requestId}\",\"trace_id\":\"{traceId}\"," +
-                $"\"world_revision\":0,\"proposal_id\":\"{proposalId}\"," +
-                $"\"proposal_revision\":{revision},\"resolution\":\"{resolution}\"," +
-                "\"utterance\":\"目前无法执行。\",\"emotion\":\"neutral\",\"gesture\":\"none\"," +
-                $"\"selected_alternative_id\":\"{selected}\"}}";
-
-            Assert.That(backend.ProcessIncomingJson(Reply("other", report.trace_id,
-                report.proposal_id, 1, "explain", "")), Is.False);
-            Assert.That(backend.ProcessIncomingJson(Reply(report.request_id, "other-trace",
-                report.proposal_id, 1, "explain", "")), Is.False);
-            Assert.That(backend.ProcessIncomingJson(Reply(report.request_id, report.trace_id,
-                "other-proposal", 1, "explain", "")), Is.False);
-            Assert.That(backend.ProcessIncomingJson(Reply(report.request_id, report.trace_id,
-                report.proposal_id, 2, "explain", "")), Is.False);
-            Assert.That(backend.ProcessIncomingJson(Reply(report.request_id, report.trace_id,
-                report.proposal_id, 1, "revise", "invented-target")), Is.False);
-            Assert.That(backend.PendingRequestCount, Is.EqualTo(1));
-            Assert.That(runner.ActiveProposalRevision, Is.Zero);
-
-            GoalPlanPresentation presentation = default;
-            runner.PresentationReady += value => presentation = value;
-            string valid = Reply(report.request_id, report.trace_id, report.proposal_id,
-                1, "explain", "");
-            Assert.That(backend.ProcessIncomingJson(valid), Is.True);
-            Assert.That(presentation.Kind, Is.EqualTo(GoalPlanPresentationKind.Clarification));
-            Assert.That(presentation.Code, Is.EqualTo("TASK_EXPLAIN"));
-            Assert.That(backend.ProcessIncomingJson(valid), Is.False); // Single-use ticket.
-            Assert.That(backend.PendingRequestCount, Is.Zero);
-            Assert.That(runner.ActiveProposalId, Is.Empty);
-            Assert.That(runner.HasActiveTask, Is.False);
-            Assert.That(runner.IsExecuting, Is.False);
-            Assert.That(outcomes, Is.Zero);
-            Assert.That(originalRun.State, Is.EqualTo(CognitiveRunState.Failed));
-            Assert.That(orchestrator.CurrentRun, Is.Null);
-            Assert.That(driver.PendingActionOutcome, Is.Null);
-            Assert.That(presenter.Count, Is.Zero);
-        }
-
-        [UnityTest]
-        public IEnumerator FailedCognitiveRun_ConnectedTaskFailureReportKeepsExactLineage()
-        {
-            TcpListener listener = new(IPAddress.Loopback, 0);
-            listener.Start();
-            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            TaskCompletionSource<bool> releaseSocket = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            TaskCompletionSource<string> reportReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            Task serverTask = Task.Run(() =>
-            {
-                try
-                {
-                using TcpClient client = listener.AcceptTcpClient();
-                using NetworkStream stream = client.GetStream();
-                List<byte> headerBytes = new();
-                while (headerBytes.Count < 16384)
-                {
-                    int next = stream.ReadByte();
-                    if (next < 0) throw new EndOfStreamException();
-                    headerBytes.Add((byte)next);
-                    int n = headerBytes.Count;
-                    if (n >= 4 && headerBytes[n - 4] == 13 && headerBytes[n - 3] == 10 &&
-                        headerBytes[n - 2] == 13 && headerBytes[n - 1] == 10) break;
-                }
-                string headers = Encoding.ASCII.GetString(headerBytes.ToArray());
-                string key = null;
-                foreach (string line in headers.Split(new[] { "\r\n" }, StringSplitOptions.None))
-                    if (line.StartsWith("Sec-WebSocket-Key:", StringComparison.OrdinalIgnoreCase))
-                        key = line.Substring("Sec-WebSocket-Key:".Length).Trim();
-                if (key == null) throw new InvalidDataException("Missing WebSocket key");
-                byte[] hash;
-                using (SHA1 sha = SHA1.Create())
-                    hash = sha.ComputeHash(Encoding.ASCII.GetBytes(
-                        key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"));
-                string handshake = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n" +
-                    "Connection: Upgrade\r\nSec-WebSocket-Accept: " + Convert.ToBase64String(hash) + "\r\n\r\n";
-                byte[] handshakeBytes = Encoding.ASCII.GetBytes(handshake);
-                stream.Write(handshakeBytes, 0, handshakeBytes.Length);
-
-                int first = stream.ReadByte();
-                int second = stream.ReadByte();
-                if (first < 0 || second < 0 || (first & 15) != 1 || (second & 128) == 0)
-                    throw new InvalidDataException("Expected masked text frame");
-                long length = second & 127;
-                if (length == 126) length = (stream.ReadByte() << 8) | stream.ReadByte();
-                else if (length == 127)
-                {
-                    length = 0;
-                    for (int i = 0; i < 8; i++) length = (length << 8) | (byte)stream.ReadByte();
-                }
-                if (length > 8192) throw new InvalidDataException("Oversized report");
-                byte[] mask = ReadExactly(stream, 4);
-                byte[] payload = ReadExactly(stream, (int)length);
-                for (int i = 0; i < payload.Length; i++) payload[i] ^= mask[i % 4];
-                reportReceived.TrySetResult(Encoding.UTF8.GetString(payload));
-                releaseSocket.Task.Wait();
-                }
-                catch (Exception exception) { reportReceived.TrySetException(exception); throw; }
-            });
-
-            byte[] ReadExactly(Stream stream, int length)
-            {
-                byte[] value = new byte[length];
-                int offset = 0;
-                while (offset < length)
-                {
-                    int read = stream.Read(value, offset, length - offset);
-                    if (read == 0) throw new EndOfStreamException();
-                    offset += read;
-                }
-                return value;
-            }
-
-            Setup(out AgentOrchestrator orchestrator, out CognitiveRunDriver driver,
-                out CognitiveTestPresenter presenter, out CognitiveRequest request);
-            request.context.current_event.event_type = AgentEventTypes.PlayerUtterance;
-            request.context.current_event.target_entity_id = request.run.agent_entity_id;
-            request.context.relevant_player = new CognitivePlayerDto
-                { player_entity_id = "player_01", display_name = "玩家" };
-            GoalPlanRunner runner = AttachRejectingHandoff(driver, orchestrator, presenter);
-            BackendWebSocketClient backend = driver.gameObject.AddComponent<BackendWebSocketClient>();
-            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
-            typeof(BackendWebSocketClient).GetField("serverUrl", flags)
-                .SetValue(backend, $"ws://127.0.0.1:{port}/ws/");
-            typeof(BackendWebSocketClient).GetField("connectOnStart", flags).SetValue(backend, false);
-            typeof(GoalPlanRunner).GetMethod("OnDisable", flags).Invoke(runner, null);
-            typeof(GoalPlanRunner).GetField("backendClient", flags).SetValue(runner, backend);
-            typeof(GoalPlanRunner).GetMethod("OnEnable", flags).Invoke(runner, null);
-            backend.ConnectFromContextMenu();
-            float deadline = Time.realtimeSinceStartup + 8f;
-            while (!backend.IsConnected && Time.realtimeSinceStartup < deadline) yield return null;
-            Assert.That(backend.IsConnected, Is.True,
-                $"status={backend.ConnectionStatus} attempts={backend.ConnectionAttempts} server={serverTask.Status} error={serverTask.Exception}");
-
-            CognitiveRun originalRun = orchestrator.CurrentRun;
-            LogAssert.Expect(LogType.Warning, new Regex("\\[GoalPlan\\] REJECTED code=GoalMissing"));
-            Assert.That(driver.TryConsumeResponse(ActionResponse(request)), Is.False);
-            while (!reportReceived.Task.IsCompleted && Time.realtimeSinceStartup < deadline) yield return null;
-            Assert.That(reportReceived.Task.IsCompletedSuccessfully, Is.True,
-                $"server={serverTask.Status} error={serverTask.Exception}");
-            TaskFailureReport report = JsonUtility.FromJson<TaskFailureReport>(reportReceived.Task.Result);
-            Assert.That(report.IsValid, Is.True);
-            Assert.That(report.proposal_id, Is.EqualTo(runner.ActiveProposalId));
-            Assert.That(report.proposal_revision, Is.Zero);
-            Assert.That(runner.ActiveTraceId, Is.EqualTo(request.trace_id));
-            Assert.That(report.allowed_alternatives, Is.Empty);
-            Assert.That(backend.PendingRequestCount, Is.EqualTo(1));
-            Assert.That(runner.HasActiveTask, Is.True);
-            Assert.That(originalRun.State, Is.EqualTo(CognitiveRunState.Failed));
-            Assert.That(driver.PendingActionOutcome, Is.Null);
-
-            string response = "{\"message_type\":\"task_failure_response\",\"schema_version\":\"1.0\"," +
-                $"\"request_id\":\"{report.request_id}\",\"trace_id\":\"{report.trace_id}\"," +
-                $"\"world_revision\":{report.world_revision},\"proposal_id\":\"{report.proposal_id}\"," +
-                "\"proposal_revision\":1,\"resolution\":\"explain\"," +
-                "\"utterance\":\"目前无法执行。\",\"emotion\":\"neutral\",\"gesture\":\"none\"," +
-                "\"selected_alternative_id\":\"\"}";
-            GoalPlanPresentation presentation = default;
-            runner.PresentationReady += value => presentation = value;
-            Assert.That(backend.ProcessIncomingJson(response), Is.True);
-            Assert.That(presentation.Kind, Is.EqualTo(GoalPlanPresentationKind.Clarification));
-            Assert.That(backend.ProcessIncomingJson(response), Is.False);
-            Assert.That(backend.PendingRequestCount, Is.Zero);
-            Assert.That(runner.HasActiveTask, Is.False);
-            Assert.That(runner.IsExecuting, Is.False);
-            Assert.That(originalRun.State, Is.EqualTo(CognitiveRunState.Failed));
-            Assert.That(orchestrator.CurrentRun, Is.Null);
-            Assert.That(driver.PendingActionOutcome, Is.Null);
-            Assert.That(presenter.Count, Is.Zero);
-            releaseSocket.TrySetResult(true);
-            listener.Stop();
-            _ = backend.DisconnectAsync();
-        }
-
-        [Test]
         public void PresentationFailureAfterOwnership_DoesNotDiscardStartedActionWait()
         {
             Setup(out AgentOrchestrator orchestrator, out CognitiveRunDriver driver,
@@ -766,12 +566,13 @@ namespace EmbodiedNPC.Tests
                 run.AgentEntityId);
             List<ExperienceDraft> experiences = CapturePresentedExperiences(driver, out _);
             Assert.That(driver.TryBeginActionWait(ownership), Is.True);
+            Assert.That(driver.CompleteAcceptedActionRun(ownership), Is.True);
             presenter.ShouldAccept = false;
 
             Assert.That(driver.TryPresentAcceptedAction(request, "好的，我去拿杯子。", null), Is.False);
-            Assert.That(run.State, Is.EqualTo(CognitiveRunState.WaitingActionResult));
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
             Assert.That(driver.PendingActionOutcome, Is.SameAs(ownership));
-            Assert.That(orchestrator.CurrentRun, Is.SameAs(run));
+            Assert.That(orchestrator.CurrentRun, Is.Null);
             Assert.That(experiences, Is.Empty);
             Assert.That(driver.TryConsumeActionOutcome(Outcome(ownership, PlanExecutionStatus.Succeeded)),
                 Is.True);
@@ -790,6 +591,7 @@ namespace EmbodiedNPC.Tests
                 GoalPlanRunner.NormalizeProposalId(request.request_id), 0, request.trace_id, run.AgentEntityId);
             var experiences = CapturePresentedExperiences(driver, out var presentations);
             Assert.That(driver.TryBeginActionWait(ownership), Is.True);
+            Assert.That(driver.CompleteAcceptedActionRun(ownership), Is.True);
             Assert.That(driver.TryPresentAcceptedAction(request, "好的，我去拿杯子。", null), Is.True);
             Assert.That(presenter.Count, Is.EqualTo(1));
             Assert.That(presentations, Has.Count.EqualTo(1));
@@ -798,7 +600,7 @@ namespace EmbodiedNPC.Tests
             Assert.That(experiences[0].EventType, Is.EqualTo("dialogue_response"));
             Assert.That(experiences[0].ConversationId, Is.EqualTo("conversation_01"));
             Assert.That(experiences[0].NaturalLanguagePayload, Is.EqualTo("好的，我去拿杯子。"));
-            Assert.That(run.State, Is.EqualTo(CognitiveRunState.WaitingActionResult));
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
         }
 
         [Test]
@@ -880,6 +682,135 @@ namespace EmbodiedNPC.Tests
             Assert.That(customerDriver.PendingRequest, Is.SameAs(customerRequest));
             Assert.That(customerRun.CurrentRun.State, Is.EqualTo(CognitiveRunState.Running));
             Assert.That(customerPresenter.Count, Is.Zero);
+        }
+
+        [TestCase(PlanExecutionStatus.Succeeded)]
+        [TestCase(PlanExecutionStatus.Failed)]
+        [TestCase(PlanExecutionStatus.Cancelled)]
+        [TestCase(PlanExecutionStatus.TimedOut)]
+        public void OldOutcome_SettlesOnlyExecutionWhileNewChatRemainsRunning(PlanExecutionStatus status)
+        {
+            SetupWaiting(out var orchestrator, out var driver, out var original, out var ownership);
+            var presenter = driver.GetComponent<CognitiveTestPresenter>();
+            var next = BeginNextChat(orchestrator, driver);
+            var chatRun = orchestrator.CurrentRun;
+            Assert.That(driver.TryConsumeActionOutcome(Outcome(ownership, status)), Is.True);
+            Assert.That(driver.TryConsumeActionOutcome(Outcome(ownership, status)), Is.False);
+            Assert.That(original.State, Is.EqualTo(CognitiveRunState.Completed));
+            Assert.That(orchestrator.CurrentRun, Is.SameAs(chatRun));
+            Assert.That(chatRun.State, Is.EqualTo(CognitiveRunState.Running));
+            Assert.That(driver.PendingRequest, Is.SameAs(next));
+            Assert.That(driver.HasPendingActionOutcome, Is.False);
+            Assert.That(presenter.Count, Is.Zero);
+            Assert.That(driver.TryConsumeResponse(Response(next, CognitiveDecisionKinds.DirectResponse)), Is.True);
+            Assert.That(chatRun.State, Is.EqualTo(CognitiveRunState.Completed));
+            Assert.That(presenter.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void SecondAction_CannotReplaceIndependentExecutionOwnership()
+        {
+            SetupWaiting(out var orchestrator, out var driver, out var original, out var ownership);
+            var next = BeginNextChat(orchestrator, driver);
+            next.context.current_event.event_type = AgentEventTypes.PlayerUtterance;
+            next.context.current_event.target_entity_id = next.run.agent_entity_id;
+            next.context.relevant_player = new CognitivePlayerDto { player_entity_id = "player_01", display_name = "玩家" };
+            Assert.That(driver.TryConsumeResponse(ActionResponse(next)), Is.False);
+            Assert.That(driver.LastActionHandoffResult, Is.EqualTo("action_busy"));
+            Assert.That(driver.PendingActionOutcome, Is.SameAs(ownership));
+            Assert.That(original.State, Is.EqualTo(CognitiveRunState.Completed));
+            Assert.That(orchestrator.LastRun.State, Is.EqualTo(CognitiveRunState.Failed));
+            Assert.That(driver.TryConsumeActionOutcome(Outcome(ownership, PlanExecutionStatus.Succeeded)), Is.True);
+        }
+
+        [Test]
+        public void NewRun_CannotOverwritePendingExecutionAtHandoffBoundary()
+        {
+            SetupWaiting(out var orchestrator, out var driver, out _, out var ownership);
+            BeginNextChat(orchestrator, driver);
+            var nextRun = orchestrator.CurrentRun;
+            Assert.That(driver.TryBeginActionWait(Ownership(nextRun)), Is.False);
+            Assert.That(driver.PendingActionOutcome, Is.SameAs(ownership));
+            Assert.That(nextRun.State, Is.EqualTo(CognitiveRunState.Running));
+        }
+
+        [Test]
+        public void SynchronousOutcome_DoesNotSettleRunBeforeHandoffAcceptance()
+        {
+            Setup(out var orchestrator, out var driver, out _, out _);
+            var run = orchestrator.CurrentRun;
+            var ownership = Ownership(run);
+            Assert.That(driver.TryBeginActionWait(ownership), Is.True);
+            Assert.That(driver.TryConsumeActionOutcome(Outcome(ownership, PlanExecutionStatus.Succeeded)), Is.True);
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.WaitingActionResult));
+            Assert.That(driver.CompleteAcceptedActionRun(ownership), Is.True);
+            Assert.That(run.State, Is.EqualTo(CognitiveRunState.Completed));
+            Assert.That(driver.CompleteAcceptedActionRun(ownership), Is.False);
+        }
+
+        [TestCase("wrong_trace", "npc_cafe_01")]
+        [TestCase("trace_01", "npc_other")]
+        public void WrongExecutionCorrelation_DoesNotConsumeOwnershipOrNewChat(string trace, string actor)
+        {
+            SetupWaiting(out var orchestrator, out var driver, out _, out var ownership);
+            var next = BeginNextChat(orchestrator, driver);
+            var outcome = new GoalOutcome("wrong_outcome", ownership.ProposalId, ownership.ProposalRevision,
+                trace, "bring_object", actor, "cup_01", "player_01", PlanExecutionStatus.Succeeded, "", 2, 2d);
+            Assert.That(driver.TryConsumeActionOutcome(outcome), Is.False);
+            Assert.That(driver.PendingActionOutcome, Is.SameAs(ownership));
+            Assert.That(driver.PendingRequest, Is.SameAs(next));
+            Assert.That(orchestrator.CurrentRun.State, Is.EqualTo(CognitiveRunState.Running));
+        }
+
+        private static CognitiveRequest BeginNextChat(AgentOrchestrator orchestrator, CognitiveRunDriver driver)
+        {
+            var trigger = new CognitiveTrigger("trigger_next", CognitiveTriggerTypes.Event,
+                orchestrator.OwnerEntity.EntityId, "event_01", 3d, AgentEventTypes.PlayerUtterance);
+            Assert.That(orchestrator.TryStartRun(trigger, out var run), Is.True);
+            var request = Request(run, trigger);
+            request.request_id = "request_next";
+            request.trace_id = "trace_next";
+            Assert.That(driver.TryOwnRequest(request), Is.True);
+            return request;
+        }
+
+        [Test]
+        public void ClosingOrSwitchingSession_DoesNotCancelAcceptedTargetRediscovery()
+        {
+            SetupWaiting(out var orchestrator, out var driver, out _, out var ownership);
+            var root = driver.gameObject;
+            var runner = root.AddComponent<GoalPlanRunner>();
+            var participant = root.AddComponent<DialogueParticipant>();
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            // Model the Runner's public rediscovery state without a navigation fixture.
+            typeof(GoalPlanRunner).GetField("awaitingRediscovery", flags).SetValue(runner, true);
+            typeof(GoalPlanRunner).GetField("activeProposalId", flags).SetValue(runner, ownership.ProposalId);
+            var ui = new GameObject("P1aDialogue"); objects.Add(ui);
+            var playerRoot = new GameObject("P1aPlayer"); objects.Add(playerRoot);
+            var player = playerRoot.AddComponent<WorldEntity>();
+            player.Configure("player_01", "player", EntityKind.Agent, AgentRole.Player);
+            var validation = ui.AddComponent<DialogueEligibilityValidator>();
+            var controller = ui.AddComponent<DialogueController>();
+            // EditMode does not run these MonoBehaviour Awake methods automatically.
+            typeof(DialogueParticipant).GetMethod("Awake", flags).Invoke(participant, null);
+            typeof(DialogueEligibilityValidator).GetField("playerEntity", flags).SetValue(validation, player);
+            typeof(DialogueController).GetField("eligibilityValidator", flags).SetValue(controller, validation);
+            Assert.That(controller.SelectTarget(participant), Is.True);
+            controller.HideDialoguePresentation();
+            Assert.That(runner.IsRediscovering, Is.True);
+            controller.ClearSession();
+            Assert.That(runner.IsRediscovering, Is.True);
+            Assert.That(driver.PendingActionOutcome, Is.SameAs(ownership));
+            var otherRoot = new GameObject("P1aOtherNpc"); objects.Add(otherRoot);
+            otherRoot.AddComponent<WorldEntity>().Configure("npc_other", "npc", EntityKind.Agent, AgentRole.Npc);
+            var other = otherRoot.AddComponent<DialogueParticipant>();
+            typeof(DialogueParticipant).GetMethod("Awake", flags).Invoke(other, null);
+            Assert.That(controller.SelectTarget(participant), Is.True);
+            Assert.That(controller.SelectTarget(other), Is.True);
+            Assert.That(runner.IsRediscovering, Is.True);
+            Assert.That(runner.ActiveProposalId, Is.EqualTo(ownership.ProposalId));
+            Assert.That(orchestrator.HasActiveRun, Is.False);
+            typeof(GoalPlanRunner).GetField("awaitingRediscovery", flags).SetValue(runner, false);
         }
 
         [Test]
@@ -1013,6 +944,7 @@ namespace EmbodiedNPC.Tests
             run = orchestrator.CurrentRun;
             ownership = Ownership(run);
             Assert.That(driver.TryBeginActionWait(ownership), Is.True);
+            Assert.That(driver.CompleteAcceptedActionRun(ownership), Is.True);
         }
 
         private static CognitiveActionOutcomeOwnership Ownership(CognitiveRun run) =>

@@ -117,8 +117,8 @@ class ModelApiConfigStore:
         atomic_json_write(self.path, document.model_dump_json(indent=2).encode("utf-8") + b"\n")
 
 
-def atomic_json_write(path: Path, payload: bytes) -> None:
-    if len(payload) > _MAX_BYTES:
+def atomic_json_write(path: Path, payload: bytes, *, max_bytes: int = _MAX_BYTES) -> None:
+    if len(payload) > max_bytes:
         raise ModelConfigStoreError("MODEL_CONFIG_DOCUMENT_TOO_LARGE")
     temporary: Path | None = None
     try:

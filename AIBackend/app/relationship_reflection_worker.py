@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import math
 import sqlite3
 import time
@@ -16,8 +17,10 @@ from .relationship_reflection_candidate import (
 )
 from .relationship_reflection_model import RelationshipReflectionModel, RelationshipReflectionModelError
 from .relationship_reflection_models import RelationshipReflectionRecord
-from .relationship_reflection_repository import RelationshipReflectionRepository
+from .relationship_reflection_repository import RelationshipReflectionRepository, PairUpdateRejected
 from .relationship_reflection_scanner import RelationshipReflectionScanner
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -28,17 +31,23 @@ class RelationshipExecutionIssue:
 
 @dataclass(frozen=True)
 class RelationshipExecutionBatch:
+    """Capacity diagnostics are durable but excluded from normal persisted results.
+
+    They also appear in issues so callers cannot mistake them for applied updates.
+    """
     scanned_jobs: int
     persisted: int
     already_processed: int
     issues: tuple[RelationshipExecutionIssue, ...]
     end_of_round: bool
+    capacity_limited: int = 0
 
 
 class RelationshipReflectionWorker:
     """Process bounded observer/subject batches sequentially; no durable job state.
 
-    Persisted unique episode/pair keys deduplicate rediscovery after restart.
+    Persisted unique episode/pair keys, including capacity diagnostics,
+    deduplicate rediscovery after restart.
     Interpretations remain subjective relationship evidence, not world facts;
     an uncommitted/preempted pair can be discovered again in a later round.
     """
@@ -83,7 +92,7 @@ class RelationshipReflectionWorker:
                 scanned_jobs = discovered.scanned_jobs
                 issues.extend(RelationshipExecutionIssue(issue.job_id, issue.reason)
                               for issue in discovered.issues)
-            persisted = already_processed = 0
+            persisted = already_processed = capacity_limited = 0
             for _ in range(min(candidate_limit, len(self._pending))):
                 candidate = self._pending.pop(0)
                 pair = (candidate.observer, candidate.subject, candidate.episode_id,
@@ -92,7 +101,9 @@ class RelationshipReflectionWorker:
                     already_processed += 1
                     continue
                 try:
-                    response = await self.model.interpret(candidate)
+                    previous = await asyncio.to_thread(self.reflections.read_current_pair_state,
+                        candidate.observer, candidate.subject)
+                    response = await self.model.interpret(candidate, previous)
                     record = RelationshipReflectionRecord(
                         reflection_id=self.reflection_id_for(candidate),
                         observer=candidate.observer, subject=candidate.subject,
@@ -104,7 +115,8 @@ class RelationshipReflectionWorker:
                         generated_at=self.clock(),
                     )
                     try:
-                        await asyncio.to_thread(self.reflections.insert, record)
+                        state = await asyncio.to_thread(self.reflections.finalize_pair_update,
+                            record, candidate, response, previous)
                     except sqlite3.IntegrityError:
                         # A concurrent/late result can win the unique pair key; other integrity
                         # failures remain errors and must not be mistaken for successful work.
@@ -112,12 +124,24 @@ class RelationshipReflectionWorker:
                             raise
                         already_processed += 1
                     else:
-                        persisted += 1
-                except (RelationshipReflectionModelError, PreemptedByForeground) as exc:
+                        if state.capacity_limited is not None:
+                            capacity_limited += 1
+                            issues.append(RelationshipExecutionIssue(candidate.episode_id,
+                                "RELATIONSHIP_STATE_CAPACITY_LIMITED"))
+                            logger.warning("relationship_state_capacity_limited")
+                        else:
+                            persisted += 1
+                except (RelationshipReflectionModelError, PreemptedByForeground, PairUpdateRejected) as exc:
                     issues.append(RelationshipExecutionIssue(candidate.episode_id, str(exc)))
+                    if not isinstance(exc, PreemptedByForeground):
+                        # No durable failure row exists: later scans can rediscover this pair.
+                        # Log only backend metadata and stable codes, never provider/evidence text.
+                        logger.warning("relationship_reflection_failed reflection_id=%s reason=%s",
+                                       self.reflection_id_for(candidate), str(exc))
             return RelationshipExecutionBatch(
                 scanned_jobs, persisted, already_processed, tuple(issues),
                 self.scanner.end_of_round and not self._pending,
+                capacity_limited,
             )
 
     def start(self) -> None:

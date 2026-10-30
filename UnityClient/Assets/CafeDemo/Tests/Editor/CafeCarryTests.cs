@@ -242,11 +242,8 @@ namespace CafeDemo.Tests
             bool sawPickup = false, sawWalk = false, sawTurn = false;
             Quaternion firstCarryRotation = Quaternion.identity;
             float until = Time.realtimeSinceStartup + 30;
-            string evidence = Environment.GetEnvironmentVariable("EMBODIEDNPC_ANIMATION_EVIDENCE_ROOT");
-            bool explicitEvidence = !string.IsNullOrWhiteSpace(evidence);
-            if (!explicitEvidence) evidence = Path.Combine(Path.GetTempPath(), "embodiednpc-er5");
-            bool capture = explicitEvidence || (Directory.Exists(evidence) && File.Exists(Path.Combine(evidence, "capture.flag")));
-            if (capture) Directory.CreateDirectory(evidence);
+            string evidence = Path.Combine(Path.GetTempPath(), "embodiednpc-er5");
+            bool capture = Directory.Exists(evidence) && File.Exists(Path.Combine(evidence, "capture.flag"));
             var camera = Camera.main;
             if (capture) camera.GetComponent<CafeDemoOrbitCamera>().enabled = false;
             var lines = new List<string>();

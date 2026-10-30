@@ -2,6 +2,7 @@
 import json
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from app.cognitive_entry import CognitiveBackendEntry
@@ -79,7 +80,13 @@ class HearingReadableProjectionTests(unittest.IsolatedAsyncioTestCase):
         self.append(experience(prior, '你好呀', response=True))
         for number, actor, target, text in ((2, 'player_01', SPEAKER, '早啊'), (3, SPEAKER, 'player_01', REPLY)):
             self.append(self.hearing(number, actor, target, text))
+        with closing(self.ledger._connection_factory()) as connection:
+            original = connection.execute("SELECT event_id,payload_json FROM experience_events WHERE source_type='observation' ORDER BY experience_seq").fetchall()
+            original = [tuple(row) for row in original]
         user, items = await self.wire()
+        with closing(self.ledger._connection_factory()) as connection:
+            self.assertEqual([tuple(row) for row in connection.execute(
+                "SELECT event_id,payload_json FROM experience_events WHERE source_type='observation' ORDER BY experience_seq")], original)
         heard = [i for i in items if i['kind'] == 'heard_speech']
         self.assertEqual(len(heard), 2)
         self.assertTrue(any(i['kind'] == 'speech' for i in items))
@@ -90,13 +97,15 @@ class HearingReadableProjectionTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(item['parent_source_event_id'], 'speech_parent')
             self.assertEqual(item['target_epistemic_status'], 'identified_from_speech_event')
             self.assertTrue(item['historical_only'] and item['model_content_is_not_world_truth'])
-            self.assertIn('「' + item['text'] + '」', item['history_description'])
+            self.assertNotIn(item['text'], item['history_description'])
+            self.assertIn('text字段', item['history_description'])
             self.assertIn('此前实际听到', item['history_description'])
             self.assertNotIn('似乎', item['history_description'])
             self.assertEqual(user.count('"occurrence_id":"' + item['occurrence_id'] + '"'), 1)
         self.assertEqual([i['actor_entity_id'] for i in heard], ['player_01', SPEAKER])
         self.assertEqual([i['target_entity_id'] for i in heard], [SPEAKER, 'player_01'])
         self.assertEqual([i['text'] for i in heard], ['早啊', REPLY])
+        self.assertEqual(user.count(REPLY), 1)
 
     async def test_T2_uncertain_target_and_observer_isolation(self):
         unknown = self.hearing(2, 'player_01', None, '这句话没有明确对象')

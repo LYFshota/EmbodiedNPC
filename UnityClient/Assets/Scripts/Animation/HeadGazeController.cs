@@ -22,6 +22,7 @@ namespace EmbodiedNPC.Animation
         [SerializeField, Min(1f)] private float listeningDegreesPerSecond = 85f;
         [SerializeField, Min(1f)] private float talkingDegreesPerSecond = 65f;
         private ExpressiveController expressive;
+        private DialogueAnimationPresenter dialogueAnimation;
         private Transform head, neck;
         private Quaternion headBase, neckBase, headApplied, neckApplied;
         private bool applied;
@@ -34,11 +35,15 @@ namespace EmbodiedNPC.Animation
         public void SetGesturePlayback(GestureController playback) => gesturePlayback = playback;
 
         private void Awake()
-        { expressive = actorRoot == null ? null : actorRoot.GetComponent<ExpressiveController>(); ResolveRig(); }
+        { expressive = actorRoot == null ? null : actorRoot.GetComponent<ExpressiveController>();
+            dialogueAnimation = actorRoot == null ? null : actorRoot.GetComponentInChildren<DialogueAnimationPresenter>(); ResolveRig(); }
+        public void RebindAnimator(Animator character) => Configure(attention, character, visualBody, actorRoot);
+
         public void Configure(AttentionController selection, Animator character, Transform body, Transform actor)
         {
             ResetPresentation(); attention = selection; animator = character; visualBody = body; actorRoot = actor;
             expressive = actorRoot == null ? null : actorRoot.GetComponent<ExpressiveController>();
+            dialogueAnimation = actorRoot == null ? null : actorRoot.GetComponentInChildren<DialogueAnimationPresenter>();
             ResolveRig();
         }
         private void ResolveRig()
@@ -74,6 +79,12 @@ namespace EmbodiedNPC.Animation
             if (!isActiveAndEnabled || head == null || visualBody == null || actorRoot == null ||
                 animator == null || !animator.isActiveAndEnabled) { ResetPresentation(); return; }
             bool nod = gesturePlayback != null && gesturePlayback.IsNodActive;
+            var channels = expressive == null ? null : expressive.MotionChannels;
+            bool accentAllowed = !nod && dialogueAnimation != null && dialogueAnimation.isActiveAndEnabled &&
+                channels != null && channels.isActiveAndEnabled && !channels.IsTaskMotionActive &&
+                !channels.IsEmergencyMotionActive && !channels.IsCarryPresentationActive && channels.ActiveGesture != "wave";
+            float accentPitch = accentAllowed ? dialogueAnimation.HeadPitchAccent : 0;
+            float accentTilt = accentAllowed ? dialogueAnimation.HeadTiltAccent : 0;
             bool tracking = !nod && attention != null && attention.isActiveAndEnabled && attention.HasGazePoint && !attention.IsSuppressed;
             Vector3 desired = tracking ? SolveAngles(actorRoot, visualBody, head.position, attention.CurrentGazePoint,
                 fullYaw, maxYaw, combinedYawCap, downPitch, upPitch) : Vector3.zero;
@@ -84,17 +95,18 @@ namespace EmbodiedNPC.Animation
                 angles = Vector2.MoveTowards(angles, new Vector2(desired.x, desired.y),
                     (expressive != null && expressive.State == DialoguePresentationState.Talking ?
                         talkingDegreesPerSecond : listeningDegreesPerSecond) * deltaTime);
-            if (CurrentWeight <= 0) { angles = Vector2.zero; if (!nod) return; }
+            if (CurrentWeight <= 0) { angles = Vector2.zero; if (!nod && Mathf.Abs(accentPitch) + Mathf.Abs(accentTilt) < .001f) return; }
             float bodyYaw = Vector3.SignedAngle(Vector3.ProjectOnPlane(actorRoot.forward, actorRoot.up),
                 Vector3.ProjectOnPlane(visualBody.forward, actorRoot.up), actorRoot.up);
             float yaw = Mathf.Clamp(bodyYaw + angles.x * CurrentWeight, -combinedYawCap, combinedYawCap) - bodyYaw;
             yaw = Mathf.Clamp(yaw, -maxYaw, maxYaw);
-            float pitch = angles.y * CurrentWeight;
+            float pitch = Mathf.Clamp(angles.y * CurrentWeight + accentPitch, -downPitch, upPitch);
             // One bone writer: gaze yields before the project's bounded one-shot Nod offset.
             if (nod && gesturePlayback.NodElapsed >= .15f) { yaw = 0; pitch = -gesturePlayback.NodPitch; }
             headBase = head.localRotation;
             if (neck != null) neckBase = neck.localRotation;
-            Quaternion offset = Quaternion.AngleAxis(yaw, visualBody.up) * Quaternion.AngleAxis(-pitch, visualBody.right);
+            Quaternion offset = Quaternion.AngleAxis(yaw, visualBody.up) * Quaternion.AngleAxis(-pitch, visualBody.right) *
+                Quaternion.AngleAxis(accentTilt, visualBody.forward);
             float share = neck == null ? 0 : neckShare;
             if (neck != null) neck.rotation = Quaternion.Slerp(Quaternion.identity, offset, share) * neck.rotation;
             head.rotation = Quaternion.Slerp(Quaternion.identity, offset, 1f - share) * head.rotation;

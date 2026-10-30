@@ -40,7 +40,6 @@ from .canonical_embeddings import CanonicalEmbeddingIndex, CanonicalEmbeddingInd
 from .canonical_memory_ranking import CanonicalMemoryRanker
 from .provider_registry import build_model_provider
 from .providers import ProviderError
-from .failure_service import TaskFailureReport, TaskFailureResponse, TaskFailureResponseService
 from .sqlite_database import SQLiteDatabase
 from .experience_ingestion import ExperienceIngestionService
 from .experience_ledger import ExperienceLedger
@@ -206,6 +205,12 @@ async def lifespan(_: FastAPI):
 
     try:
         try:
+            try:
+                await asyncio.to_thread(knowledge_resolver.store.initialize)
+            except (OSError, ValueError) as error:
+                # Fail the Knowledge subsystem closed; preserve damaged files and
+                # keep unrelated cognition/settings available for repair.
+                logger.error("knowledge_initialization_unavailable error=%s", str(error))
             # Register before start so partial startup is cleaned as well.
             attempted.add("episode")
             episode_processing_loop.start()
@@ -340,6 +345,12 @@ knowledge_embedding_indexer = (KnowledgeEmbeddingIndexer(knowledge_resolver.rank
 knowledge_management = KnowledgeManagement(knowledge_resolver, knowledge_embedding_indexer)
 app.add_middleware(LocalBackendAccessMiddleware, session=knowledge_management.auth)
 app.include_router(create_knowledge_management_router(knowledge_management))
+from .experience_export import ExperienceExport, create_experience_export_router
+app.include_router(create_experience_export_router(
+    ExperienceExport(memory_database_path, knowledge_resolver.store, demo_player_uid,
+        runtime=dict(provider=provider.name, model=provider.model,
+                     context_length=getattr(getattr(startup_model_config_document, "main_model", None), "context_length", None))),
+    knowledge_management.auth))
 task_cognition = CognitiveTasks(TaskService(TaskRepository(database.connect)), expected_player_uid=demo_player_uid)
 cognitive_entry = CognitiveBackendEntry(provider, model_executor, tasks=task_cognition,
     recent_dialogue_policy_source=context_policy_settings.snapshot,
@@ -355,7 +366,6 @@ cognitive_entry = CognitiveBackendEntry(provider, model_executor, tasks=task_cog
     inference_options=cognition_options(startup_model_config_document))
 from .context_capacity import create_capacity_router
 app.include_router(create_capacity_router(cognitive_entry))
-failure_response_service = TaskFailureResponseService(provider, model_executor)
 active_context_length = getattr(getattr(startup_model_config_document, 'main_model', None), 'context_length', None)
 base_memory_consolidator = BaseMemoryConsolidator(provider, model_executor, context_length=active_context_length)
 memory_context_resolver = MemoryContextResolver(experience_ledger, episode_repository)
@@ -412,15 +422,9 @@ async def health_check() -> dict[str, object]:
     }
 
 
-@app.post("/v1/task-failure-response", response_model=TaskFailureResponse)
-async def get_task_failure_response(report: TaskFailureReport) -> TaskFailureResponse:
-    return await failure_response_service.respond(report)
-
 
 # Bound retained request contexts per connection; model execution uses the shared executor.
 MAX_CONNECTION_COGNITIONS = 32
-MAX_CONNECTION_FAILURE_EXPLANATIONS = 4  # Includes the one active explanation and queued reports.
-FAILURE_EXPLANATION_TIMEOUT_SECONDS = 30
 COGNITIVE_INPUT_COMMIT_TIMEOUT_SECONDS = 20
 MAX_EARLY_COMMITTED_INPUTS = 128
 
@@ -433,9 +437,8 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     send_lock = asyncio.Lock()
     closed = False
     cognition_tasks: dict[tuple[str, str, str], asyncio.Task[None]] = {}
-    failure_tasks: dict[tuple[str, str, str, int], asyncio.Task[None]] = {}
-    failure_slot = asyncio.Semaphore(1)
     cognition_traces: dict[tuple[str, str, str], str] = {}
+    cognition_requests: dict[tuple[str, str, str], CognitiveRequest] = {}
     continuation_keys: set[tuple[str, str, str]] = set()
     retired_cognitions: OrderedDict[tuple[str, str, str, str], None] = OrderedDict()
     continuation_turns: OrderedDict[tuple[str, ...], None] = OrderedDict()
@@ -546,6 +549,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     def cognition_done(key: tuple[str, str, str], task: asyncio.Task[None],
                        input_key: tuple[str, str, str, str, str] | None) -> None:
         cognition_tasks.pop(key, None)
+        cognition_requests.pop(key, None)
         trace = cognition_traces.pop(key, None)
         if key in continuation_keys:
             continuation_keys.discard(key)
@@ -558,32 +562,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             if error is not None:
                 logger.warning("Cognitive task send failed request_id=%s run_id=%s agent_entity_id=%s error=%s",
                                *key, type(error).__name__)
-
-    async def run_failure_explanation(report: TaskFailureReport) -> None:
-        # Language only: no task transition, execution permission or settlement.
-        # The timeout includes queue wait; the receive loop never waits for inference.
-        if closed:
-            return
-        try:
-            async with asyncio.timeout(FAILURE_EXPLANATION_TIMEOUT_SECONDS):
-                async with failure_slot:
-                    response = await failure_response_service.respond(report)
-        except TimeoutError:
-            logger.warning("Task failure explanation fallback code=TIMEOUT")
-            response = TaskFailureResponseService._safe_fallback(report)
-        except Exception as error:
-            logger.warning("Task failure explanation fallback code=FAILED error=%s", type(error).__name__)
-            response = TaskFailureResponseService._safe_fallback(report)
-        # Cancellation propagates; a failed send is observed, never retried as a
-        # second explanation. This closure can only send on its owning socket.
-        await send_json(response.model_dump())
-
-    def failure_done(key: tuple[str, str, str, int], task: asyncio.Task[None]) -> None:
-        if failure_tasks.get(key) is task:
-            failure_tasks.pop(key)
-        if not task.cancelled() and task.exception() is not None:
-            logger.warning("Task failure explanation send failed code=SEND_FAILED error=%s",
-                           type(task.exception()).__name__)
 
     logger.info("WebSocket client connected")
     try:
@@ -665,6 +643,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     context = task_cognition.prepare(original,recovery=True)
                     if context is None:
                         raise ValueError("TASK_CONTROL_SOURCE_INVALID")
+                    key = (original.request_id, original.run.run_id, original.run.agent_entity_id)
+                    active = cognition_tasks.get(key)
+                    if active is not None and not active.done():
+                        # This socket already owns the exact request, including input-commit
+                        # wait. A Task Command exists only after a task mutation; absence
+                        # while cognition runs is not a terminal inference failure.
+                        if cognition_requests.get(key) != original:
+                            raise ValueError("TASK_CONTROL_REQUEST_MISMATCH")
+                        continue  # The owned task sends its one result; client timeout still applies.
                     recovered = await asyncio.to_thread(task_cognition.recover, original, context)
                     if recovered is None:
                         await send_json(cognition_error(original, "COGNITIVE_TASK_COMMAND_NOT_FOUND"))
@@ -680,7 +667,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             if not isinstance(request_id, str) or not request_id or len(request_id) > 160:
                 request_id = "unknown-request"
             validators = {"cognitive_request": CognitiveRequest,
-                          "task_failure_report": TaskFailureReport,
                           "experience_append_request": ExperienceAppendRequest}
             validator = validators.get(message_type) if isinstance(message_type, str) else None
             if validator is not None:
@@ -757,9 +743,19 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 if request.context.current_event is not None and request.context.current_event.event_type == COUNTER_CLEANING_EVENT and not counter_work:
                     await send_json(cognition_error(request, "AUTONOMOUS_SOURCE_INVALID"))
                     continue
-                cancellable = continuation or service_mode or counter_work or request.task_consideration is not None
+                cancellable = request.action_feedback is not None or continuation or service_mode or counter_work or request.task_consideration is not None
                 if cancellable and (*key, request.trace_id) in retired_cognitions:
                     continue
+                if request.action_feedback is not None:
+                    # Reuse the existing bounded attempt tombstones: one cognition attempt per outcome,
+                    # including duplicate requests with a different envelope ID on this socket.
+                    feedback_key = (request.run.agent_entity_id, request.context.runtime_state.source_session_id,
+                        "action_outcome", request.action_feedback.proposal_id, request.action_feedback.outcome_id)
+                    if feedback_key in continuation_turns:
+                        continue
+                    continuation_turns[feedback_key] = None
+                    if len(continuation_turns) > 256:
+                        continuation_turns.popitem(last=False)
                 if continuation:
                     payload = {item.key: item.value for item in request.context.current_event.payload}
                     turn_key = (request.run.agent_entity_id, payload.get("source_session_id", ""),
@@ -789,21 +785,11 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                                            name="cognition:" + ":".join(key))
                 cognition_tasks[key] = task
                 cognition_traces[key] = request.trace_id
+                cognition_requests[key] = request
                 if cancellable:
                     continuation_keys.add(key)
                 task.add_done_callback(lambda done, owned_key=key, dialogue_key=input_key:
                                        cognition_done(owned_key, done, dialogue_key))
-            elif message_type == "task_failure_report":
-                key = (request.request_id, request.trace_id, request.proposal_id, request.proposal_revision)
-                if key in failure_tasks:
-                    continue  # The in-flight owned response already fulfils this correlation.
-                if len(failure_tasks) >= MAX_CONNECTION_FAILURE_EXPLANATIONS:
-                    logger.warning("Task failure explanation fallback code=CAPACITY")
-                    await send_json(TaskFailureResponseService._safe_fallback(request).model_dump())
-                    continue
-                task = asyncio.create_task(run_failure_explanation(request), name="failure-explanation")
-                failure_tasks[key] = task
-                task.add_done_callback(lambda done, owned_key=key: failure_done(owned_key, done))
             elif message_type == "experience_append_request":
                 response = await asyncio.to_thread(experience_ingestion_service.append, request)
                 await send_json(response.model_dump())
@@ -840,11 +826,11 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     finally:
         closed = True
         task_cognition.disconnect(websocket)
-        owned_tasks = (*cognition_tasks.values(), *failure_tasks.values())
+        owned_tasks = tuple(cognition_tasks.values())
         for task in owned_tasks:
             task.cancel()
         await asyncio.gather(*owned_tasks, return_exceptions=True)
         cognition_tasks.clear()
-        failure_tasks.clear()
+        cognition_requests.clear()
         pending_dialogue_inputs.clear()
         committed_dialogue_inputs.clear()

@@ -46,3 +46,12 @@ is reported on the v0.1.2-preview Release page. It does not imply testing every
 model provider, a fresh physical Windows machine, or every possible gameplay path.
 The release retains the complete pinned EmbeddingGemma-300M Q4 ONNX resources
 and license bundle; a Main LLM is still configured by the player.
+
+
+## v0.1.3-preview
+
+Runtime source is synchronized from private development main 7a47164ebd43633ca04174318ef9e5fcffc68b52 through the existing public allowlist. Public license/attribution, sanitized resources, README and build entry points are retained. Original Mixamo FBX, OlyPoly, Microsoft YaHei, hidden standee, private history/data and development evidence remain excluded.
+
+Includes the complete player knowledge catalog, 108 defaults, public/restricted access, constant/retrieval usage, incremental embeddings, hybrid two-step cognition, ten drinks, dialogue presentation and rare emotion icons, plus player-scoped read-only experience ZIP export. Exported authored text can contain personal information; sharing is voluntary. API credentials and model weights are excluded from experience exports.
+
+Application and first-party assemblies use 0.1.3-preview / 0.1.3.0. The Backend API version remains independent. Release-specific Windows build/startup/export/restart evidence and limitations are listed on the v0.1.3-preview Release page; no full regression or clean physical machine certification is implied.
