@@ -1,5 +1,7 @@
 # Early Prototype release scope
 
+> Current published preview: [v0.1.3-preview](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.3-preview). Dated/versioned sections below retain their original validation scope; earlier NOT_RUN or capacity limits are not a statement of current implementation. Current module behavior is documented in [Architecture](ARCHITECTURE.md).
+
 The public source keeps TitleScene → CafeDemoV2, the café, four NPCs and Xingmang,
 AIBackend, Contracts and project dependencies. Private Git history, InternalDocs,
 development WIP, model weights, caches, UserData and credentials are excluded.
@@ -17,8 +19,7 @@ development WIP, model weights, caches, UserData and credentials are excluded.
 
 The prior private source cold-start check was PARTIAL on raw first import and PASS
 for the minimum startup chain after six-resource Reimport. This is not a clean-machine
-or full-gameplay certification. The new Windows preview will be described only by
-the minimum build/startup checks actually completed for this release.
+or full-gameplay certification. Each Windows preview is described only by the build/startup and gameplay/export checks actually recorded for its own release; historical incomplete checks are not silently promoted to passes.
 
 The Windows preview bundles the eight pinned EmbeddingGemma-300M Q4 ONNX runtime files, with the Gemma Agreement, Prohibited Use Policy, Notice and conversion/source record. Source Git remains weight-free. Built-in Embedding is the first-start default; external Embedding and disabled-vector options remain available. The Main LLM is not bundled and must be configured by the user.
 
@@ -35,7 +36,7 @@ and a restrained non-waving arm. Vivi's skirt-specific idle and the customers'
 seated base/foot IK remain in place. Existing dialogue, task/world outcomes
 and long-term memory semantics are retained.
 
-This source has application/first-party runtime assembly version
+That release used application/first-party runtime assembly version
 0.1.2-preview (numeric assembly/file version 0.1.2.0). Backend OpenAPI version
 0.3.0 remains the API version, not the application release version.
 The build entry point reads the committed application version.
