@@ -124,6 +124,16 @@ namespace CafeDemo.Tests
                 Assert.That(output.GetEntry("conversations.jsonl"),Is.Null);
             }
         }
+        [Test] public void UnboundPlayerCannotCopyPrivateBackendRecords()
+        {
+            var local = Local(); local["player_profile"]["identity"] = JValue.CreateNull();
+            var result = ExperienceDataExport.BuildArchive(root, Backend(), local, Diagnostics());
+            Assert.That(result.incomplete, Does.Contain("player_profile").And.Contain("conversations"));
+            using var zip = ZipFile.OpenRead(result.path);
+            Assert.That(zip.GetEntry("conversations.jsonl"), Is.Null);
+            Assert.That((bool)Read(zip, "manifest.json")["complete"], Is.False);
+        }
+
         [Test] public void ExcessiveArchiveEntryCountIsRejected()
         {
             string source=Backend();

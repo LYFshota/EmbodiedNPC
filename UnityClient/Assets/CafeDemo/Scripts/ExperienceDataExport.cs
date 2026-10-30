@@ -98,6 +98,11 @@ namespace CafeDemo
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             { LastResult = SettingsUiLanguage.T("无法创建体验导出：", "Cannot create experience export: ") + e.GetType().Name; }
             if (local == null) { Finish(status); yield break; }
+            if (local["player_profile"]?["identity"]?.Type != JTokenType.Object)
+            {
+                LastResult = SettingsUiLanguage.T("请先进入咖啡馆，再导出全部体验数据。", "Enter the cafe before exporting all experience data.");
+                Finish(status); yield break;
+            }
             string backendPath = null;
             var backend = FindAnyObjectByType<BackendWebSocketClient>();
             if (backend != null)
@@ -262,8 +267,8 @@ namespace CafeDemo
                             using var reader = new StreamReader(input.GetEntry("backend_manifest.json")?.Open() ?? throw new InvalidDataException());
                             var backend = JObject.Parse(reader.ReadToEnd());
                             var sourceSections = (JObject)backend["sections"] ?? throw new InvalidDataException();
-                            string currentUid = (string)profile["identity"]?["PlayerUid"];
-                            if (currentUid == null || currentUid != (string)backend["player_identity"]?["persistent_id"]) throw new InvalidDataException("PLAYER_SCOPE_MISMATCH");
+                            string currentUid = (string)(profile["identity"] as JObject)?["PlayerUid"];
+                            if (currentUid == null || currentUid != (string)(backend["player_identity"] as JObject)?["persistent_id"]) throw new InvalidDataException("PLAYER_SCOPE_MISMATCH");
                             foreach (var name in new[] { "world_knowledge", "experiences", "conversations", "episodes", "memories", "relationships", "tasks", "actions" })
                             {
                                 var item = sourceSections[name] as JObject ?? throw new InvalidDataException();
