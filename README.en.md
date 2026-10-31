@@ -41,10 +41,10 @@ The project explores a working loop: **perception → cognition → memory and a
 ## System architecture
 
 <p align="center">
-  <img src="Docs/Images/architecture-overview.en.svg" alt="Architecture: Unity world, bounded cognition, action feedback and long-term memory" width="560">
+  <img src="Docs/Images/architecture-overview.en.svg" alt="Architecture: Unity world, bounded cognition, action feedback and long-term memory" width="960">
 </p>
 
-[Mermaid source](Docs/Images/architecture-overview.en.mmd)
+[Simplified Mermaid flow](Docs/Images/architecture-overview.en.mmd)
 
 This is an overview of ordinary interaction. Replies, no action and action proposals are distinct outcomes; only action proposals enter action admission and execution. Background memory processing does not require every dialogue turn to wait for it.
 
