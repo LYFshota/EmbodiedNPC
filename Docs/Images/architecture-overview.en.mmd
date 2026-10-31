@@ -1,6 +1,7 @@
-flowchart TD
-    W["Unity world<br/>Local perception · events"] --> C["Backend cognition<br/>Hybrid context · up to two steps"]
-    C --> A["Unity presentation / action<br/>Action checks · execution · feedback"]
-    A --> W
-    A --> M["Experience → memory<br/>Async consolidation · reflection"]
-    M -.->|"Later on-demand recall"| C
+flowchart LR
+    U["Unity World & Events"] --> C["Backend Bounded Cognition"]
+    C --> X["Unity Presentation & Execution"]
+    K["World Knowledge"] -.-> C
+    M["Memory & Relationship"] -.-> C
+    X --> E["Experience → Episode / Async Reflection"]
+    E --> M
