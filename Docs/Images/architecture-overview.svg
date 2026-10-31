@@ -2,60 +2,60 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="610" viewBox="0 0 1120 610" role="img" aria-label="EmbodiedNPC 分层架构：Unity 感知进入有界认知、经 Unity 验证后呈现或执行，真实经历异步整理为长期记忆和关系，世界知识与记忆支撑之后的认知">
 <title>SYSTEM ARCHITECTURE</title><desc>EmbodiedNPC 分层架构：Unity 感知进入有界认知、经 Unity 验证后呈现或执行，真实经历异步整理为长期记忆和关系，世界知识与记忆支撑之后的认知</desc>
 <defs>
- <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101C30"/><stop offset="1" stop-color="#0A1220"/></linearGradient>
- <pattern id="g" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M30 0H0V30" fill="none" stroke="#516B8B" stroke-opacity=".075" stroke-width="1"/></pattern>
- <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" fill="#7D91AD"/></marker>
- <marker id="cyan" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" fill="#38BDF8"/></marker>
- <marker id="violet" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" fill="#A78BFA"/></marker>
- <marker id="green" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" fill="#34D399"/></marker>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FBF7F0"/><stop offset="1" stop-color="#F1E7D9"/></linearGradient>
+ <pattern id="g" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M30 0H0V30" fill="none" stroke="#BDA48E" stroke-opacity=".075" stroke-width="1"/></pattern>
+ <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" fill="#9B846E"/></marker>
+ <marker id="caramel" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" fill="#B57B48"/></marker>
+ <marker id="espresso" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" fill="#8D6247"/></marker>
+ <marker id="sage" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z" fill="#78896C"/></marker>
 </defs>
-<rect width="1120" height="610" rx="20" fill="url(#bg)"/><rect width="1120" height="610" rx="20" fill="url(#g)"/><rect x="1" y="1" width="1118" height="608" rx="19" fill="none" stroke="#293C57" stroke-width="1.5"/>
-<rect x="48" y="44" width="5" height="29" rx="2" fill="#38BDF8"/>
-<text x="67" y="67" fill="#F5F9FF" font-size="25" font-weight="750" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.6">SYSTEM ARCHITECTURE</text>
-<text x="1070" y="64" fill="#9AAFC9" font-size="14" font-weight="500" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" text-anchor="end">Unity 世界权威  /  受限认知  /  可信经历</text>
-<path d="M48 89H1072" stroke="#263B58" stroke-width="1"/>
-<text x="48" y="122" fill="#79B9D6" font-size="13" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.5">01   实时交互  /  RUNTIME</text>
-<path d="M280 117H1072" stroke="#274159" stroke-width="1"/>
-<path d="M348 233H409" stroke="#7D91AD" stroke-width="2.8" stroke-linecap="round" marker-end="url(#a)"/>
-<path d="M710 233H771" stroke="#7D91AD" stroke-width="2.8" stroke-linecap="round" marker-end="url(#a)"/>
-<path d="M919 320V425" stroke="#34D399" stroke-width="2.3" stroke-linecap="round" marker-end="url(#green)"/>
-<path d="M771 499H711" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" marker-end="url(#green)"/>
-<path d="M624 425V320" stroke="#A78BFA" stroke-width="2.2" stroke-dasharray="6 6" stroke-linecap="round" marker-end="url(#violet)"/>
-<path d="M348 497H382V347H489V320" fill="none" stroke="#38BDF8" stroke-width="2" stroke-dasharray="6 6" stroke-linejoin="round" marker-end="url(#cyan)"/>
-<path d="M48 356H1072" stroke="#263B58" stroke-width="1" stroke-dasharray="4 8"/>
-<text x="48" y="402" fill="#79B9D6" font-size="13" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.2">02   知识、经历与长期记忆  /  CONTEXT</text>
-<path d="M365 397H1072" stroke="#274159" stroke-width="1"/>
-<g><rect x="48" y="147" width="300" height="173" rx="15" fill="#151F32" stroke="#34435B" stroke-width="1.3"/><rect x="49" y="148" width="5" height="171" rx="2" fill="#38BDF8" opacity=".9"/>
- <circle cx="73" cy="173" r="4" fill="#38BDF8"/><text x="88" y="178" fill="#9FB0C8" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">UNITY WORLD</text>
- <text x="73" y="229" fill="#F4F7FD" font-size="25" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >感知与事件</text>
- <text x="73" y="267" fill="#C1D0E1" font-size="16" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >局部感知  ·  AgentEvent</text>
- <text x="73" y="302" fill="#8FA3BE" font-size="14.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >玩家输入 / NPC / 当前世界</text>
- </g><g><rect x="410" y="147" width="300" height="173" rx="15" fill="#151F32" stroke="#34435B" stroke-width="1.3"/><rect x="411" y="148" width="5" height="171" rx="2" fill="#A78BFA" opacity=".9"/>
- <circle cx="435" cy="173" r="4" fill="#A78BFA"/><text x="450" y="178" fill="#9FB0C8" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">BACKEND COGNITION</text>
- <text x="435" y="229" fill="#F4F7FD" font-size="25" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >认知决策</text>
- <text x="435" y="267" fill="#C1D0E1" font-size="16" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >Step 0  ·  可选 Context Read</text>
- <text x="435" y="302" fill="#8FA3BE" font-size="14.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >最多两次推理 · 有界上下文</text>
- </g><g><rect x="772" y="147" width="300" height="173" rx="15" fill="#151F32" stroke="#34435B" stroke-width="1.3"/><rect x="773" y="148" width="5" height="171" rx="2" fill="#34D399" opacity=".9"/>
- <circle cx="797" cy="173" r="4" fill="#34D399"/><text x="812" y="178" fill="#9FB0C8" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">UNITY RUNTIME</text>
- <text x="797" y="229" fill="#F4F7FD" font-size="25" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >呈现与执行</text>
- <text x="797" y="267" fill="#C1D0E1" font-size="16" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >对话 / 表情 / 行动授权</text>
- <text x="797" y="302" fill="#8FA3BE" font-size="14.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >世界状态与 GoalOutcome 由 Unity 确认</text>
- </g><g><rect x="48" y="426" width="300" height="140" rx="15" fill="#151F32" stroke="#34435B" stroke-width="1.3"/><rect x="49" y="427" width="5" height="138" rx="2" fill="#38BDF8" opacity=".9"/>
- <circle cx="73" cy="452" r="4" fill="#38BDF8"/><text x="88" y="457" fill="#9FB0C8" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">KNOWLEDGE</text>
- <text x="73" y="499" fill="#F4F7FD" font-size="23" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >世界知识</text>
- <text x="73" y="530" fill="#C1D0E1" font-size="15.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >权限过滤 · 自动预检索</text>
- <text x="73" y="558" fill="#8FA3BE" font-size="14" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >需要时补查</text>
- </g><g><rect x="410" y="426" width="300" height="140" rx="15" fill="#151F32" stroke="#34435B" stroke-width="1.3"/><rect x="411" y="427" width="5" height="138" rx="2" fill="#A78BFA" opacity=".9"/>
- <circle cx="435" cy="452" r="4" fill="#A78BFA"/><text x="450" y="457" fill="#9FB0C8" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">MEMORY &amp; RELATION</text>
- <text x="435" y="499" fill="#F4F7FD" font-size="23" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >长期记忆与关系</text>
- <text x="435" y="530" fill="#C1D0E1" font-size="15.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >Memory / Relationship</text>
- <text x="435" y="558" fill="#8FA3BE" font-size="14" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >按身份与来源召回</text>
- </g><g><rect x="772" y="426" width="300" height="140" rx="15" fill="#151F32" stroke="#34435B" stroke-width="1.3"/><rect x="773" y="427" width="5" height="138" rx="2" fill="#34D399" opacity=".9"/>
- <circle cx="797" cy="452" r="4" fill="#34D399"/><text x="812" y="457" fill="#9FB0C8" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">EXPERIENCE</text>
- <text x="797" y="499" fill="#F4F7FD" font-size="23" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >经历与异步整理</text>
- <text x="797" y="530" fill="#C1D0E1" font-size="15.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >Ledger → Episode</text>
- <text x="797" y="558" fill="#8FA3BE" font-size="14" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >Consolidation / Reflection</text>
+<rect width="1120" height="610" rx="20" fill="url(#bg)"/><rect width="1120" height="610" rx="20" fill="url(#g)"/><rect x="1" y="1" width="1118" height="608" rx="19" fill="none" stroke="#D5C0AA" stroke-width="1.5"/>
+<rect x="48" y="44" width="5" height="29" rx="2" fill="#B57B48"/>
+<text x="67" y="67" fill="#3F3026" font-size="25" font-weight="750" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.6">SYSTEM ARCHITECTURE</text>
+<text x="1070" y="64" fill="#78604E" font-size="14" font-weight="500" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" text-anchor="end">Unity 世界权威  /  受限认知  /  可信经历</text>
+<path d="M48 89H1072" stroke="#DFD0BE" stroke-width="1"/>
+<text x="48" y="122" fill="#94623F" font-size="13" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.5">01   实时交互  /  RUNTIME</text>
+<path d="M280 117H1072" stroke="#D8C6B2" stroke-width="1"/>
+<path d="M348 233H409" stroke="#9B846E" stroke-width="2.8" stroke-linecap="round" marker-end="url(#a)"/>
+<path d="M710 233H771" stroke="#9B846E" stroke-width="2.8" stroke-linecap="round" marker-end="url(#a)"/>
+<path d="M919 320V425" stroke="#78896C" stroke-width="2.3" stroke-linecap="round" marker-end="url(#sage)"/>
+<path d="M771 499H711" stroke="#78896C" stroke-width="2.2" stroke-linecap="round" marker-end="url(#sage)"/>
+<path d="M624 425V320" stroke="#8D6247" stroke-width="2.2" stroke-dasharray="6 6" stroke-linecap="round" marker-end="url(#espresso)"/>
+<path d="M348 497H382V347H489V320" fill="none" stroke="#B57B48" stroke-width="2" stroke-dasharray="6 6" stroke-linejoin="round" marker-end="url(#caramel)"/>
+<path d="M48 356H1072" stroke="#DFD0BE" stroke-width="1" stroke-dasharray="4 8"/>
+<text x="48" y="402" fill="#94623F" font-size="13" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.2">02   知识、经历与长期记忆  /  CONTEXT</text>
+<path d="M365 397H1072" stroke="#D8C6B2" stroke-width="1"/>
+<g><rect x="48" y="147" width="300" height="173" rx="15" fill="#FFFDF9" stroke="#D7C5B2" stroke-width="1.3"/><rect x="49" y="148" width="5" height="171" rx="2" fill="#B57B48" opacity=".9"/>
+ <circle cx="73" cy="173" r="4" fill="#B57B48"/><text x="88" y="178" fill="#846754" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">UNITY WORLD</text>
+ <text x="73" y="229" fill="#382A21" font-size="25" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >感知与事件</text>
+ <text x="73" y="267" fill="#665143" font-size="16" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >局部感知  ·  AgentEvent</text>
+ <text x="73" y="302" fill="#796658" font-size="14.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >玩家输入 / NPC / 当前世界</text>
+ </g><g><rect x="410" y="147" width="300" height="173" rx="15" fill="#FFFDF9" stroke="#D7C5B2" stroke-width="1.3"/><rect x="411" y="148" width="5" height="171" rx="2" fill="#8D6247" opacity=".9"/>
+ <circle cx="435" cy="173" r="4" fill="#8D6247"/><text x="450" y="178" fill="#846754" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">BACKEND COGNITION</text>
+ <text x="435" y="229" fill="#382A21" font-size="25" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >认知决策</text>
+ <text x="435" y="267" fill="#665143" font-size="16" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >Step 0  ·  可选 Context Read</text>
+ <text x="435" y="302" fill="#796658" font-size="14.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >最多两次推理 · 有界上下文</text>
+ </g><g><rect x="772" y="147" width="300" height="173" rx="15" fill="#FFFDF9" stroke="#D7C5B2" stroke-width="1.3"/><rect x="773" y="148" width="5" height="171" rx="2" fill="#78896C" opacity=".9"/>
+ <circle cx="797" cy="173" r="4" fill="#78896C"/><text x="812" y="178" fill="#846754" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">UNITY RUNTIME</text>
+ <text x="797" y="229" fill="#382A21" font-size="25" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >呈现与执行</text>
+ <text x="797" y="267" fill="#665143" font-size="16" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >对话 / 表情 / 行动授权</text>
+ <text x="797" y="302" fill="#796658" font-size="14.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >世界状态与 GoalOutcome 由 Unity 确认</text>
+ </g><g><rect x="48" y="426" width="300" height="140" rx="15" fill="#FFFDF9" stroke="#D7C5B2" stroke-width="1.3"/><rect x="49" y="427" width="5" height="138" rx="2" fill="#B57B48" opacity=".9"/>
+ <circle cx="73" cy="452" r="4" fill="#B57B48"/><text x="88" y="457" fill="#846754" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">KNOWLEDGE</text>
+ <text x="73" y="499" fill="#382A21" font-size="23" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >世界知识</text>
+ <text x="73" y="530" fill="#665143" font-size="15.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >权限过滤 · 自动预检索</text>
+ <text x="73" y="558" fill="#796658" font-size="14" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >需要时补查</text>
+ </g><g><rect x="410" y="426" width="300" height="140" rx="15" fill="#FFFDF9" stroke="#D7C5B2" stroke-width="1.3"/><rect x="411" y="427" width="5" height="138" rx="2" fill="#8D6247" opacity=".9"/>
+ <circle cx="435" cy="452" r="4" fill="#8D6247"/><text x="450" y="457" fill="#846754" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">MEMORY &amp; RELATION</text>
+ <text x="435" y="499" fill="#382A21" font-size="23" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >长期记忆与关系</text>
+ <text x="435" y="530" fill="#665143" font-size="15.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >Memory / Relationship</text>
+ <text x="435" y="558" fill="#796658" font-size="14" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >按身份与来源召回</text>
+ </g><g><rect x="772" y="426" width="300" height="140" rx="15" fill="#FFFDF9" stroke="#D7C5B2" stroke-width="1.3"/><rect x="773" y="427" width="5" height="138" rx="2" fill="#78896C" opacity=".9"/>
+ <circle cx="797" cy="452" r="4" fill="#78896C"/><text x="812" y="457" fill="#846754" font-size="12" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" letter-spacing="1.1">EXPERIENCE</text>
+ <text x="797" y="499" fill="#382A21" font-size="23" font-weight="700" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >经历与异步整理</text>
+ <text x="797" y="530" fill="#665143" font-size="15.5" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >Ledger → Episode</text>
+ <text x="797" y="558" fill="#796658" font-size="14" font-weight="400" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" >Consolidation / Reflection</text>
  </g>
-<path d="M48 585H1072" stroke="#243750" stroke-width="1"/>
-<text x="560" y="601" fill="#7188A5" font-size="11.5" font-weight="600" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" text-anchor="middle" letter-spacing="2">MODEL PROPOSES    ·    UNITY VERIFIES    ·    EXPERIENCE PERSISTS</text>
+<path d="M48 585H1072" stroke="#D8C7B5" stroke-width="1"/>
+<text x="560" y="598" fill="#866D5B" font-size="11.5" font-weight="600" font-family="Inter, Segoe UI, Noto Sans CJK SC, Microsoft YaHei, Arial, sans-serif" text-anchor="middle" letter-spacing="2">MODEL PROPOSES    ·    UNITY VERIFIES    ·    EXPERIENCE PERSISTS</text>
 </svg>
