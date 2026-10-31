@@ -40,14 +40,11 @@ The project explores a working loop: **perception → cognition → memory and a
 
 ## System architecture
 
-```mermaid
-flowchart TD
-    W["Unity world<br/>Local perception · events"] --> C["Backend cognition<br/>Hybrid context · up to two steps"]
-    C --> A["Unity presentation / action<br/>Action checks · execution · feedback"]
-    A --> W
-    A --> M["Experience → memory<br/>Async consolidation · reflection"]
-    M -.->|"Later on-demand recall"| C
-```
+<p align="center">
+  <img src="Docs/Images/architecture-overview.en.svg" alt="Architecture: Unity world, bounded cognition, action feedback and long-term memory" width="560">
+</p>
+
+[Mermaid source](Docs/Images/architecture-overview.en.mmd)
 
 This is an overview of ordinary interaction. Replies, no action and action proposals are distinct outcomes; only action proposals enter action admission and execution. Background memory processing does not require every dialogue turn to wait for it.
 

@@ -40,14 +40,11 @@ EmbodiedNPC 是一个面向游戏场景的多 NPC 认知与交互实验项目。
 
 ## 系统架构
 
-```mermaid
-flowchart TD
-    W["Unity 世界<br/>局部感知 · 玩家事件"] --> C["Backend 认知<br/>混合上下文 · 最多两步推理"]
-    C --> A["Unity 呈现与行动<br/>行动检查 · 执行 · 结果反馈"]
-    A --> W
-    A --> M["经历记录 → 长期记忆<br/>异步整理 · 反思"]
-    M -.->|"后续按需召回"| C
-```
+<p align="center">
+  <img src="Docs/Images/architecture-overview.svg" alt="系统架构：Unity 世界、受限认知、行动反馈与长期记忆的闭环" width="560">
+</p>
+
+[Mermaid 源码](Docs/Images/architecture-overview.mmd)
 
 图中是普通交互的概览；回复、不行动和行动提案是不同结果，只有行动提案进入行动检查与执行流程。后台记忆处理也不要求每轮对话同步等待。
 
