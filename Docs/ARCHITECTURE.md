@@ -2,6 +2,18 @@
 
 The current v0.1.3-preview source uses TitleScene → CafeDemoV2. This page describes production module responsibilities and authority boundaries; it is not a claim that every provider or gameplay path has been tested. See [release scope](RELEASE_STATUS.md) for the retained source and validation limits, and [source setup](SOURCE_SETUP.md) to run the project.
 
+## Reading the diagrams
+
+The [README overview](../README.en.md#system-architecture) ([中文](../README.md#系统架构)) introduces the perception → cognition → memory/action → world-feedback loop. The diagram below expands the ordinary dialogue path; branches are alternatives or optional reads, not work that every turn must perform. Unity remains the authority for current world state and action outcomes throughout.
+
+| Part of the flow | How to read it |
+| --- | --- |
+| Perception → CognitiveRun | Observer-local events and context wake one foreground run per NPC; noticing an event does not grant action permission. |
+| Knowledge capture → Step 0 → optional Step 1 | Automatic knowledge prefetch comes before the first inference. One optional batch can read knowledge, memory and task context; Step 1 must terminate. |
+| Terminal decision → presentation or action execution | A reply, no action and an action proposal are distinct. Backend validation and independent Unity admission precede world-action execution. |
+| Presented dialogue / Unity outcome → Experience → Memory | Only source-qualified actual experiences enter the Ledger. Consolidation and reflection run asynchronously; a promise or generated reply is not proof of execution or delivery. |
+| Memory / Relationship → later cognition | Recall supplies historical evidence; Relationship supplies a pair-scoped interpretation. Neither overrides current Unity state or grants action authority. |
+
 ## Runtime flow
 
 ```mermaid
@@ -40,6 +52,8 @@ flowchart TD
     R -.-> T["Read-only RuntimeTrace"]
     O -.-> T
 ```
+
+Solid arrows show control/data flow, not equal authority or synchronous completion; dotted arrows to RuntimeTrace are read-only observation. World changes from executed actions re-enter subsequent observer-local perception at the top of the diagram. Long-term Memory is available through later on-demand Recall.
 
 This is the ordinary dialogue path. Fixed mode decisions, restricted action-feedback recovery, dialogue continuation and task-consideration events retain their own restricted schemas; the diagram does not grant them all dialogue reads or player action authority. A turn ends after Step 0 or Step 1: at most two model inferences, with no separate LLM query rewriter or third inference. Independent read branches can wait concurrently; shared Embedding provider gates still apply.
 
