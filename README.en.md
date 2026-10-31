@@ -12,8 +12,6 @@ EmbodiedNPC is an experimental multi-NPC cognition and interaction project for g
 
 The project explores a working loop: **perception → cognition → memory and action → world feedback → future interactions**. The model uses character experiences and local surroundings to propose replies or actions. Unity validates and executes them, and actual results become evidence for later interactions. NPC autonomy and available actions are limited; this is an early prototype, not a complete general-purpose Agent framework.
 
-[Download and try](#download-and-try) · [System architecture](#system-architecture) · [Technical documentation](#technical-documentation) · [Run from source](#run-from-source)
-
 <p align="center">
   <img src="Docs/Images/cafe-panorama.jpg" alt="In-game panorama of the EmbodiedNPC café" width="640">
 </p>
