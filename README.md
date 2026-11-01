@@ -92,7 +92,7 @@ EmbodiedNPC 是一个面向游戏场景的多 NPC 认知与交互实验项目。
 >
 > - 项目不包含主模型，需要自行配置可用的本地或远程 LLM 服务。
 > - 内置 Embedding 权重不随源码提供，可按文档准备，也可在首次保存配置前选择外部 Embedding 或关闭向量能力。
-> - Unity 首次导入时，文档列出的六项 VRM/GLB 资源可能需要定向 Reimport，具体见 [源码运行说明](Docs/SOURCE_SETUP.md)。
+> - Unity 首次导入会自动检查并修复六项 VRM/GLB 的不完整产物，无需手动 Reimport 或重生成场景；等待模型就绪后运行 TitleScene。验证范围与失败诊断见 [源码运行说明](Docs/SOURCE_SETUP.md)。
 
 1. 从仓库根目录打开 PowerShell，安装依赖并启动 Backend：
 

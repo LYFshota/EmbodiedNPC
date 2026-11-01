@@ -20,24 +20,7 @@ public static class PublicPreviewBuild
 
     public static void ValidateModels()
     {
-        string[] models = {
-            "Assets/CafeDemo/V2/Characters/薇薇.vrm", "Assets/CafeDemo/V2/Characters/Ao.vrm",
-            "Assets/CafeDemo/V2/Characters/桜田 史利矢.vrm", "Assets/CafeEnvironmentCompatibilityTest/GirlA.vrm",
-            "Assets/CafeEnvironmentCompatibilityTest/CozyCafe.glb", "Assets/VRMCompatibilityTest/Xingmang.vrm" };
-        foreach (var path in models)
-        {
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
-            var root = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (root == null) throw new Exception("Model import failed: " + path);
-            if (path.EndsWith(".vrm"))
-            {
-                bool valid = false;
-                foreach (var asset in AssetDatabase.LoadAllAssetsAtPath(path))
-                    if (asset is Avatar a && a.isHuman && a.isValid) valid = true;
-                if (!valid) throw new Exception("Humanoid avatar missing: " + path);
-            }
-        }
-        Debug.Log("PUBLIC_PREVIEW_MODELS_VALIDATED: six imports, five valid Humanoid avatars");
+        PublicSourceModels.Validate();
     }
 
     private static void Build(string output)

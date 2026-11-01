@@ -103,8 +103,9 @@ before saving the first model configuration.
 
 2. Open `UnityClient` in Unity Hub. Let packages, scripts and shaders finish importing,
    then run `Assets/Scenes/TitleScene.unity` and enter the café from the title screen.
-   First import may require Reimport on the six existing VRM/GLB assets listed in
-   [source setup](Docs/SOURCE_SETUP.md); do not regenerate scenes or copy someone else's Library.
+   The Editor automatically checks the six included VRM/GLB models and recovers incomplete
+   imports once prerequisites are ready; no manual model Reimport or scene generation is required.
+   See [source setup](Docs/SOURCE_SETUP.md) for readiness logs, failure diagnostics and validation limits.
 3. Configure Main and Embedding, save/apply, and restart this checkout's Backend when prompted.
 
 See [source setup](Docs/SOURCE_SETUP.md) for dependency/model preparation and

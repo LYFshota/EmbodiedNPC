@@ -25,22 +25,24 @@
 
 新建 Main 草稿默认 32768 上下文，已有值不自动迁移。该值是请求预算配置，不证明 Provider 实际容量。首次 Main 保存会一并启用默认预选的内置 Embedding；**需先准备下面的资源**，或在保存前明确选择已有外部 Embedding / 关闭 Embedding 的路径。关闭向量能力仍有 lexical/structured fallback，不等于启用向量检索。
 
-### 首次 Unity 导入后的 VRM / GLB 核对
+### 首次 Unity 导入与模型就绪
 
-新建 Library 的首次导入可能先处理 VRM/GLB、后完成包内 Shader，导致 CafeDemoV2 报 Missing Prefab 或材质导入异常。先等 Package Manager、Shader 和脚本导入结束，再在 Project 中对下面六项已跟踪资源执行右键 **Reimport**；不需要复制其他工作区的 Library 或资源，也不要更改 UniVRM 的固定版本。
+用 Unity Hub 打开 `UnityClient` 后，等待依赖恢复、脚本编译、Shader 和资源导入结束。Editor 会自动检查正式场景所用的六项 VRM/GLB：薇薇、Ao、桜田 史利矢、GirlA、CozyCafe、Xingmang。正常流程不需要手动 Reimport、重新下载角色、绑定 Avatar/材质，或执行一次性场景配置菜单。
+
+固定版本 UniVRM 在新 Library 的首次刷新中可能出现 `ArgumentNullException: Shader`：日志里已有 Shader 导入记录，也不代表当时 `Shader.Find()` 已可取得对象。Editor 修复会在连续空闲更新后确认包已注册、显式加载固定包内的 Shader，再只对根对象、Avatar、网格、材质或 Shader 不完整的模型执行一次定向重导入。成功标志是 Console / Editor.log 中的：
 
 ```text
-Assets/CafeDemo/V2/Characters/薇薇.vrm
-Assets/CafeDemo/V2/Characters/Ao.vrm
-Assets/CafeDemo/V2/Characters/桜田 史利矢.vrm
-Assets/CafeEnvironmentCompatibilityTest/GirlA.vrm
-Assets/CafeEnvironmentCompatibilityTest/CozyCafe.glb
-Assets/VRMCompatibilityTest/Xingmang.vrm
+PUBLIC_PREVIEW_MODELS_VALIDATED: six models, five bound Humanoid avatars; meshes/materials/shaders valid (read-only)
+PUBLIC_SOURCE_MODEL_IMPORT_READY: repaired=6; no source assets saved
 ```
 
-冷导入日志中的 `ArgumentNullException: Shader` / `Asset import failed` 应按导入失败处理，即使批处理最终退出码为 0。六项 Reimport 后重新打开正式场景，确认实际模型、材质和贴图完整；首帧 Shader 尚在编译时应等待稳定画面后再判断显示结果。此操作重新导入工程已有素材，不需要额外下载或手动添加美术包。
+`repaired` 是实际需要修复的数量，可以为 0；健康工程再次打开不强制重导入模型。早期导入失败记录会保留，判断结果应同时看最终验证与场景状态，不能只看批处理退出码。该过程不保存或重写场景、Prefab、Animator Controller、人设资产、模型源文件或已有 `.meta`。
 
-这些历史目录名下的资源也被正式 CafeDemoV2 场景引用。仅重导入资源，不执行 `ReimportAndApplyBatch` 或场景配置菜单，不重写场景/Prefab。打开 CafeDemoV2 后确认无 Missing Prefab/资源导入错误，再执行场景测试。此步骤已有定向重导入验证，不等于已完成全新机器、全新 Library 或 Player 的完整验收。
+每项资源在同一模型源文件、`.meta` 与 Shader 依赖状态下最多自动修复一次，尝试记录只写在 `Library/PublicSourceModelImport/`。如果包或 Shader 不可用，或修复后仍无效，Console 会明确报出资源路径和原因并停止，不通过反复重开工程无限重试。先检查 Package Manager / Editor.log 中的网络、依赖、Shader 或原始资源问题；不要从其他工作区复制 Library、升级固定依赖或重生成场景来掩盖失败。
+
+维护者可在初始导入完成后用 `-batchmode -quit -executeMethod PublicSourceModelImport.ValidateBatch` 执行相同检查；失败会抛出异常使批处理失败。`PublicPreviewBuild.ValidateModels()` 则复用只读检查，不再强制重导入全部六项，也不需要运行发布构建来验证模型。
+
+[本轮冷启动验证记录](Validation/UnitySourceFirstImport-20261101.md)覆盖 Unity 6000.5.10f1、仓库固定依赖、全新 Library、二次打开和实际 Editor Play；它不保证所有机器、驱动或网络均可成功。依赖下载仍需要可用网络和已激活的 Unity。没有 Backend 时，TitleScene 仍能进入 Play 并给出明确连接提示；进入咖啡馆继续遵守现有 AI 配置/连接准入流程，Backend、Main 和 Embedding 的安装步骤不变。
 
 Backend 的相关离线测试可从 `AIBackend` 目录通过标准入口运行，例如 `.\.venv\Scripts\python.exe -B -m unittest -v tests.test_cognitive_request tests.test_world_action_eligibility`。测试公共入口会在首次导入应用前创建临时 Mock 数据路径，并为 HTTP/WS 提供真实本地会话；不会加载本机模型配置或关闭 S01。其他未采用此夹具的集成测试仍须遵守上面的导入前隔离要求。
 
