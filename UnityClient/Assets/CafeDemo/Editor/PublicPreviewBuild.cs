@@ -14,6 +14,9 @@ public static class PublicPreviewBuild
         if (index < 0 || index + 1 >= args.Length) throw new Exception("Missing build output");
         var output = Path.GetFullPath(args[index + 1]);
         if (output.StartsWith(Path.GetFullPath(Application.dataPath), StringComparison.OrdinalIgnoreCase)) throw new Exception("Build outside Assets");
+        foreach (var name in new[] { "PerformanceTestRunInfo.json", "PerformanceTestRunSettings.json" })
+            if (File.Exists(Path.Combine(Application.dataPath, "Resources", name)))
+                throw new Exception("Remove generated performance-test Resources before a public build: " + name);
         ValidateModels();
         Build(output);
     }
