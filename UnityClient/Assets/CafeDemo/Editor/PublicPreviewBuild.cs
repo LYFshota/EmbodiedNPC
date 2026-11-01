@@ -14,9 +14,6 @@ public static class PublicPreviewBuild
         if (index < 0 || index + 1 >= args.Length) throw new Exception("Missing build output");
         var output = Path.GetFullPath(args[index + 1]);
         if (output.StartsWith(Path.GetFullPath(Application.dataPath), StringComparison.OrdinalIgnoreCase)) throw new Exception("Build outside Assets");
-        foreach (var name in new[] { "PerformanceTestRunInfo.json", "PerformanceTestRunSettings.json" })
-            if (File.Exists(Path.Combine(Application.dataPath, "Resources", name)))
-                throw new Exception("Remove generated performance-test Resources before a public build: " + name);
         ValidateModels();
         Build(output);
     }
@@ -57,5 +54,24 @@ public static class PublicPreviewBuild
             "{\"version\":\"" + PlayerSettings.bundleVersion + "\",\"result\":\"" + summary.result + "\",\"errors\":" + summary.totalErrors + ",\"warnings\":" + summary.totalWarnings + ",\"bytes\":" + summary.totalSize + "}");
         if (summary.result != BuildResult.Succeeded) throw new Exception("Windows build failed");
         Debug.Log("PUBLIC_PREVIEW_BUILD_SUCCEEDED: " + output);
+    }
+}
+
+// Performance Testing writes host metadata even for ordinary Player builds (order 0).
+// Run after its setup so generated test Resources cannot enter a public Player.
+public sealed class PublicPreviewBuildResourceGuard : IPreprocessBuildWithReport
+{
+    public int callbackOrder => int.MaxValue;
+    public void OnPreprocessBuild(BuildReport report)
+    {
+        if ((report.summary.options & BuildOptions.IncludeTestAssemblies) != 0) return;
+        foreach (var name in new[] { "PerformanceTestRunInfo.json", "PerformanceTestRunSettings.json" })
+        {
+            string path = "Assets/Resources/" + name;
+            if (File.Exists(path) && !AssetDatabase.DeleteAsset(path))
+                throw new Exception("Cannot exclude generated performance-test metadata: " + name);
+        }
+        AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+        Debug.Log("PUBLIC_PREVIEW_TEST_METADATA_EXCLUDED");
     }
 }
