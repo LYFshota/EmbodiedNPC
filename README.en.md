@@ -101,6 +101,21 @@ before saving the first model configuration.
 See [source setup](Docs/SOURCE_SETUP.md) for dependency/model preparation and
 [architecture](Docs/ARCHITECTURE.md) for the main boundaries. Some detailed developer documents are currently in Chinese.
 
+## 🤖 Recommended models and performance comparison
+
+Different language models can behave differently in NPC dialogue, memory use, and action decisions. The following results from 100 fixed NPC scenarios in this project may help you choose a model.
+
+| Model | Test score | Suggested use |
+| --- | ---: | --- |
+| GLM-5.3 Flash | **89/100** | ⭐ Recommended cloud option |
+| Gemini 3.8 Flash | **88/100** | ⭐ Recommended cloud option |
+| DeepSeek V4.1 Flash | **87/100** | ⭐ Recommended cloud option |
+| Qwen3.8 Flash | 82/100 | Alternative cloud option |
+| Qwen3.8-27B W8A8 | 78/100 | Local deployment with substantial compute |
+| Nemotron 3.5 BF16 | 66/100 | Deployment and model experiments |
+| Qwen3.5-9B | 56/100 | Small-model experiments |
+| Qwen3.5-4B | 39/100 | Lightweight-model research |
+
 ## Directions to explore
 
 - **More natural multi-party conversations:** players and NPCs sharing a scene,
