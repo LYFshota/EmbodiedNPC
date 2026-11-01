@@ -4,13 +4,14 @@ using UnityEngine.UI;
 
 namespace EmbodiedNPC.Settings
 {
-    public enum ModelSettingsPage { Configuration, IndexMaintenance, Contracts, Diagnostics }
+    public enum ModelSettingsPage { Configuration, IndexMaintenance, Contracts, Diagnostics, Concurrency }
 
     public sealed partial class FirstRunModelSetup
     {
         private Transform developerDiagnostics;
         private bool developerToolsVisible;
-        private GameObject configurationContent, contractContent, diagnosticsContent;
+        private GameObject configurationContent, contractContent, diagnosticsContent, concurrencyContent;
+        private TMP_Text concurrencyHelp;
         private TMP_Text maintenanceTarget;
         private TMP_Text contractSummary;
         public ModelSettingsPage SettingsPage { get; private set; }
@@ -55,6 +56,12 @@ namespace EmbodiedNPC.Settings
             diagnosticsToggle.transform.parent.gameObject.SetActive(false);
             var title=developerDiagnostics.Find("DiagnosticsTitle")?.GetComponent<TMP_Text>();
             if(title!=null)title.gameObject.SetActive(false);
+            concurrencyContent = SettingsContent("ModelConcurrencyContent", content);
+            concurrencyHelp = AddState(concurrencyContent.transform, "ConcurrencyHelp");
+            var helpSize = concurrencyHelp.GetComponent<LayoutElement>();
+            helpSize.minHeight = 72; helpSize.preferredHeight = -1;
+            foreach (var input in new[] { totalConcurrency, foregroundConcurrency, backgroundConcurrency })
+                input.transform.parent.SetParent(concurrencyContent.transform, false);
             SetSettingsPage(SettingsPage);
         }
 
@@ -81,7 +88,11 @@ namespace EmbodiedNPC.Settings
             memoryIndexSection.SetActive(page==ModelSettingsPage.Configuration || page==ModelSettingsPage.IndexMaintenance);
             contractContent.SetActive(page==ModelSettingsPage.Contracts);
             diagnosticsContent.SetActive(page==ModelSettingsPage.Diagnostics);
-            saveButton.gameObject.SetActive(page==ModelSettingsPage.Configuration);
+            concurrencyContent.SetActive(page==ModelSettingsPage.Concurrency);
+            concurrencyHelp.text=SettingsUiLanguage.T(
+                "前台对话与后台记忆任务共享模型总并发，各自同时受前台／后台上限约束。云端默认 6 / 6 / 2，本地默认 1 / 1 / 1。\n保存并应用后需重启 Backend 生效；保存也会包含 AI 配置页的待保存修改。",
+                "Foreground dialogue and background memory jobs share the total model capacity, with separate class limits. Cloud defaults: 6 / 6 / 2; local defaults: 1 / 1 / 1.\nSave & Apply requires a Backend restart and also saves pending edits in AI configuration.");
+            saveButton.gameObject.SetActive(page==ModelSettingsPage.Configuration || page==ModelSettingsPage.Concurrency);
             if(restoreDefaultsButton!=null)restoreDefaultsButton.gameObject.SetActive(page==ModelSettingsPage.Configuration);
             if(saveButton.transform.parent.name=="FooterActions")
             {
@@ -102,8 +113,8 @@ namespace EmbodiedNPC.Settings
             Transform pageRoot=mainModel.transform;
             while(pageRoot!=null && pageRoot.name!="ModelPage")pageRoot=pageRoot.parent;
             var title=pageRoot?.Find("Title")?.GetComponent<TMP_Text>();
-            if(title!=null)title.text=SettingsUiLanguage.T(page==ModelSettingsPage.Configuration?"AI 配置":page==ModelSettingsPage.Contracts?"模型合同测试":page==ModelSettingsPage.Diagnostics?"运行诊断 · 模型配置状态":"记忆索引维护",
-                page==ModelSettingsPage.Configuration?"AI configuration":page==ModelSettingsPage.Contracts?"Model contracts":page==ModelSettingsPage.Diagnostics?"Runtime diagnostics · Model configuration":"Memory index maintenance");
+            if(title!=null)title.text=SettingsUiLanguage.T(page==ModelSettingsPage.Configuration?"AI 配置":page==ModelSettingsPage.Contracts?"模型合同测试":page==ModelSettingsPage.Diagnostics?"运行诊断 · 模型配置状态":page==ModelSettingsPage.Concurrency?"并发调整":"记忆索引维护",
+                page==ModelSettingsPage.Configuration?"AI configuration":page==ModelSettingsPage.Contracts?"Model contracts":page==ModelSettingsPage.Diagnostics?"Runtime diagnostics · Model configuration":page==ModelSettingsPage.Concurrency?"Concurrency settings":"Memory index maintenance");
             RebuildSettingsLayout();
         }
 

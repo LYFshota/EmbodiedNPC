@@ -347,11 +347,11 @@ class MemoryC2BTests(unittest.IsolatedAsyncioTestCase):
         original = self.jobs.claim_next_for_version
         attempts = []
 
-        def claim(*args):
+        def claim(*args, **kwargs):
             attempts.append(args)
             if len(attempts) == 1:
                 raise sqlite3.OperationalError("SECRET_UID simulated lock")
-            return original(*args)
+            return original(*args, **kwargs)
 
         with patch.object(self.jobs, "claim_next_for_version", side_effect=claim), \
              self.assertLogs("embodiednpc.backend.memory_consolidation", level="WARNING") as logs:
@@ -489,7 +489,8 @@ class MemoryC2BTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(asyncio.CancelledError):
                 await task
             requeue.assert_not_called()
-        self.assertEqual(self.jobs.get(job.job_id).status, "RUNNING")
+        self.assertEqual(self.jobs.get(job.job_id).status, "RETRY")
+        self.assertEqual(self.jobs.get(job.job_id).error_code, "ATTEMPT_CANCELLED")
         self.assert_no_writes()
 
     async def test_foreground_during_finalization_does_not_cancel_durable_write(self):

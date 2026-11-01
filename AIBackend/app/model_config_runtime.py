@@ -79,7 +79,8 @@ def effective_runtime_config(document: ModelApiConfigDocument) -> tuple:
     main = document.main_model
     generation = (main.temperature, main.thinking, main.max_output_tokens, main.schema_profile,
                   main.token_parameter, main.thinking_parameter, main.send_temperature,
-                  main.top_p, main.reasoning_effort, main.thinking_budget, main.health_strategy)
+                  main.top_p, main.reasoning_effort, main.thinking_budget, main.health_strategy,
+                  main.concurrency_limits())
     if main.provider_type == "mock":
         # Mock still uses this startup snapshot for cognition budgeting.
         main_effective = ("mock", main.context_length or 8192)

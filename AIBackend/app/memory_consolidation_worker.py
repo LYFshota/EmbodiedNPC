@@ -11,6 +11,7 @@ import time
 from .base_memory_consolidator import BaseMemoryConsolidator, MemoryConsolidationError
 from .canonical_memory_repository import CanonicalMemoryFinalizationError, CanonicalMemoryRepository
 from .episode_models import DurableMemoryJob, MemoryJobPolicy
+from .worker_runtime import store_call, drain_task, run_pool, owned_attempt
 from .local_model_scheduler import PreemptedByForeground
 from .memory_consolidation_admission import MemoryConsolidationAdmission, MemoryConsolidationAdmissionError
 from .memory_consolidation_context import MemoryConsolidationContextError, MemoryContextResolver
@@ -46,7 +47,7 @@ class MemoryConsolidationWorker:
     def __init__(self, jobs: MemoryJobRepository, resolver: MemoryContextResolver,
                  consolidator: BaseMemoryConsolidator, admission: MemoryConsolidationAdmission,
                  memories: CanonicalMemoryRepository, *, job_policy: MemoryJobPolicy | None = None,
-                 interval_seconds: float = 1.0, clock=time.time) -> None:
+                 interval_seconds: float = 1.0, clock=time.time, concurrency: int = 1, attempt_timeout: float = 900) -> None:
         self.jobs = jobs
         self.resolver = resolver
         self.consolidator = consolidator
@@ -59,6 +60,9 @@ class MemoryConsolidationWorker:
             raise ValueError("INVALID_CONSOLIDATION_POLL_INTERVAL")
         self.interval_seconds = interval_seconds
         self._clock = clock
+        if not 1 <= concurrency <= 32 or attempt_timeout <= 0:
+            raise ValueError("WORKER_CONCURRENCY_INVALID")
+        self.concurrency, self.attempt_timeout = concurrency, attempt_timeout
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
 
@@ -67,39 +71,54 @@ class MemoryConsolidationWorker:
             self._stop = asyncio.Event()
             self._task = asyncio.create_task(self._run(), name="memory-consolidation-worker")
 
+    def request_stop(self) -> None:
+        self._stop.set()
+
     async def stop(self) -> None:
         # Drain the current durable attempt; do not abandon an in-flight provider/write.
         self._stop.set()
         if self._task is not None:
-            await self._task
+            await drain_task(self._task)
             self._task = None
 
     async def process_once(self) -> bool:
-        now = self._clock()
-        await asyncio.to_thread(self.jobs.recover_stale, now, self.job_policy)
-        job = await asyncio.to_thread(self.jobs.claim_next_for_version, now, ACTIVE_VERSION)
+        return await owned_attempt(self._process_once)
+
+    async def _process_once(self, claimed) -> bool:
+        try:
+            now = self._clock()
+            await store_call(self.jobs.recover_stale, now, self.job_policy)
+            job = await store_call(self.jobs.claim_next_for_version, now, ACTIVE_VERSION, activate=True)
+        finally:
+            claimed.set()
         if job is None:
             return False
         try:
-            context = await asyncio.to_thread(self.resolver.resolve, job)
-            projection = await asyncio.to_thread(self.consolidator.project, context)
-            response = await self.consolidator.consolidate(context, projection=projection)
-            batch = await asyncio.to_thread(self.admission.evaluate, context, response,
-                                           visible_event_ids=projection.visible_event_ids)
-            outcome = await asyncio.to_thread(
-                self.memories.finalize_success, job_id=job.job_id,
-                attempt_generation=job.attempt_generation, expected_input_hash=job.input_hash,
-                batch=batch, now=self._clock(),
-            )
-            logger.info("Consolidation job_id=%s attempt=%s applied=%s candidates=%s accepted=%s rejected=%s",
-                        job.job_id, job.attempt_generation, outcome.applied,
-                        len(response.episodic_memories) + len(response.semantic_facts), len(batch.memories),
-                        len(batch.rejections))
-            for rejection in batch.rejections:
-                logger.info("Consolidation job_id=%s kind=%s index=%s code=%s", job.job_id,
-                            rejection.candidate_kind, rejection.candidate_index, rejection.reason)
+            async with asyncio.timeout(self.attempt_timeout):
+                context = await store_call(self.resolver.resolve, job)
+                projection = await store_call(self.consolidator.project, context)
+                response = await self.consolidator.consolidate(context, projection=projection)
+                batch = await store_call(self.admission.evaluate, context, response,
+                                               visible_event_ids=projection.visible_event_ids)
+                outcome = await store_call(
+                    self.memories.finalize_success, job_id=job.job_id,
+                    attempt_generation=job.attempt_generation, expected_input_hash=job.input_hash,
+                    batch=batch, now=self._clock(),
+                )
+                logger.info("Consolidation job_id=%s attempt=%s applied=%s candidates=%s accepted=%s rejected=%s",
+                            job.job_id, job.attempt_generation, outcome.applied,
+                            len(response.episodic_memories) + len(response.semantic_facts), len(batch.memories),
+                            len(batch.rejections))
+                for rejection in batch.rejections:
+                    logger.info("Consolidation job_id=%s kind=%s index=%s code=%s", job.job_id,
+                                rejection.candidate_kind, rejection.candidate_index, rejection.reason)
+        except asyncio.CancelledError:
+            await store_call(self.jobs.requeue_cancelled, job.job_id, job.attempt_generation, self._clock())
+            raise
+        except TimeoutError:
+            await self._fail(job, "CONSOLIDATION_ATTEMPT_TIMEOUT")
         except PreemptedByForeground:
-            requeued = await asyncio.to_thread(
+            requeued = await store_call(
                 self.jobs.requeue_preempted, job.job_id, job.attempt_generation, self._clock(),
             )
             logger.info("Consolidation job_id=%s attempt=%s outcome=%s", job.job_id,
@@ -124,19 +143,21 @@ class MemoryConsolidationWorker:
             await self._fail(job, "SQLITE_TRANSIENT_WRITE_FAILED")
         except Exception:
             await self._fail(job, "CONSOLIDATION_UNEXPECTED")
+        finally:
+            self.jobs.active_attempts.discard(job)
         return True
 
     async def _fail(self, job: DurableMemoryJob, code: str, *, permanent: bool = False) -> None:
-        current = await asyncio.to_thread(self.jobs.get, job.job_id)
+        current = await store_call(self.jobs.get, job.job_id)
         if current is None or current.status != "RUNNING" or current.attempt_generation != job.attempt_generation:
             self._log_stale(job)
             return
         # Repository guards still protect the race between this read and the mutation.
         if permanent:
-            updated = await asyncio.to_thread(self.jobs.mark_permanent_failure, job.job_id,
+            updated = await store_call(self.jobs.mark_permanent_failure, job.job_id,
                                              job.attempt_generation, self._clock(), code)
         else:
-            updated = await asyncio.to_thread(self.jobs.mark_failed, job.job_id,
+            updated = await store_call(self.jobs.mark_failed, job.job_id,
                                              job.attempt_generation, self._clock(), code, self.job_policy)
         logger.info("Consolidation job_id=%s attempt=%s outcome=%s code=%s", job.job_id,
                     job.attempt_generation, updated.status if updated else "STALE_ATTEMPT", code)
@@ -147,15 +168,6 @@ class MemoryConsolidationWorker:
                     job.job_id, job.attempt_generation)
 
     async def _run(self) -> None:
-        while not self._stop.is_set():
-            try:
-                if await self.process_once():
-                    continue
-            except Exception:
-                # Includes claim/recovery and failure-persistence errors. No raw exception
-                # text or traceback: provider/evidence payloads must not enter logs.
-                logger.warning("Consolidation polling outcome=CONSOLIDATION_POLL_FAILED")
-            try:
-                await asyncio.wait_for(self._stop.wait(), timeout=self.interval_seconds)
-            except TimeoutError:
-                pass
+        await run_pool(self.process_once, self._stop, concurrency=self.concurrency,
+                       interval=self.interval_seconds,
+                       on_error=lambda: logger.warning("CONSOLIDATION_POLL_FAILED"))

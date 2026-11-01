@@ -45,7 +45,7 @@ namespace EmbodiedNPC.Cognition
             RunId = runId ?? string.Empty;
             OwnerAgentEntityId = ownerAgentEntityId ?? string.Empty;
             PlayerEntityId = playerEntityId ?? string.Empty;
-            Utterance = utterance ?? string.Empty;
+            Utterance = EmbodiedNPC.Dialogue.Presentation.DialoguePresentationText.PlainText(utterance);
             WorldRevision = Math.Max(0, worldRevision);
             PresentedAt = Math.Max(0d, presentedAt);
             SourceEventId = sourceEventId ?? string.Empty;

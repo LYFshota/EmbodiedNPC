@@ -185,20 +185,28 @@ class ContextReadTests(unittest.IsolatedAsyncioTestCase):
             started, release = threading.Event(), threading.Event()
             def read(*args):
                 started.set()
-                release.wait(3)
+                release.wait(5)
                 return KnowledgeContext(status="NO_MATCH")
             backend = self.entry([plan("coffee"), TERMINAL])
             with patch.object(self.resolver, "query", side_effect=read):
-                task = asyncio.create_task(asyncio.wait_for(backend.run(self.request), .1) if timeout else backend.run(self.request))
-                self.assertTrue(await asyncio.to_thread(started.wait, 2))
-                if not timeout:
-                    task.cancel()
+                task = asyncio.create_task(backend.run(self.request))
                 try:
+                    self.assertTrue(await asyncio.to_thread(started.wait, 2))
+                    # Arm the deadline at the read boundary, not during unrelated
+                    # prompt construction. Cancellation must join the native read.
+                    if timeout:
+                        waiter = asyncio.create_task(asyncio.wait_for(task, .05))
+                    else:
+                        task.cancel()
+                        waiter = task
+                    await asyncio.sleep(.08)
+                    self.assertFalse(task.done())
+                    release.set()
                     with self.assertRaises(asyncio.TimeoutError if timeout else asyncio.CancelledError):
-                        await task
+                        await waiter
                 finally:
                     release.set()
-                await asyncio.sleep(.02)
+                    await asyncio.gather(task, return_exceptions=True)
             self.assertEqual(len(self.provider.requests), 1)
 
     async def test_unbound_character_cannot_query_and_unknown_subject_stays_scoped(self):

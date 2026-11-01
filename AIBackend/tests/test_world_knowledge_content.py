@@ -69,7 +69,7 @@ class ContentTests(unittest.IsolatedAsyncioTestCase):
     def test_internal_sources_preserve_semantic_embedding_fingerprints(self):
         from app.knowledge_embeddings import content_hash
         entries = read_document(TEMPLATE, KnowledgeBundle).entries
-        self.assertEqual(108, len(entries))
+        self.assertEqual(156, len(entries))
         for entry in entries:
             self.assertEqual("builtin", entry.source)
             archived = entry.model_copy(update={"source": "Authoring reference"})

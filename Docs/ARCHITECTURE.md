@@ -131,7 +131,7 @@ Saved local Model Config takes precedence over environment bootstrap. Save chang
 
 ### World Knowledge management and context budgets
 
-[WorldKnowledgeStore](../AIBackend/app/world_knowledge_store.py) owns a complete player JSON catalog (`schema_version=2`). The 108-entry system template is read-only, used for initialization, explicit legacy migration or restore; installed template updates never merge into an existing player catalog. Backend enforces `public`/`restricted` CharacterId access plus trusted deployment/scene binding. `constant` background and `retrieval` knowledge remain low-authority reference data, not actual player experience, current stock or action completion.
+[WorldKnowledgeStore](../AIBackend/app/world_knowledge_store.py) owns a complete player JSON catalog (`schema_version=2`). The 156-entry system template is read-only, used for initialization, explicit legacy migration or restore; installed template updates never merge into an existing player catalog. Backend enforces `public`/`restricted` CharacterId access plus trusted deployment/scene binding. `constant` background and `retrieval` knowledge remain low-authority reference data, not actual player experience, current stock or action completion.
 
 [CafeWorldKnowledgePanel](../UnityClient/Assets/CafeDemo/Scripts/CafeWorldKnowledgePanel.cs) uses [KnowledgeManagementClient](../UnityClient/Assets/Scripts/Settings/KnowledgeManagementClient.cs) and the existing [management API](../AIBackend/app/knowledge_management_api.py) for search/filter/edit, complete JSON export, import preview/confirmation, and single-entry or whole-template restore. Import replaces the catalog; stale previews fail local revision checks. Cross-process locking, backup and atomic writes protect modifications. The SQLite [knowledge index](../AIBackend/app/knowledge_embeddings.py) is derived: only the actual embedding projection changes its content fingerprint, not ACL/usage/source bookkeeping. Constant entries need no vector; lexical fallback remains available.
 
@@ -160,3 +160,10 @@ Validation records are version-specific. Earlier bring_object/Persona/M3 reports
 VRM facial expressions, local player VRM import and Windows preview packages are implemented; their presence is not a guarantee of identical visuals across models or clean-machine certification. History/source safeguards reduce unsupported claims but do not prove model semantic correctness.
 
 Not implemented as general systems: persistent Mood/decay, Motivation/Needs/Big Five, Narrative Graph, GraphRAG/automatic knowledge generation, Character Evolution, comprehensive Daily Schedule or long-term autonomous goals (limited daily modes/activities do exist), unrestricted Tool Loop, audio-driven LipSync/TTS/ASR/VLM, Player Inventory UI/Equipment/Carry, generic runtime PMX/NPC mod loading, unrestricted world placement or large-scale multiplayer.
+
+
+## v0.1.4 scheduling and retained outcomes
+
+The shared bounded model executor limits active Provider calls, with total/foreground/background caps. Cloud defaults are 6/6/2 and Ollama defaults to 1/1/1; each is configurable up to 32 through Developer tools. Context reads do not hold inference slots. Background consolidation, relationship reflection and maintenance use bounded lanes while retaining Episode transactions, pair/scope exclusions, active-attempt protection and drained shutdown. This remains a single-process Demo.
+
+Retained source dialogue can read its associated validated historical GoalOutcome independently of the ordinary 900-second recent-result filter. Order dialogue and available outcome evidence share one budget dependency; an unfit group degrades safely. Current Runtime Snapshot remains independent. Display segmentation retains one conversation record and sanitizes presentation markers into paragraph boundaries.

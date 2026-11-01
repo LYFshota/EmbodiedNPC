@@ -2,6 +2,36 @@ using System;
 
 namespace EmbodiedNPC.Dialogue.Presentation
 {
+    public static class DialoguePresentationText
+    {
+        private const string Pause = "[[PAUSE]]";
+
+        public static string PlainText(string text) => text == null ? string.Empty :
+            text.Contains(Pause) ? string.Join("\n", Segments(text)) : text;
+
+        // Persisted speech replaces presentation markers with natural paragraph boundaries.
+        // Reuse the same empty-segment and three-segment rules without changing stored messages.
+        public static string[] HistorySegments(string text) => Segments(text);
+
+        public static string[] Segments(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return System.Array.Empty<string>();
+            // Both live speech and saved history use explicit paragraph boundaries only.
+            text = text.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", Pause);
+            if (!text.Contains(Pause)) return new[] { text };
+            var parts = new System.Collections.Generic.List<string>();
+            foreach (string raw in text.Split(new[] { Pause }, System.StringSplitOptions.None))
+            {
+                string part = raw.Trim();
+                if (part.Length == 0) continue;
+                // Keep all content even if the model exceeds the three-bubble limit.
+                if (parts.Count < 3) parts.Add(part);
+                else parts[2] += "\n" + part;
+            }
+            return parts.ToArray();
+        }
+    }
+
     public enum DialogueSpeakerKind
     {
         Player,

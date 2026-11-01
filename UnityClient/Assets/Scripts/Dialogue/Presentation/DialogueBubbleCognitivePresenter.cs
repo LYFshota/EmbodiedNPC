@@ -1,3 +1,4 @@
+using System.Collections;
 using EmbodiedNPC.Cognition;
 using EmbodiedNPC.Animation;
 using EmbodiedNPC.World;
@@ -46,7 +47,7 @@ namespace EmbodiedNPC.Dialogue.Presentation
         {
             if (!TryShow(utterance)) return false;
             emotionIcon?.ClearPresentation();
-            speech?.BeginPresentedText(utterance, Time.unscaledTimeAsDouble);
+            speech?.BeginPresentedText(DialoguePresentationText.PlainText(utterance), Time.unscaledTimeAsDouble);
             return true;
         }
 
@@ -55,7 +56,7 @@ namespace EmbodiedNPC.Dialogue.Presentation
             if (owner == null || context.OwnerAgentEntityId != owner.EntityId || decision == null ||
                 !TryShow(decision.utterance, context)) return false;
             expressive?.ReceivePresentedDecision(decision, context);
-            speech?.BeginPresentedText(decision.utterance, Time.unscaledTimeAsDouble);
+            speech?.BeginPresentedText(DialoguePresentationText.PlainText(decision.utterance), Time.unscaledTimeAsDouble);
             emotionIcon?.TryPresent(decision.expression_icon, context, Time.unscaledTimeAsDouble);
             return true;
         }
@@ -64,10 +65,25 @@ namespace EmbodiedNPC.Dialogue.Presentation
         {
             if (!isActiveAndEnabled || string.IsNullOrWhiteSpace(utterance) || owner == null ||
                 manager == null || !manager.isActiveAndEnabled || !manager.CanPresentText) return false;
-            return context.HasValue
-                ? manager.PushReply(owner.EntityId, utterance, context.Value.RequestId, context.Value.TraceId, context.Value.ConversationId).IsValid
-                : manager.PushMessage(owner.EntityId, utterance, DialogueSpeakerKind.Npc).IsValid;
+            string[] segments = DialoguePresentationText.Segments(utterance);
+            if (segments.Length == 0) return false;
+            bool shown = context.HasValue
+                ? manager.PushReply(owner.EntityId, segments[0], context.Value.RequestId, context.Value.TraceId, context.Value.ConversationId).IsValid
+                : manager.PushMessage(owner.EntityId, segments[0], DialogueSpeakerKind.Npc).IsValid;
+            if (shown && segments.Length > 1) StartCoroutine(ShowRemaining(segments, manager, owner.EntityId));
+            return shown;
         }
-        private void OnDisable() { emotionIcon?.ClearPresentation(); speech?.Cancel(); }
+
+        private IEnumerator ShowRemaining(string[] segments, DialogueBubbleManager target, string speaker)
+        {
+            for (int i = 1; i < segments.Length; i++)
+            {
+                yield return new WaitForSecondsRealtime(2.0f);
+                if (target == null || !target.isActiveAndEnabled || !target.CanPresentText) yield break;
+                target.PushMessage(speaker, segments[i], DialogueSpeakerKind.Npc);
+            }
+        }
+
+        private void OnDisable() { StopAllCoroutines(); emotionIcon?.ClearPresentation(); speech?.Cancel(); }
     }
 }

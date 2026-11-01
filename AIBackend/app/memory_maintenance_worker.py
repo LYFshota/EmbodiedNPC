@@ -8,6 +8,7 @@ import time
 from pydantic import ValidationError
 
 from .context_token_estimator import ContextTokenEstimator
+from .worker_runtime import store_call, drain_task, run_pool, owned_attempt
 from .local_model_scheduler import PreemptedByForeground
 from .memory_maintenance_models import (
     MaintenancePolicy, MaintenanceResponse, MaintenanceOperation, MaintenanceDecisionResponse,
@@ -163,7 +164,7 @@ class MemoryMaintenanceWorker:
     establish quiescence before closing the shared Embedding provider.
     """
 
-    def __init__(self,repository,provider,executor,*,policy=MaintenancePolicy(),reflection_policy=ReflectionPolicy(),interval_seconds=30,clock=time.time,context_length=None):
+    def __init__(self,repository,provider,executor,*,policy=MaintenancePolicy(),reflection_policy=ReflectionPolicy(),interval_seconds=30,clock=time.time,context_length=None,concurrency=1,attempt_timeout=900):
         if not 1<=interval_seconds<=300:
             raise ValueError('MAINTENANCE_INTERVAL_INVALID')
         self.repository,self.provider,self.executor=repository,provider,executor
@@ -171,19 +172,26 @@ class MemoryMaintenanceWorker:
         self.reflection_policy=reflection_policy
         self.reflection=ReflectionTasks(repository)
         self._task=None
+        self._stop=asyncio.Event()
+        self._claim_lock=asyncio.Lock()
+        self._prefer_reflection=False
+        if not 1<=concurrency<=32 or attempt_timeout<=0:
+            raise ValueError("WORKER_CONCURRENCY_INVALID")
+        self.concurrency,self.attempt_timeout=concurrency,attempt_timeout
         self.capacity_policy=task_policy(provider,'maintenance',context_length)
 
     def start(self):
         if self._task is None or self._task.done():
+            self._stop=asyncio.Event()
             self._task=asyncio.create_task(self._run(),name='memory-maintenance-worker')
 
+    def request_stop(self):
+        self._stop.set()
+
     async def stop(self):
+        self.request_stop()
         if self._task is not None:
-            self._task.cancel()
-            try:
-                await self._task
-            except asyncio.CancelledError:
-                pass
+            await drain_task(self._task)
             self._task=None
 
     def _bounded(self,context,request_builder=maintenance_request):
@@ -210,48 +218,62 @@ class MemoryMaintenanceWorker:
                     raise MaintenanceAdmissionError('MAINTENANCE_COMPARISON_BUDGET_EXCEEDED')
 
     async def process_once(self):
-        job=await asyncio.to_thread(self.repository.claim,self.clock(),self.policy)
-        if job is None:
-            job=await asyncio.to_thread(self.reflection.claim,self.clock(),self.reflection_policy,self.policy.stale_seconds)
+        return await owned_attempt(self._process_once)
+
+    async def _process_once(self, claimed):
+        try:
+            async with self._claim_lock:
+                kinds = (True, False) if self._prefer_reflection else (False, True)
+                job = None
+                for reflecting in kinds:
+                    if reflecting:
+                        job = await store_call(self.reflection.claim,self.clock(),self.reflection_policy,self.policy.stale_seconds,activate=True)
+                    else:
+                        job = await store_call(self.repository.claim,self.clock(),self.policy,activate=True)
+                    if job is not None:
+                        self._prefer_reflection = not reflecting
+                        break
+        finally:
+            claimed.set()
         if job is None:
             return False
         try:
-            reflecting=job.get('task_kind')=='REFLECTION'
-            tasks=self.reflection if reflecting else self.repository
-            context=await asyncio.to_thread(tasks.prepare,job,self.reflection_policy if reflecting else self.policy)
-            context,request=self._bounded(context,reflection_request if reflecting else maintenance_request)
-            # No pair exists in this bounded sample: persist a processed no-op,
-            # without asserting that the complete history contains no conflict.
-            if reflecting and len({r['episode_id'] for r in context.records})<self.reflection_policy.min_episodes:
-                response=ReflectionResponse(insights=())
-            elif not reflecting and not context.comparison_pairs:
-                response=MaintenanceResponse(operations=())
-            else:
-                result=await self.executor.execute_preemptible_background(self.provider,request)
-                check_result(result,request,self.capacity_policy)
-                response=parse_maintenance_response(result,ReflectionResponse if reflecting else MaintenanceDecisionResponse)
-                if not reflecting:
-                    context,response=bind_maintenance_decisions(context,response)
-            await asyncio.to_thread(tasks.finalize,context,response,self.clock())
+            async with asyncio.timeout(self.attempt_timeout):
+                reflecting=job.get('task_kind')=='REFLECTION'
+                tasks=self.reflection if reflecting else self.repository
+                context=await store_call(tasks.prepare,job,self.reflection_policy if reflecting else self.policy)
+                context,request=self._bounded(context,reflection_request if reflecting else maintenance_request)
+                # No pair exists in this bounded sample: persist a processed no-op,
+                # without asserting that the complete history contains no conflict.
+                if reflecting and len({r['episode_id'] for r in context.records})<self.reflection_policy.min_episodes:
+                    response=ReflectionResponse(insights=())
+                elif not reflecting and not context.comparison_pairs:
+                    response=MaintenanceResponse(operations=())
+                else:
+                    result=await self.executor.execute_preemptible_background(self.provider,request)
+                    check_result(result,request,self.capacity_policy)
+                    response=parse_maintenance_response(result,ReflectionResponse if reflecting else MaintenanceDecisionResponse)
+                    if not reflecting:
+                        context,response=bind_maintenance_decisions(context,response)
+                await store_call(tasks.finalize,context,response,self.clock())
         except (PreemptedByForeground,MaintenanceStale) as exc:
-            await asyncio.to_thread(self.repository.requeue,job['job_id'],job['attempt_generation'],self.clock(),
+            await store_call(self.repository.requeue,job['job_id'],job['attempt_generation'],self.clock(),
                                    'PREEMPTED' if isinstance(exc,PreemptedByForeground) else 'STALE_INPUT')
         except asyncio.CancelledError:
-            await asyncio.to_thread(self.repository.requeue,job['job_id'],job['attempt_generation'],self.clock(),'STOPPED')
+            await store_call(self.repository.requeue,job['job_id'],job['attempt_generation'],self.clock(),'STOPPED')
             raise
         except Exception as exc:
             code=str(exc) if isinstance(exc,(MaintenanceOutputError,MaintenanceAdmissionError)) else 'MAINTENANCE_FAILED'
             logger.warning('Maintenance failed job_id=%s error=%s code=%s',job['job_id'],type(exc).__name__,code)
             if isinstance(exc,MaintenanceOutputError) and exc.schema_errors:
                 logger.warning('Memory output contract errors=%s',exc.schema_errors)
-            await asyncio.to_thread(self.repository.requeue,job['job_id'],job['attempt_generation'],self.clock(),
+            await store_call(self.repository.requeue,job['job_id'],job['attempt_generation'],self.clock(),
                                    code,failed=True,policy=self.policy)
+        finally:
+            self.repository.active_attempts.discard(job)
         return True
 
     async def _run(self):
-        while True:
-            try:
-                await self.process_once()
-            except Exception as exc:
-                logger.warning('Maintenance polling failed error=%s',type(exc).__name__)
-            await asyncio.sleep(self.interval_seconds)
+        await run_pool(self.process_once,self._stop,concurrency=self.concurrency,
+            interval=self.interval_seconds,
+            on_error=lambda: logger.warning('MAINTENANCE_POLL_FAILED'))

@@ -18,7 +18,7 @@ The project explores a working loop: **perception → cognition → memory and a
 
 ## Download and try
 
-[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.3-preview/EmbodiedNPC-Windows-x64-v0.1.3-preview.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.3-preview)
+[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.4-preview/EmbodiedNPC-Windows-x64-v0.1.4-preview.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.4-preview)
 
 1. Extract the complete archive and run `Start.cmd`. No Unity Editor or separate Python installation is needed.
 2. **Configure your own Main LLM** for dialogue and decisions. The ZIP bundles EmbeddingGemma-300M Q4 ONNX for memory vectors, so no extra Embedding download or API setup is normally needed. External Embedding and disabled-vector options remain available.
@@ -28,13 +28,22 @@ The project explores a working loop: **perception → cognition → memory and a
 
 - **Distinct character conversations:** Four NPCs have separate personas, personalities and dialogue styles, support Chinese and English, and use recent dialogue to continue topics.
 - **Long-term memory and experience processing:** Actual conversations and action experiences are recorded, processed in the background and recalled on demand. Processing and recall can still fail.
-- **World knowledge management:** Includes 108 entries covering coffee, characters and the neighborhood. Players can search, edit, add, import and export entries, and configure which NPCs know them and how they are used.
+- **World knowledge management:** Includes 156 entries covering coffee, characters and the neighborhood. Players can search, edit, add, import and export entries, and configure which NPCs know them and how they are used.
 - **Local perception and overhearing:** NPCs perceive nearby surroundings and can record nearby text speech when range and occlusion permit. Overhearing does not automatically trigger an interruption.
 - **Scene actions and feedback:** Characters with the appropriate capabilities can deliver items, prepare ten hot drinks and clean counters. The game validates and executes actions, then feeds actual results back into cognition and memory.
 - **Persistent tasks and meeting arrangements:** Limited future requests can be saved for consideration at the next meeting or another suitable opportunity, deferred or cancelled. A saved arrangement is not proof of completion.
 - **Expressions and dialogue motion:** Dialogue motions, expressions and conversational rhythms can vary by character, with occasional happy, confused, surprised and thinking icons.
 - **Separate model configuration:** The main model and vector-retrieval model are configured independently, using local or remote services.
 - **Experience data export:** Export retained conversations, memories, personas, knowledge, relationships, tasks and other data from Settings for personal records or feedback. Exports may contain personal information: review before sharing. The game does not upload them automatically.
+
+### New in v0.1.4-preview
+
+- **Everyday conversation:** 12 additional private backgrounds per NPC, bringing the default catalog to 156 entries. Guidance favors useful follow-ups over repeated stories, mechanical questions or unrelated sales pitches; actual wording still depends on the model.
+- **Segmented replies:** Overhead bubbles and chat history share explicit paragraph boundaries, with at most three bubbles. The first overhead segment is immediate, later segments are two seconds apart, with a 20-second lifetime. History shows all segments immediately; storage retains one reply per turn.
+- **Trusted historical outcomes:** While the original order remains in recent dialogue, its validated terminal outcome can accompany that dialogue. Historical completion remains separate from current task state; the general 900-second recent-results window is unchanged.
+- **Bounded concurrency:** Cloud defaults to **6 total / 6 foreground / 2 background**; Ollama defaults to **1/1/1**. Use Settings > Developer tools > **Concurrency settings**, save/apply and restart. Independent NPC inference and background Episode, relationship and memory jobs can overlap while preserving required pair/scope ordering and shutdown safety.
+
+Existing player-authored knowledge catalogs are not overwritten by new defaults. To adopt the expanded defaults, export a backup first, then explicitly restore system defaults in World knowledge; this replaces the current catalog.
 
 ## System architecture
 

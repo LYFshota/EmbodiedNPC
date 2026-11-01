@@ -1,6 +1,6 @@
 # 世界知识与管理
 
-当前 v0.1.3-preview 默认模板 [cafedemo_v2.json](app/knowledge/cafedemo_v2.json) 有 108 条知识；真实合同以 [world_knowledge.py](app/world_knowledge.py) 和[可信部署配置](app/knowledge/cafedemo_v2_deployment.json)为准。
+当前 v0.1.3-preview 默认模板 [cafedemo_v2.json](app/knowledge/cafedemo_v2.json) 有 156 条知识；真实合同以 [world_knowledge.py](app/world_knowledge.py) 和[可信部署配置](app/knowledge/cafedemo_v2_deployment.json)为准。
 
 - 默认模板只读。首次初始化或旧覆盖格式显式迁移后，玩家的 `data/world_knowledge.json` 是 `schema_version=2` 的完整目录；游戏更新不合并新默认内容。
 - `access.mode=public` 面向部署/场景条件匹配的可信注册角色；`restricted` 只允许明确 CharacterId。缺失字段按旧 restricted 范围解释。
@@ -20,3 +20,8 @@
 - [Knowledge Management API](app/knowledge_management_api.py) 与 [Unity 面板](../UnityClient/Assets/CafeDemo/Scripts/CafeWorldKnowledgePanel.cs) 复用同一 Store。UI 本地化只改变显示名，类型 ID/CharacterId/正文保持原样；权限和 NPC 筛选取交集。来源是内部元数据，不再作为普通玩家编辑/筛选项。
 - [完整体验导出](app/experience_export.py) 只读导出当前完整目录，保留权限/usage；它不是导入、恢复默认或隐式模板同步。详细[架构](../Docs/ARCHITECTURE.md#read-only-complete-experience-export)与[内部读取协议](../Contracts/README.md#backend-internal-context-reads)说明各模块职责。
 - 十种热饮知识只提供可聊的参考；可制作集合由 [DrinkType](app/drink_types.py) 和 Unity DrinkTypes/动作准入定义，世界知识不能新增能力、配方、库存或实时经营事实。
+
+
+## v0.1.4 默认背景扩充
+
+四名 NPC 各新增 12 条受角色权限限制的生活背景。原有 108 条保留，共 156 条；默认模板与玩家目录仍然独立。自动预取与模型补查沿用原有 Top-K、Token 预算及两步上限，不新增关键词触发器或模型调用。旧玩家目录不会自动合并新条目，恢复默认前应导出备份。

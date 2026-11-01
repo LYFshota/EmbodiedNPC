@@ -29,8 +29,10 @@ namespace EmbodiedNPC.Dialogue.Presentation
         };
         [SerializeField, Range(1, 3)] private int maxMessagesPerSpeaker = 3;
         [FormerlySerializedAs("inactivityLifetimeSeconds")]
-        [SerializeField, Min(0.1f)] private float bubbleLifetimeSeconds = 15f;
+        [SerializeField, Min(0.1f)] private float bubbleLifetimeSeconds = 20f;
         [SerializeField, Min(0f)] private float verticalSpacing = 10f;
+        [Tooltip("Extra clearance above the existing head/hair bounds; independent of bubble stacking.")]
+        [SerializeField, Min(0f)] private float headSpacing = 0f;
 
         private readonly Dictionary<string, DialogueBubbleAnchor> anchors = new(StringComparer.Ordinal);
         private readonly Dictionary<string, List<Entry>> entriesBySpeaker = new(StringComparer.Ordinal);
@@ -243,11 +245,11 @@ namespace EmbodiedNPC.Dialogue.Presentation
                 Vector2 local = Vector2.zero;
                 if (onScreen) RectTransformUtility.ScreenPointToLocalPointInRectangle(LayerRect, screen,
                     rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : sceneCamera, out local);
-                float bottom = local.y + verticalSpacing;
+                float bottom = local.y + headSpacing;
                 // Only the owner's head defines its baseline. Other characters may
                 // project higher without moving this speaker's entire conversation.
                 if (onScreen && TryGetHeadRect(anchor, out Rect headRect))
-                    bottom = Mathf.Max(bottom, headRect.yMax + verticalSpacing);
+                    bottom = Mathf.Max(bottom, headRect.yMax + headSpacing);
 
                 for (int i = speakerEntries.Count - 1; i >= 0; i--)
                 {

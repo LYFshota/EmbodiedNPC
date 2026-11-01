@@ -177,39 +177,47 @@ namespace EmbodiedNPC.Dialogue.Presentation
             float y = 4;
             foreach (var message in messages)
             {
-                if (messageTemplate != null)
+                string[] segments = message.IsPlayer ? new[] { message.Text } : DialoguePresentationText.HistorySegments(message.Text);
+                for (int segment = 0; segment < segments.Length; segment++)
                 {
-                    var view = UnityEngine.Object.Instantiate(messageTemplate, scroll.content);
-                    view.gameObject.SetActive(true);
-                    rows.Add(view.gameObject);
-                    float messageHeight = view.Present(message, bubbleWidth);
-                    Rect(view.transform, new Vector2(0,1), Vector2.one,
-                        new Vector2(0,-y-messageHeight-35), new Vector2(0,-y));
-                    y += messageHeight+53;
-                    continue;
+                    bool first = segment == 0;
+                    float heading = first ? 35 : 0;
+                    float gap = segment == segments.Length - 1 ? 18 : 6;
+                    if (messageTemplate != null)
+                    {
+                        var view = UnityEngine.Object.Instantiate(messageTemplate, scroll.content);
+                        view.gameObject.SetActive(true);
+                        rows.Add(view.gameObject);
+                        float messageHeight = view.Present(message, bubbleWidth, segments[segment], first);
+                        Rect(view.transform, new Vector2(0,1), Vector2.one,
+                            new Vector2(0,-y-messageHeight-heading), new Vector2(0,-y));
+                        y += messageHeight + heading + gap;
+                        continue;
+                    }
+                    var row = New("ChatMessage", scroll.content);
+                    rows.Add(row);
+                    var speaker = Text("Speaker", row.transform, 21,
+                        message.IsPlayer ? Ink : new Color(.47f, .60f, .29f));
+                    speaker.gameObject.SetActive(first);
+                    speaker.text = message.IsPlayer ? SettingsUiLanguage.T("我", "Me") :
+                        SettingsUiLanguage.NpcDisplayName(message.ObserverEntityId, message.Speaker);
+                    speaker.fontStyle = FontStyles.Bold;
+                    speaker.alignment = message.IsPlayer ? TextAlignmentOptions.TopRight : TextAlignmentOptions.TopLeft;
+                    Rect(speaker.transform, new Vector2(0, 1), Vector2.one, new Vector2(2, -29), new Vector2(-2, -1));
+                    var bubble = New("Bubble", row.transform, typeof(Image));
+                    var text = Text("Message", bubble.transform, 23, Ink);
+                    text.text = segments[segment];
+                    text.alignment = TextAlignmentOptions.TopLeft;
+                    text.textWrappingMode = TextWrappingModes.Normal;
+                    text.overflowMode = TextOverflowModes.Overflow;
+                    float height = Mathf.Max(34, text.GetPreferredValues(segments[segment], bubbleWidth - 32, 0).y) + 24;
+                    Rect(bubble.transform, new Vector2(message.IsPlayer ? 1 : 0, 1), new Vector2(message.IsPlayer ? 1 : 0, 1),
+                        new Vector2(message.IsPlayer ? -bubbleWidth : 0, -height - heading), new Vector2(message.IsPlayer ? 0 : bubbleWidth, -heading));
+                    SettingsPanelTheme.Surface(bubble.GetComponent<Image>(), message.IsPlayer ? new Color(1, .88f, .57f, .95f) : Cream);
+                    Rect(text.transform, Vector2.zero, Vector2.one, new Vector2(16, 12), new Vector2(-16, -12));
+                    Rect(row.transform, new Vector2(0, 1), Vector2.one, new Vector2(0, -y - height - heading), new Vector2(0, -y));
+                    y += height + heading + gap;
                 }
-                var row = New("ChatMessage", scroll.content);
-                rows.Add(row);
-                var speaker = Text("Speaker", row.transform, 21,
-                    message.IsPlayer ? Ink : new Color(.47f, .60f, .29f));
-                speaker.text = message.IsPlayer ? SettingsUiLanguage.T("我", "Me") :
-                    SettingsUiLanguage.NpcDisplayName(message.ObserverEntityId, message.Speaker);
-                speaker.fontStyle = FontStyles.Bold;
-                speaker.alignment = message.IsPlayer ? TextAlignmentOptions.TopRight : TextAlignmentOptions.TopLeft;
-                Rect(speaker.transform, new Vector2(0, 1), Vector2.one, new Vector2(2, -29), new Vector2(-2, -1));
-                var bubble = New("Bubble", row.transform, typeof(Image));
-                var text = Text("Message", bubble.transform, 23, Ink);
-                text.text = message.Text;
-                text.alignment = TextAlignmentOptions.TopLeft;
-                text.textWrappingMode = TextWrappingModes.Normal;
-                text.overflowMode = TextOverflowModes.Overflow;
-                float height = Mathf.Max(34, text.GetPreferredValues(message.Text, bubbleWidth - 32, 0).y) + 24;
-                Rect(bubble.transform, new Vector2(message.IsPlayer ? 1 : 0, 1), new Vector2(message.IsPlayer ? 1 : 0, 1),
-                    new Vector2(message.IsPlayer ? -bubbleWidth : 0, -height - 35), new Vector2(message.IsPlayer ? 0 : bubbleWidth, -35));
-                SettingsPanelTheme.Surface(bubble.GetComponent<Image>(), message.IsPlayer ? new Color(1, .88f, .57f, .95f) : Cream);
-                Rect(text.transform, Vector2.zero, Vector2.one, new Vector2(16, 12), new Vector2(-16, -12));
-                Rect(row.transform, new Vector2(0, 1), Vector2.one, new Vector2(0, -y - height - 35), new Vector2(0, -y));
-                y += height + 53;
             }
             scroll.content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Max(y, scroll.viewport.rect.height));
         }

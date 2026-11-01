@@ -41,12 +41,20 @@ class ReflectionTasks:
         self.base = maintenance
         self.connect = maintenance.connect
 
-    def claim(self, now, policy, stale_seconds):
+    def claim(self, now, policy, stale_seconds, *, activate=False):
+        with self.base.active_attempts.lock:
+            job = self._claim(now, policy, stale_seconds)
+            if job is not None and activate:
+                self.base.active_attempts.add(job, (job["owner_json"], job["subject_json"]))
+            return job
+
+    def _claim(self, now, policy, stale_seconds):
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
-            db.execute("UPDATE memory_maintenance_jobs SET status='PENDING',started_at=NULL,error_code='RECOVERED_STALE' WHERE task_kind='REFLECTION' AND policy_version=? AND status='RUNNING' AND started_at<?", (REFLECTION_VERSION,now-stale_seconds))
-            job = db.execute("SELECT j.* FROM memory_maintenance_jobs j WHERE j.task_kind='REFLECTION' AND j.policy_version=? AND j.status='PENDING' AND (j.next_retry_at IS NULL OR j.next_retry_at<=?) AND j.pending_since<=? AND (SELECT COUNT(DISTINCT episode_id) FROM (SELECT r.episode_id FROM memory_reflection_items i JOIN memory_records r USING(memory_id) WHERE i.job_id=j.job_id AND i.processed_at IS NULL AND r.status IN ('ACTIVE','CONFLICTED','SUPERSEDED') AND r.memory_type IN ('EPISODIC','SEMANTIC_FACT') ORDER BY i.enqueued_at,i.memory_id LIMIT ?))>=? ORDER BY j.pending_since,j.job_id LIMIT 1",
-                (REFLECTION_VERSION,now,now-policy.min_wait_seconds,policy.scan_limit,policy.min_episodes)).fetchone()
+            self.base.recover_stale(db, now, stale_seconds, REFLECTION_VERSION)
+            exclusion, args = self.base.active_attempts.exclusions('j')
+            job = db.execute("SELECT j.* FROM memory_maintenance_jobs j WHERE j.task_kind='REFLECTION' AND j.policy_version=? AND j.status='PENDING' AND (j.next_retry_at IS NULL OR j.next_retry_at<=?) AND j.pending_since<=? AND (SELECT COUNT(DISTINCT episode_id) FROM (SELECT r.episode_id FROM memory_reflection_items i JOIN memory_records r USING(memory_id) WHERE i.job_id=j.job_id AND i.processed_at IS NULL AND r.status IN ('ACTIVE','CONFLICTED','SUPERSEDED') AND r.memory_type IN ('EPISODIC','SEMANTIC_FACT') ORDER BY i.enqueued_at,i.memory_id LIMIT ?))>=?" + exclusion + " ORDER BY j.pending_since,j.job_id LIMIT 1",
+                (REFLECTION_VERSION,now,now-policy.min_wait_seconds,policy.scan_limit,policy.min_episodes,*args)).fetchone()
             if job is None:
                 return None
             db.execute("UPDATE memory_maintenance_jobs SET status='RUNNING',attempt_generation=attempt_generation+1,started_at=?,updated_at=? WHERE job_id=?", (now,now,job['job_id']))

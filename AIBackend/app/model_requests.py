@@ -648,10 +648,26 @@ class CognitiveModelRequestFactory:
                            "没有有价值的新内容就沉默，不能仅为续话添往事。NO_ACTION 是正确结果，不需要解释沉默。\n"
                            if continuation else
                            "\n正常回复最终检查：当前偏好和意愿直接理解；环境报告不自动覆盖可信事实。"
+                           "只在确实需要了解玩家的看法或信息时自然提问，不为延续聊天机械补上“你呢”“你觉得呢”或“还想聊什么”。"
+                           "受邀分享更多时，结合近期对白理解省略的追问所指，优先提供与刚讲过的经历或观点不同的具体内容，"
+                           "不要换一种说法重复；当前话题优先，不强行讲往事、转向点单推销或推荐座位。"
+                           "自然结束当前回复不等于拒绝继续交流；玩家继续正常搭话时仍正常回应。"
+                           "涉及隐私、越权或不合理请求时可按人设拒绝该具体请求，不把它扩大成拒绝一切聊天。"
                            "最新偏好按来源和变化保留暂时/条件。说错要撤回并改正，建议遵守当前限制，"
                            "角色身份不增加列表外能力，旧的错误承诺须撤回而非继续履行。"
                            "无本轮合法动作提案，不用回复承诺执行或完成；模式意图不是正式任务。"
-                           "一般知识正常解释，口味推荐不等于本店供货声明。\n")
+                           "一般知识正常解释，口味推荐不等于本店供货声明。"
+                           " Display segmentation: generate the complete utterance in this one response. "
+                           "[[PAUSE]] simulates brief pauses in natural conversation, so the NPC speaks in successive "
+                           "chunks rather than one large text block. Choose boundaries by speaking rhythm, semantic "
+                           "transitions and emphasis. If a segment is much longer than another, split at a natural "
+                           "transition to avoid one very large bubble and one tiny bubble. "
+                           "Keep brief greetings, farewells and single-idea replies in one segment. For distinct ideas, "
+                           "story turns, topic changes or transitions from explanation to advice or questions, prefer "
+                           "[[PAUSE]] at natural boundaries. Do not split mechanically at sentence endings, add content "
+                           "or change meaning just to create segments. Preserve each Persona's voice. Use at most three "
+                           "segments (two separators), and omit markers when unnecessary. This is only for bubble display, "
+                           "not another utterance, action or continuation.\n")
                         + scene_wording_review
                         + "\n表达语气：有回复时，emotion 按本句实际语气选择 neutral（放松）、happy（开心）、"
                           "curious（好奇/疑惑）、thoughtful（认真思考）、concerned（关心/安慰）、"
@@ -919,8 +935,11 @@ def _allocate_context(request: ModelRequest, context: KnowledgeContext | None, *
         for i, (seqs, protected) in enumerate(timeline.budget_groups()):
             group_id = f"recent:{i}"
             speech_groups[group_id] = seqs
+            outcomes = timeline.linked_for_seqs(seqs)
+            content = ([by_seq[seq] for seq in seqs] if not outcomes else
+                       {"speech": [by_seq[seq] for seq in seqs], "outcomes": outcomes})
             groups.append(AtomicContextGroup(group_id, "recent",
-                json.dumps([by_seq[seq] for seq in seqs], ensure_ascii=False, separators=(",", ":")),
+                json.dumps(content, ensure_ascii=False, separators=(",", ":")),
                 20 if protected else 40, -max(seqs)))
             if protected:
                 # Try the complete local block first. If it cannot fit, short
@@ -928,8 +947,11 @@ def _allocate_context(request: ModelRequest, context: KnowledgeContext | None, *
                 for seq in reversed(seqs):
                     fallback_id = f"recent-fallback:{seq}"
                     speech_groups[fallback_id] = (seq,)
+                    outcomes = timeline.linked_for_seqs((seq,))
+                    content = (by_seq[seq] if not outcomes else
+                               {"speech": by_seq[seq], "outcomes": outcomes})
                     groups.append(AtomicContextGroup(fallback_id, "recent",
-                        json.dumps(by_seq[seq], ensure_ascii=False, separators=(",", ":")),
+                        json.dumps(content, ensure_ascii=False, separators=(",", ":")),
                         21, -seq, fallback_for=group_id))
     else:
         # Compatibility for existing internal callers supplying trusted turn views.
@@ -937,7 +959,13 @@ def _allocate_context(request: ModelRequest, context: KnowledgeContext | None, *
             groups.append(AtomicContextGroup(f"recent:{i}", "recent",
                                             json.dumps(turn, ensure_ascii=False, separators=(",", ":")),
                                             20 if i == len(recent)-1 else 40, -i))
+    linked = timeline.linked_outcomes if timeline is not None else ()
+    linked_ids = {item['event_id'] for item in linked}
+    linked_overlap = 0
     for i, interaction in enumerate(recent_interactions or []):
+        if any(item.get('event_id') in linked_ids for item in interaction):
+            linked_overlap += len(interaction)
+            continue  # Its whole result is already costed with the associated speech.
         groups.append(AtomicContextGroup(f"interaction:{i}", "recent",
             json.dumps(interaction, ensure_ascii=False, separators=(",", ":")),
             19 if interaction[0].get('kind') == 'action_result' else 22, -interaction[0]['seq']))
@@ -974,6 +1002,8 @@ def _allocate_context(request: ModelRequest, context: KnowledgeContext | None, *
         interactions = [entry for i, group in enumerate(recent_interactions or [])
                         if f"interaction:{i}" in selected for entry in group]
         action_results = [item for item in interactions if item.get('kind') == 'action_result']
+        if timeline is not None:
+            action_results += timeline.linked_for_seqs(turn['seq'] for turn in turns)
         interactions = [item for item in interactions if item.get('kind') != 'action_result']
         if interactions:
             # One chronological data projection, not a second copy of speech or fabricated player text.
@@ -989,10 +1019,17 @@ def _allocate_context(request: ModelRequest, context: KnowledgeContext | None, *
             user = core + coverage + interaction_framing + "PRIOR INTERACTION TIMELINE JSON: " + json.dumps(
                 combined, ensure_ascii=False, separators=(',', ':')) + "\n"
         action_scope = getattr(recent_interactions, 'action_scope', None)
-        if action_scope is not None:
-            action_view = {**action_scope, "retained_results": len(action_results),
-                           "budget_limited": len(action_results) < action_scope["offered_results"],
+        if action_scope is not None or linked:
+            action_scope = action_scope or {"offered_results": 0, "historical_only": True,
+                                            "ongoing_execution_state": "NOT_OBSERVED"}
+            offered = action_scope["offered_results"] - linked_overlap + len(linked)
+            action_view = {**action_scope, "offered_results": offered,
+                           "retained_results": len(action_results),
+                           "budget_limited": len(action_results) < offered,
                            "results": action_results}
+            if linked:
+                action_view["dialogue_linked_results"] = len(linked)
+                action_view["result_limit"] = max(action_scope.get("result_limit", 0), offered)
             user += ("RECENT EXECUTED ACTION RESULTS: trusted observer/player-local historical execution evidence, "
                      "not speech or action authorization. Goal SUCCEEDED confirms completion at that time; "
                      "FAILED/CANCELLED/TIMED_OUT do not. Skill success alone leaves Goal completion UNCONFIRMED. "

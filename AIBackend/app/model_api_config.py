@@ -40,6 +40,17 @@ class MainModelConfig(BaseModel):
     max_output_tokens: int = Field(default=1024, ge=1, le=32768)
     context_length: int | None = Field(default=None, ge=1, le=1_000_000)
     timeout_seconds: float = Field(default=60.0, gt=0, le=600)
+    model_total_concurrency: int | None = Field(default=None, ge=1, le=32)
+    model_foreground_concurrency: int | None = Field(default=None, ge=1, le=32)
+    model_background_concurrency: int | None = Field(default=None, ge=1, le=32)
+
+    def concurrency_limits(self) -> tuple[int, int, int]:
+        local = self.provider_type in ("mock", "ollama")
+        total = self.model_total_concurrency or (1 if local else 6)
+        foreground = self.model_foreground_concurrency or total
+        background = self.model_background_concurrency or min(total, 1 if local else 2)
+        return total, foreground, background
+
     schema_profile: Literal["raw", "portable_union", "openai_strict", "anthropic"] = "raw"
     token_parameter: Literal["max_tokens", "max_completion_tokens"] = "max_tokens"
     thinking_parameter: Literal["none", "enable_thinking", "thinking", "reasoning_effort"] = "none"
@@ -63,6 +74,9 @@ class MainModelConfig(BaseModel):
 
     @model_validator(mode="after")
     def connection_complete(self) -> "MainModelConfig":
+        total, foreground, background = self.concurrency_limits()
+        if max(foreground, background) > total:
+            raise ValueError("MODEL_CONCURRENCY_CLASS_EXCEEDS_TOTAL")
         if self.provider_type != "mock" and self.base_url is None:
             raise ValueError("MODEL_CONFIG_URL_REQUIRED")
         if self.provider_type == "deepseek_official_responses" and not self.api_key:

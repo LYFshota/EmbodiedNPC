@@ -131,7 +131,11 @@ namespace CafeDemo
                 var action = developerActions[i];
                 string key = "DeveloperTool" + i;
                 ActionButton(developerNav.transform, key, action.zh, action.en, () => Navigate(action.show,key,true));
-                if(i==0)ActionButton(developerNav.transform,"ModelDiagnosticsNav","　模型配置状态","　Model configuration status",ShowModelDiagnostics);
+                if(i==0)
+                {
+                    ActionButton(developerNav.transform,"ModelDiagnosticsNav","　模型配置状态","　Model configuration status",ShowModelDiagnostics);
+                    ActionButton(developerNav.transform,"ModelConcurrencyNav","并发调整","Concurrency settings",ShowConcurrency);
+                }
                 if (i == 1 && showPerception != null)
                 {
                     debugSubNavigation = Node("NpcDebugSubNavigation",developerNav.transform,typeof(VerticalLayoutGroup),typeof(LayoutElement));
@@ -142,6 +146,7 @@ namespace CafeDemo
                 }
             }
             if(developerActions.Length==0)ActionButton(developerNav.transform,"ModelDiagnosticsNav","运行诊断 · 模型配置状态","Runtime diagnostics · Models",ShowModelDiagnostics);
+            if(developerActions.Length==0)ActionButton(developerNav.transform,"ModelConcurrencyNav","并发调整","Concurrency settings",ShowConcurrency);
             ActionButton(developerNav.transform, "ModelContractsNav", "模型合同测试", "Model contracts", ShowModelContracts);
             developerEntry = ActionButton(window, "DeveloperToolsEntry", "开发者工具", "Developer tools", () => SetDeveloper(true));
             Place(developerEntry.transform, Vector2.zero,Vector2.zero,new Vector2(24,24),new Vector2(SidebarWidth,78));
@@ -196,7 +201,7 @@ namespace CafeDemo
                 switch (page.name)
                 {
                     case "ModelPage":
-                        if (!IsDeveloper || (developerSelection!="ModelMaintenanceNav" && developerSelection!="ModelContractsNav" && developerSelection!="ModelDiagnosticsNav"))
+                        if (!IsDeveloper || (developerSelection!="ModelMaintenanceNav" && developerSelection!="ModelContractsNav" && developerSelection!="ModelDiagnosticsNav" && developerSelection!="ModelConcurrencyNav"))
                         { SetMode(false); ordinarySelection="AiSettingsNav"; form.SetSettingsPage(ModelSettingsPage.Configuration); }
                         break;
                     case "NpcPage": SetMode(false); ordinarySelection="NpcCharacterSettingsNav"; break;
@@ -220,6 +225,7 @@ namespace CafeDemo
         private void OpenModelShell() => showModelPresentation();
         public void ShowIndexMaintenance() => Navigate(()=>{OpenModelShell();form.SetSettingsPage(ModelSettingsPage.Configuration);form.ShowAdvancedMaintenance();},"AiSettingsNav",false);
         public void ShowModelContracts() => Navigate(()=>{OpenModelShell();form.SetSettingsPage(ModelSettingsPage.Contracts);},"ModelContractsNav",true);
+        public void ShowConcurrency() => Navigate(()=>{OpenModelShell();form.SetSettingsPage(ModelSettingsPage.Concurrency);},"ModelConcurrencyNav",true);
         public void ShowModelDiagnostics() => Navigate(()=>{OpenModelShell();form.SetSettingsPage(ModelSettingsPage.Diagnostics);},"ModelDiagnosticsNav",true);
         private void SetMode(bool enabled)
         {

@@ -1,6 +1,8 @@
 """Bounded observer/player-local execution evidence, never a new state store."""
 import json
 import re
+from contextlib import closing
+from .recent_dialogue_context import RecentDialogueTimeline
 from .drink_types import VALID_DRINK_TYPES
 
 MAX_ROWS = 64
@@ -35,6 +37,18 @@ def read_action_results(ledger, connection, boundary, identities):
     authoritative ongoing-state carrier; neither an absent result nor a Skill
     can certify that a whole Goal is currently running or has not started.
     """
+    if not _accepted_input(boundary, identities):
+        return [], None
+    observer = boundary.observer_id
+    rows = connection.execute(
+        "SELECT * FROM experience_events WHERE observer_id=? AND source_session_id=? "
+        "AND clock_domain=? AND experience_seq<? AND source_type IN ('goal_outcome','skill_result') "
+        "ORDER BY experience_seq DESC LIMIT ?",
+        (observer, boundary.source_session_id, boundary.clock_domain, boundary.experience_seq, MAX_ROWS+1)).fetchall()
+    return _project_results(ledger, rows, boundary, identities)
+
+
+def _accepted_input(boundary, identities):
     observer, player = boundary.observer_id, boundary.actor_entity_id
     if (boundary.event_type != 'dialogue_input' or boundary.source_type != 'dialogue'
             or boundary.provenance != 'SYSTEM_CONFIRMED' or not _token(player, True)
@@ -42,12 +56,13 @@ def read_action_results(ledger, connection, boundary, identities):
             or identities[observer][:2] != ('npc', 'Character')
             or identities[player][:2] != ('player', 'Player')
             or any(_identities(boundary).get(k) != identities[k] for k in (observer, player))):
-        return [], None
-    rows = connection.execute(
-        "SELECT * FROM experience_events WHERE observer_id=? AND source_session_id=? "
-        "AND clock_domain=? AND experience_seq<? AND source_type IN ('goal_outcome','skill_result') "
-        "ORDER BY experience_seq DESC LIMIT ?",
-        (observer, boundary.source_session_id, boundary.clock_domain, boundary.experience_seq, MAX_ROWS+1)).fetchall()
+        return False
+    return True
+
+
+def _project_results(ledger, rows, boundary, identities, *, age_limited=True):
+    """Shared terminal/receipt/conflict checks; only a verified dialogue join bypasses age."""
+    observer, player = boundary.observer_id, boundary.actor_entity_id
     if not rows:
         return [], None
     scope = dict(window_seconds=MAX_AGE_SECONDS, scan_limit=MAX_ROWS,
@@ -70,8 +85,8 @@ def read_action_results(ledger, connection, boundary, identities):
                 or any(p.entity_id not in identities for p in event.persistent_participants)
                 or any(_identities(event).get(k) != identities[k] for k in (observer, player))
                 or event.observed_at > boundary.observed_at or event.occurred_at > boundary.occurred_at
-                or boundary.observed_at-event.observed_at > MAX_AGE_SECONDS
-                or boundary.occurred_at-event.occurred_at > MAX_AGE_SECONDS
+                or (age_limited and boundary.observed_at-event.observed_at > MAX_AGE_SECONDS)
+                or (age_limited and boundary.occurred_at-event.occurred_at > MAX_AGE_SECONDS)
                 or event.occurred_at > event.observed_at
                 or event.world_revision is None or boundary.world_revision is None
                 or event.world_revision > boundary.world_revision
@@ -153,3 +168,75 @@ def read_action_results(ledger, connection, boundary, identities):
         retained.append(group);used += size
     scope['offered_results'] = len(retained)
     return sorted(retained,key=lambda g:g[0]['seq']), scope
+
+
+def read_dialogue_linked_results(ledger, timeline, observer, conversation, request_id, event_id, identities):
+    """Read terminal evidence for retained accepted inputs, never infer an order from speech.
+
+    Reuse the original source session/clock and persistent pair. Cross-source-session
+    history stays history-only speech; this bounded projection does not bridge visits.
+    Each selected input has at most MAX_ROWS terminal candidates. Ambiguity or an
+    incomplete revision/conflict scan cannot certify a convenient older success.
+    """
+    if not isinstance(timeline, RecentDialogueTimeline) or not timeline:
+        return ()
+    linked, seen = [], set()
+    with closing(ledger._connection_factory()) as connection:
+        rows = connection.execute(
+            "SELECT * FROM experience_events WHERE observer_id=? AND conversation_id=? "
+            "AND event_type='dialogue_input' AND request_id=? AND source_event_id=? LIMIT 2",
+            (observer, conversation, request_id, event_id)).fetchall()
+        if len(rows) != 1:
+            return ()
+        boundary = ledger._row_to_event(rows[0])
+        if not _accepted_input(boundary, identities):
+            return ()
+        for message in timeline:
+            source = timeline.sources.get(message['seq'], {})
+            input_seq = source.get('input_seq')
+            if type(input_seq) is not int or input_seq in seen or input_seq >= boundary.experience_seq:
+                continue
+            seen.add(input_seq)
+            rows = connection.execute(
+                "SELECT * FROM experience_events WHERE observer_id=? AND experience_seq=?",
+                (observer, input_seq)).fetchall()
+            if len(rows) != 1:
+                continue
+            order = ledger._row_to_event(rows[0])
+            if (not _accepted_input(order, identities) or _identities(order) != identities
+                    or not _token(order.request_id) or not _token(order.trace_id) or not order.source_event_id
+                    or order.source_session_id != boundary.source_session_id
+                    or order.clock_domain != boundary.clock_domain):
+                continue
+            matches = connection.execute(
+                "SELECT experience_seq FROM experience_events WHERE observer_id=? "
+                "AND source_session_id=? AND clock_domain=? AND trace_id=? "
+                "AND event_type='dialogue_input' AND experience_seq<? LIMIT 2",
+                (observer, order.source_session_id, order.clock_domain, order.trace_id,
+                 boundary.experience_seq)).fetchall()
+            if len(matches) != 1:
+                continue  # A normalized/truncated proposal alone is not an order identity.
+            proposal = (order.request_id if order.request_id.startswith('proposal_')
+                        else 'proposal_' + order.request_id)[:120]
+            rows = connection.execute(
+                "SELECT * FROM experience_events WHERE observer_id=? AND source_session_id=? "
+                "AND clock_domain=? AND trace_id=? AND source_type='goal_outcome' "
+                "AND json_extract(payload_json,'$.structured_payload.proposal_id')=? "
+                "AND experience_seq>? AND experience_seq<? ORDER BY experience_seq DESC LIMIT ?",
+                (observer, order.source_session_id, order.clock_domain, order.trace_id,
+                 proposal, input_seq, boundary.experience_seq, MAX_ROWS + 1)).fetchall()
+            if len(rows) > MAX_ROWS:
+                continue
+            rows = [row for row in rows if row['occurred_at'] >= order.occurred_at
+                    and row['observed_at'] >= order.observed_at and row['world_revision'] is not None
+                    and (order.world_revision is None or row['world_revision'] >= order.world_revision)]
+            groups, _ = _project_results(ledger, rows, boundary, identities, age_limited=False)
+            speech_seqs = [m['seq'] for m in timeline
+                           if timeline.sources.get(m['seq'], {}).get('input_seq') == input_seq]
+            for group in groups:
+                for item in group:
+                    linked.append(dict(item, linked_input_seq=input_seq, linked_dialogue_seqs=speech_seqs,
+                        original_request_id=order.request_id, original_input_event_id=order.source_event_id,
+                        original_source_session_id=order.source_session_id,
+                        original_conversation_id=order.conversation_id))
+    return tuple(linked)

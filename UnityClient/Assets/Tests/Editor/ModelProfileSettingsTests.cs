@@ -293,6 +293,73 @@ namespace EmbodiedNPC.Tests
         }
 
         private GameObject root;
+        [TestCase("openai_compatible", 6, 6, 2)]
+        [TestCase("ollama", 1, 1, 1)]
+        public void ConcurrencyDefaultsAndProfilePayloadRoundTrip(string protocol, int total, int foreground, int background)
+        {
+            var view = (ModelProfilesView)Get("profilesView");
+            view.main_presets = new[] { Preset("custom", protocol, "http://127.0.0.1:18846") };
+            Invoke("LoadSupplierOptions", false, protocol == "ollama" ? 1 : 0, "custom");
+            Invoke("LoadEditingProfile", false);
+            Assert.AreEqual(total.ToString(), ((TMP_InputField)Get("totalConcurrency")).text);
+            Assert.AreEqual(foreground.ToString(), ((TMP_InputField)Get("foregroundConcurrency")).text);
+            Assert.AreEqual(background.ToString(), ((TMP_InputField)Get("backgroundConcurrency")).text);
+            ((TMP_InputField)Get("mainModel")).text = "fake-model";
+            ((TMP_InputField)Get("totalConcurrency")).text = "8";
+            ((TMP_InputField)Get("foregroundConcurrency")).text = "5";
+            ((TMP_InputField)Get("backgroundConcurrency")).text = "3";
+            var command = (Newtonsoft.Json.Linq.JObject)Invoke("BuildProfileCommand", false);
+            var config = command["config"];
+            Assert.AreEqual(8, (int)config["model_total_concurrency"]);
+            Assert.AreEqual(5, (int)config["model_foreground_concurrency"]);
+            Assert.AreEqual(3, (int)config["model_background_concurrency"]);
+            Invoke("EnsureCompactLayout");
+            form.SetSettingsPage(ModelSettingsPage.Concurrency);
+            Assert.IsTrue(((GameObject)Get("concurrencyContent")).activeSelf);
+            Assert.IsFalse(((Component)Get("totalConcurrency")).transform.IsChildOf(form.AdvancedSettingsRoot));
+            ((TMP_InputField)Get("backgroundConcurrency")).text = "9";
+            Assert.IsInstanceOf<ArgumentException>(Assert.Throws<TargetInvocationException>(() => Invoke("BuildProfileCommand", false)).InnerException);
+        }
+
+        [Test] public void ConcurrencyPageReusesInputsAndPreservesDraftAcrossNavigation()
+        {
+            Invoke("EnsureCompactLayout");
+            string before=(string)Invoke("DraftSignature",false);
+            var controls=new[] { "totalConcurrency", "foregroundConcurrency", "backgroundConcurrency" }
+                .Select(name=>(TMP_InputField)Get(name)).ToArray();
+            foreach(var page in new[] { ModelSettingsPage.Configuration, ModelSettingsPage.Concurrency,
+                ModelSettingsPage.Diagnostics, ModelSettingsPage.Contracts, ModelSettingsPage.Concurrency })
+            {
+                form.SetSettingsPage(page);
+                foreach(var input in controls)
+                {
+                    Assert.AreEqual(page==ModelSettingsPage.Concurrency,((GameObject)Get("concurrencyContent")).activeSelf,
+                        input.name+" on "+page);
+                    Assert.IsTrue(input.transform.IsChildOf(((GameObject)Get("concurrencyContent")).transform));
+                }
+                Assert.AreEqual(page==ModelSettingsPage.Configuration || page==ModelSettingsPage.Concurrency,
+                    ((Button)Get("saveButton")).gameObject.activeSelf);
+                Assert.AreEqual(before,Invoke("DraftSignature",false),"Navigation must not replace the draft");
+            }
+            controls[0].text="8"; controls[1].text="5"; controls[2].text="3";
+            ((TMP_InputField)Get("mainModel")).text="fake-model";
+            var command=(Newtonsoft.Json.Linq.JObject)Invoke("BuildProfileCommand",false);
+            Assert.AreEqual(8,(int)command["config"]["model_total_concurrency"]);
+            Assert.AreEqual(5,(int)command["config"]["model_foreground_concurrency"]);
+            Assert.AreEqual(3,(int)command["config"]["model_background_concurrency"]);
+        }
+
+        [Test] public void ConcurrencyNullDefaultsSerializeWithoutInvalidZeroValues()
+        {
+            var json = ModelProfileJson.Main(new MainModelConfig());
+            Assert.AreEqual(Newtonsoft.Json.Linq.JTokenType.Null, json["model_total_concurrency"].Type);
+            var restored = JsonUtility.FromJson<MainModelConfig>(ModelProfileJson.Main(new MainModelConfig
+                { model_total_concurrency = 8, model_foreground_concurrency = 5, model_background_concurrency = 3 }).ToString());
+            Assert.AreEqual(8, restored.model_total_concurrency);
+            Assert.AreEqual(5, restored.model_foreground_concurrency);
+            Assert.AreEqual(3, restored.model_background_concurrency);
+        }
+
         private FirstRunModelSetup form;
         private Transform main, embedding;
         private readonly BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;

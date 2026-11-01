@@ -102,13 +102,13 @@ class KnowledgeTests(unittest.TestCase):
     def test_p4b_catalog_count_references_and_access_sets(self):
         roles = {b.character_id for b in self.resolver.deployment.bindings}
         ids = {e.knowledge_id for e in self.entries}
-        self.assertEqual(len(self.entries), 108)
+        self.assertEqual(len(self.entries), 156)
         self.assertEqual(len(ids), len(self.entries))
         self.assertTrue({"cafe.setting", "coffee.latte", "coffee.cappuccino", "cafe.staff.taste_guidance"} <= ids)
         personal = [e for e in self.entries if e.knowledge_type == "personal_background"]
-        self.assertEqual(len(personal), 52)
+        self.assertEqual(len(personal), 100)
         for role in roles:
-            self.assertEqual(sum(e.access.character_ids == (role,) for e in personal), 13)
+            self.assertEqual(sum(e.access.character_ids == (role,) for e in personal), 25)
         events = [e for e in self.entries if e.knowledge_type == "shared_event"]
         self.assertEqual(len(events), 3)
         for entry in self.entries:

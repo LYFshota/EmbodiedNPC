@@ -6,6 +6,7 @@ import sqlite3
 from collections.abc import Callable
 from contextlib import closing
 
+from .worker_runtime import ActiveAttempts
 from .episode_models import DurableMemoryJob, MemoryJobBacklog, MemoryJobPolicy
 
 
@@ -18,6 +19,7 @@ class MemoryJobRepository:
 
     def __init__(self, connection_factory: Callable[[], sqlite3.Connection]) -> None:
         self._connection_factory = connection_factory
+        self.active_attempts = ActiveAttempts()
 
     @staticmethod
     def _job(row: sqlite3.Row) -> DurableMemoryJob:
@@ -69,9 +71,13 @@ class MemoryJobRepository:
             version_filter = f" AND extractor_version NOT IN ({placeholders})"
         return self._claim_next(now, version_filter, excluded_extractor_versions)
 
-    def claim_next_for_version(self, now: float, extractor_version: str) -> DurableMemoryJob | None:
+    def claim_next_for_version(self, now: float, extractor_version: str, *, activate: bool = False) -> DurableMemoryJob | None:
         """Claim only this pipeline's jobs, using the existing atomic attempt transition."""
-        return self._claim_next(now, " AND extractor_version = ?", (extractor_version,))
+        with self.active_attempts.lock:
+            job = self._claim_next(now, " AND extractor_version = ?", (extractor_version,))
+            if job is not None and activate:
+                self.active_attempts.add(job)
+            return job
 
     def _claim_next(
         self, now: float, version_filter: str, versions: tuple[str, ...]
@@ -109,8 +115,14 @@ class MemoryJobRepository:
                 connection.rollback()
                 raise
 
-    def requeue_preempted(
-        self, job_id: str, attempt_generation: int, now: float
+    def requeue_preempted(self, job_id: str, attempt_generation: int, now: float):
+        return self._requeue_attempt(job_id, attempt_generation, now, "PREEMPTED_BY_FOREGROUND")
+
+    def requeue_cancelled(self, job_id: str, attempt_generation: int, now: float):
+        return self._requeue_attempt(job_id, attempt_generation, now, "ATTEMPT_CANCELLED")
+
+    def _requeue_attempt(
+        self, job_id: str, attempt_generation: int, now: float, error_code: str
     ) -> DurableMemoryJob | None:
         """Yield owned work without consuming the failure budget or changing generation."""
         with closing(self._connection_factory()) as connection:
@@ -119,10 +131,10 @@ class MemoryJobRepository:
                     """
                     UPDATE memory_jobs SET status = 'RETRY', next_retry_at_utc = ?,
                         updated_at_utc = ?, finished_at_utc = NULL,
-                        error_code = 'PREEMPTED_BY_FOREGROUND'
+                        error_code = ?
                     WHERE job_id = ? AND status = 'RUNNING' AND attempt_generation = ?
                     """,
-                    (now, now, job_id, attempt_generation),
+                    (now, now, error_code, job_id, attempt_generation),
                 ).rowcount
                 if not changed:
                     return None
@@ -213,9 +225,12 @@ class MemoryJobRepository:
             ).fetchall()
         recovered: list[DurableMemoryJob] = []
         for row in rows:
-            value = self.mark_failed(
-                row["job_id"], int(row["attempt_generation"]), now, "STALE_RUNNING", policy
-            )
+            with self.active_attempts.lock:
+                if self.active_attempts.contains(row["job_id"], int(row["attempt_generation"])):
+                    continue
+                value = self.mark_failed(
+                    row["job_id"], int(row["attempt_generation"]), now, "STALE_RUNNING", policy
+                )
             if value is not None:
                 recovered.append(value)
         return tuple(recovered)

@@ -19230,7 +19230,7 @@ MonoBehaviour:
     textColor: {r: 0.3019608, g: 0.25490198, b: 0.1764706, a: 1}
     fontSize: 28
   maxMessagesPerSpeaker: 3
-  bubbleLifetimeSeconds: 15
+  bubbleLifetimeSeconds: 20
   verticalSpacing: 10
 --- !u!224 &906730724
 RectTransform:

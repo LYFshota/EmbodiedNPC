@@ -15,6 +15,9 @@ namespace EmbodiedNPC.Settings
         public int max_output_tokens = 1024;
         public int context_length = 32768;
         public float timeout_seconds = 60;
+        public int model_total_concurrency;
+        public int model_foreground_concurrency;
+        public int model_background_concurrency;
         public string schema_profile = "raw";
         public string token_parameter = "max_tokens";
         public string thinking_parameter = "none";

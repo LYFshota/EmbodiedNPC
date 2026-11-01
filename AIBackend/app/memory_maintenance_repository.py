@@ -1,5 +1,6 @@
 """Persistent scope queue, optimistic atomic maintenance and reversible relations."""
 from contextlib import closing
+from .worker_runtime import ActiveAttempts
 import json
 
 from .canonical_memory_ranking import CanonicalMemoryRanker
@@ -43,21 +44,37 @@ def enqueue_fact(db, record, now):
 class MemoryMaintenanceRepository:
     def __init__(self, connect, embedding_provider=None, *, expected_player_uid=None):
         self.connect = connect
+        self.active_attempts = ActiveAttempts()
         self.ranker = CanonicalMemoryRanker(embedding_provider)
         self.certificates = CanonicalMemoryReadRepository(connect, expected_player_uid=expected_player_uid)
 
-    def claim(self, now, policy: MaintenancePolicy):
+    def claim(self, now, policy: MaintenancePolicy, *, activate=False):
+        with self.active_attempts.lock:
+            job = self._claim(now, policy)
+            if job is not None and activate:
+                self.active_attempts.add(job, (job["owner_json"], job["subject_json"]))
+            return job
+
+    def recover_stale(self, db, now, stale_seconds, version):
+        rows = db.execute("SELECT job_id,attempt_generation FROM memory_maintenance_jobs "
+            "WHERE status='RUNNING' AND started_at<? AND policy_version=?", (now-stale_seconds, version)).fetchall()
+        for row in rows:
+            if not self.active_attempts.contains(row["job_id"], row["attempt_generation"]):
+                db.execute("UPDATE memory_maintenance_jobs SET status='PENDING',started_at=NULL,"
+                    "error_code='RECOVERED_STALE' WHERE job_id=? AND attempt_generation=? AND status='RUNNING'",
+                    (row["job_id"], row["attempt_generation"]))
+
+    def _claim(self, now, policy):
         with closing(self.connect()) as db, db:
             db.execute('BEGIN IMMEDIATE')
-            db.execute("UPDATE memory_maintenance_jobs SET status='PENDING',started_at=NULL,"
-                       "error_code='RECOVERED_STALE' WHERE status='RUNNING' AND started_at<? AND policy_version=?",
-                       (now-policy.stale_seconds,MAINTENANCE_VERSION))
+            self.recover_stale(db, now, policy.stale_seconds, MAINTENANCE_VERSION)
+            exclusion, args = self.active_attempts.exclusions('j')
             row = db.execute("SELECT j.* FROM memory_maintenance_jobs j WHERE j.status='PENDING' "
                 "AND j.policy_version=? AND (j.next_retry_at IS NULL OR j.next_retry_at<=?) "
                 "AND ((SELECT COUNT(*) FROM (SELECT 1 FROM memory_maintenance_items i WHERE i.job_id=j.job_id "
                 "AND i.processed_at IS NULL LIMIT ?))>=? OR j.pending_since<=?) "
-                "ORDER BY j.pending_since,j.job_id LIMIT 1",
-                (MAINTENANCE_VERSION,now,policy.backlog_threshold,policy.backlog_threshold,now-policy.max_wait_seconds)).fetchone()
+                + exclusion + " ORDER BY j.pending_since,j.job_id LIMIT 1",
+                (MAINTENANCE_VERSION,now,policy.backlog_threshold,policy.backlog_threshold,now-policy.max_wait_seconds,*args)).fetchone()
             if row is None:
                 return None
             db.execute("UPDATE memory_maintenance_jobs SET status='RUNNING',attempt_generation=attempt_generation+1,"

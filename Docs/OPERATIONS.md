@@ -34,3 +34,8 @@ $env:EMBODIEDNPC_PROVIDER = 'mock'
 ## 贡献时的验证
 
 按实际变更选择定向测试，分别说明静态检查、Mock、真实模型、Unity Editor 和 Player 的结果。不要在有价值的玩家数据上测试或迁移。首次部署已知的六项 Reimport 见 [SOURCE_SETUP](SOURCE_SETUP.md#首次-unity-导入后的-vrm--glb-核对)。
+
+
+## Model concurrency (v0.1.4-preview)
+
+Settings → Developer tools → Concurrency settings exposes total, foreground and background model limits (integers 1–32, each class no greater than total). Cloud defaults: 6/6/2; Ollama: 1/1/1. Save & Apply includes any pending AI configuration edits and requires the existing Backend restart flow. The scheduler is shared by cognition and all three background workers; class caps do not reserve fixed slots. Existing timeouts, bounded waiting and local priority remain in effect.

@@ -15,6 +15,7 @@ namespace EmbodiedNPC.Settings
     {
         private ModelProfilesView profilesView;
         private TMP_Dropdown mainSupplier, embeddingSupplier, schemaMode, tokenMode, thinkingMode, reasoningMode, healthMode;
+        private TMP_InputField totalConcurrency, foregroundConcurrency, backgroundConcurrency;
         private TMP_InputField topP, thinkingBudget, embeddingDimensions, embeddingVersion;
         private Toggle sendTemperature;
         private TMP_Text mainProfileState, embeddingProfileState, indexState, probeDetails;
@@ -285,6 +286,9 @@ namespace EmbodiedNPC.Settings
             SetOptions(reasoningMode, "default", "none", "minimal", "low", "medium", "high", "xhigh");
             SetOptions(healthMode, "models", "generation_once");
             sendTemperature = (Toggle)AddProfileRow(thinking, "SendTemperature", "发送 Temperature", "Send temperature", mainParent);
+            totalConcurrency = (TMP_InputField)AddProfileRow(mainTimeout, "TotalConcurrency", "模型总并发（1–32）", "Total concurrency (1–32)", mainParent);
+            foregroundConcurrency = (TMP_InputField)AddProfileRow(mainTimeout, "ForegroundConcurrency", "前台并发（1–总并发）", "Foreground concurrency (1–total)", mainParent);
+            backgroundConcurrency = (TMP_InputField)AddProfileRow(mainTimeout, "BackgroundConcurrency", "后台并发（1–总并发）", "Background concurrency (1–total)", mainParent);
             topP = (TMP_InputField)AddProfileRow(mainTimeout, "TopP", "Top P（可选）", "Top P (optional)", mainParent);
             thinkingBudget = (TMP_InputField)AddProfileRow(mainTimeout, "ThinkingBudget", "原生思考预算（可选）", "Native thinking budget", mainParent);
             embeddingDimensions = (TMP_InputField)AddProfileRow(embeddingTimeout, "EmbeddingDimensions", "维度（可选）", "Dimensions (optional)", embedParent);
@@ -414,6 +418,11 @@ namespace EmbodiedNPC.Settings
                 maxOutputTokens.SetTextWithoutNotify(c.max_output_tokens.ToString()); contextLength.SetTextWithoutNotify((c.context_length > 0 ? c.context_length : 8192).ToString());
                 RefreshContextPreset();
                 mainTimeout.SetTextWithoutNotify(c.timeout_seconds.ToString(CultureInfo.InvariantCulture));
+                bool local = c.provider_type == "ollama" || c.provider_type == "mock";
+                int total = c.model_total_concurrency > 0 ? c.model_total_concurrency : local ? 1 : 6;
+                totalConcurrency.SetTextWithoutNotify(total.ToString());
+                foregroundConcurrency.SetTextWithoutNotify((c.model_foreground_concurrency > 0 ? c.model_foreground_concurrency : total).ToString());
+                backgroundConcurrency.SetTextWithoutNotify((c.model_background_concurrency > 0 ? c.model_background_concurrency : Math.Min(total, local ? 1 : 2)).ToString());
                 SelectOption(schemaMode, c.schema_profile); SelectOption(tokenMode, c.token_parameter);
                 SelectOption(thinkingMode, c.thinking_parameter); SelectOption(reasoningMode, c.reasoning_effort ?? "default");
                 SelectOption(healthMode, c.health_strategy);
@@ -431,13 +440,27 @@ namespace EmbodiedNPC.Settings
             dropdown.SetValueWithoutNotify(index < 0 ? 0 : index);
         }
 
+        private bool TryConcurrency(out int total, out int foreground, out int background)
+        {
+            total = foreground = background = 0;
+            if (totalConcurrency == null)
+            {
+                bool local = MainType() == "ollama" || MainType() == "mock";
+                total = foreground = local ? 1 : 6; background = local ? 1 : 2;
+                return true;
+            }
+            return TryInt(totalConcurrency.text, 1, 32, out total) &&
+                TryInt(foregroundConcurrency.text, 1, total, out foreground) &&
+                TryInt(backgroundConcurrency.text, 1, total, out background);
+        }
+
         private string DraftSignature(bool embedding)
         {
             // Length-prefixed fields avoid conflating drafts without serializing credentials to logs or disk.
             string[] values = embedding ? new[] { embeddingBaseUrl.text, embeddingModel.text, embeddingApiKey.text, embeddingTimeout.text,
                 embeddingDimensions.text, embeddingVersion.text, embeddingClearKey.ToString(), embeddingEnabled.isOn.ToString() } :
                 new[] { mainBaseUrl.text, mainModel.text, mainApiKey.text, temperature.text, thinking.isOn.ToString(), maxOutputTokens.text,
-                    contextLength.text, mainTimeout.text, schemaMode.value.ToString(), tokenMode.value.ToString(), thinkingMode.value.ToString(),
+                    contextLength.text, mainTimeout.text, totalConcurrency.text, foregroundConcurrency.text, backgroundConcurrency.text, schemaMode.value.ToString(), tokenMode.value.ToString(), thinkingMode.value.ToString(),
                     reasoningMode.value.ToString(), sendTemperature.isOn.ToString(), topP.text, thinkingBudget.text, mainClearKey.ToString(), healthMode.value.ToString() };
             return string.Concat(values.Select(v => (v ?? "").Length + ":" + v));
         }
@@ -508,7 +531,8 @@ namespace EmbodiedNPC.Settings
             else
             {
                 if (!TryFloat(temperature.text, 0, 2, out float temp) || !TryInt(maxOutputTokens.text, 1, 32768, out int tokens) ||
-                    !TryMainContext(contextLength.text, out int context) || !TryFloat(mainTimeout.text, .01f, 600, out float timeout)) throw new ArgumentException();
+                    !TryMainContext(contextLength.text, out int context) || !TryFloat(mainTimeout.text, .01f, 600, out float timeout) ||
+                    !TryConcurrency(out int total, out int foreground, out int background)) throw new ArgumentException();
                 float p = -1; int budget = 0;
                 if (!string.IsNullOrWhiteSpace(topP.text) && !TryFloat(topP.text, 0, 1, out p)) throw new ArgumentException();
                 if (!string.IsNullOrWhiteSpace(thinkingBudget.text) && !TryInt(thinkingBudget.text, 1024, 32768, out budget)) throw new ArgumentException();
@@ -516,6 +540,7 @@ namespace EmbodiedNPC.Settings
                 config = ModelProfileJson.Main(new MainModelConfig { display_name = displayName, provider_type = preset.protocol,
                     base_url = mainBaseUrl.text.Trim(), model = SelectedModel(mainModel, mainCandidates), temperature = temp,
                     thinking = thinking.isOn, max_output_tokens = tokens, context_length = context, timeout_seconds = timeout,
+                    model_total_concurrency = total, model_foreground_concurrency = foreground, model_background_concurrency = background,
                     schema_profile = schemaMode.options[schemaMode.value].text, token_parameter = tokenMode.options[tokenMode.value].text,
                     thinking_parameter = thinkingMode.options[thinkingMode.value].text, send_temperature = sendTemperature.isOn, top_p = p,
                     thinking_budget = budget, reasoning_effort = reasoningMode.value == 0 ? null : reasoningMode.options[reasoningMode.value].text,
@@ -646,6 +671,7 @@ namespace EmbodiedNPC.Settings
             stack.spacing = SettingsPanelTheme.Spacing; stack.childControlWidth = stack.childControlHeight = true;
             stack.childForceExpandWidth = true; stack.childForceExpandHeight = false;
             foreach (Component control in new Component[] { temperature, thinking, maxOutputTokens, contextLength, mainTimeout,
+                totalConcurrency, foregroundConcurrency, backgroundConcurrency,
                 schemaMode, tokenMode, thinkingMode, reasoningMode, healthMode, sendTemperature, topP, thinkingBudget,
                 embeddingTimeout, embeddingDimensions, embeddingVersion })
                 control.transform.parent.SetParent(advancedSettings.transform, false);

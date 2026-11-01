@@ -190,6 +190,233 @@ namespace CafeDemo.Tests
             Assert.That(drafts.Count(d => d.SourceType == "goal_outcome"), Is.EqualTo(1));
         }
 
+        private static string SegmentationScreenshotPath(string name)
+        {
+            string folder = Path.Combine(Application.temporaryCachePath, "DialogueSegmentationValidation");
+            Directory.CreateDirectory(folder);
+            return Path.Combine(folder, name);
+        }
+
+        [UnityTest] public IEnumerator SegmentedReply_UnscaledBubbles_OneCleanEvidenceAndRequest()
+        {
+            var bubbles = Object.FindAnyObjectByType<DialogueBubbleManager>();
+            float oldScale = Time.timeScale;
+            var gameView = EditorWindow.GetWindow(typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView"));
+            var sizeProperty = gameView.GetType().GetProperty("selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            int previousSize = (int)sizeProperty.GetValue(gameView);
+            try
+            {
+                sizeProperty.SetValue(gameView, 3); // Existing 1920x1080 entry, shared with NpcWaitingBubbleTests.
+                gameView.Focus(); gameView.Repaint(); yield return null; yield return null;
+                Assert.That(Screen.width, Is.EqualTo(1920)); Assert.That(Screen.height, Is.EqualTo(1080));
+                Time.timeScale = 0f;
+                foreach (string text in new[] { "欢迎光临。", "欢迎光临。[[PAUSE]]今天想聊什么？",
+                    "欢迎光临。[[PAUSE]]今天阳光很好。[[PAUSE]]想聊什么？",
+                    "欢迎光临。\n今天想聊什么？", "欢迎光临。\r\n今天阳光很好。\r\n想聊什么？",
+                    string.Concat(Enumerable.Repeat("奶香柔和，又不至于甜到盖住咖啡香。", 8)) })
+                {
+                    bubbles.ClearMessages(); shown.Clear(); drafts.Clear();
+                    var request = Send(); int sends = fake.Requests.Count;
+                    Assert.That(fake.Reply(Reply(request, text)), Is.True);
+                    Assert.That(merchant.GetComponent<SpeechPresentationLifecycle>().Current.Utterance,
+                        Is.EqualTo(DialoguePresentationText.PlainText(text)));
+                    string[] segments = DialoguePresentationText.Segments(text);
+                    Assert.That(DialoguePresentationText.HistorySegments(DialoguePresentationText.PlainText(text)),
+                        Is.EqualTo(segments), "Live and persisted history use the same explicit boundaries.");
+                    Assert.That(bubbles.GetMessages(merchant.EntityId).Select(m => m.Text), Is.EqualTo(segments.Take(1)));
+                    for (int i = 1; i < segments.Length; i++)
+                    {
+                        double previous = bubbles.GetMessages(merchant.EntityId).Last().CreatedAt;
+                        while (Time.unscaledTimeAsDouble < previous + 1.9) yield return null;
+                        Assert.That(bubbles.GetMessages(merchant.EntityId).Count, Is.EqualTo(i));
+                        double deadline = previous + 3;
+                        while (bubbles.GetMessages(merchant.EntityId).Count == i && Time.unscaledTimeAsDouble < deadline)
+                            yield return null;
+                        Assert.That(bubbles.GetMessages(merchant.EntityId).Count, Is.EqualTo(i + 1));
+                        double interval = bubbles.GetMessages(merchant.EntityId).Last().CreatedAt - previous;
+                        Assert.That(interval, Is.InRange(1.99, 2.4), "Unscaled interval");
+                        Debug.Log("[SegmentedReply] interval=" + interval.ToString("F4"));
+                    }
+                    Assert.That(bubbles.GetMessages(merchant.EntityId).Select(m => m.Text), Is.EqualTo(segments));
+                    Assert.That(shown, Has.Count.EqualTo(1));
+                    Assert.That(shown.Single().Utterance, Is.EqualTo(DialoguePresentationText.PlainText(text)));
+                    Assert.That(drafts.Count(d => d.EventType == "dialogue_response"), Is.EqualTo(1));
+                    Assert.That(drafts.Single(d => d.EventType == "dialogue_response").NaturalLanguagePayload,
+                        Is.EqualTo(shown.Single().Utterance));
+                    Assert.That(fake.Requests, Has.Count.EqualTo(sends));
+                    yield return null;
+                    bubbles.Refresh(Time.unscaledTimeAsDouble);
+                    var views = bubbles.GetComponentsInChildren<DialogueBubbleView>()
+                        .Where(v => v.Message.SpeakerEntityId == merchant.EntityId).ToArray();
+                    foreach (var view in views)
+                        Assert.That(view.GetComponentInChildren<TMPro.TMP_Text>().text, Does.Not.Contain("[[PAUSE]]"));
+                    if (text.Length > 100 && segments.Length == 1)
+                    {
+                        var label = views.Single().GetComponentInChildren<TMPro.TMP_Text>();
+                        label.ForceMeshUpdate();
+                        Assert.That(label.textInfo.lineCount, Is.GreaterThan(1), "Automatic wrapping stays in one bubble.");
+                    }
+                    for (int i = 0; i < views.Length; i++)
+                        for (int j = i + 1; j < views.Length; j++)
+                            Assert.That(views[i].ScreenRect.Overlaps(views[j].ScreenRect), Is.False);
+                    if (segments.Length == 3)
+                    {
+                        // Same frozen CafeDemoV2 frame, only the old/new head clearance changes.
+                        Set(bubbles, "headSpacing", 10f); bubbles.Refresh(Time.unscaledTimeAsDouble);
+                        var before = views.Select(v => v.RectTransform.anchoredPosition).ToArray();
+                        ScreenCapture.CaptureScreenshot(SegmentationScreenshotPath("bubbles-before.png"));
+                        double until = Time.unscaledTimeAsDouble + .3; while (Time.unscaledTimeAsDouble < until) yield return null;
+                        Set(bubbles, "headSpacing", 0f); bubbles.Refresh(Time.unscaledTimeAsDouble);
+                        for (int i = 0; i < views.Length; i++)
+                            Assert.That(before[i].y - views[i].RectTransform.anchoredPosition.y, Is.EqualTo(10f).Within(.1));
+                        ScreenCapture.CaptureScreenshot(SegmentationScreenshotPath("bubbles-after.png"));
+                        until = Time.unscaledTimeAsDouble + .3; while (Time.unscaledTimeAsDouble < until) yield return null;
+                        foreach (var view in bubbles.GetComponentsInChildren<DialogueBubbleView>())
+                        {
+                            var anchor = Object.FindObjectsByType<DialogueBubbleAnchor>()
+                                .Single(a => a.SpeakerEntityId == view.Message.SpeakerEntityId);
+                            if (bubbles.TryGetHeadRect(anchor, out Rect head))
+                                Assert.That(view.ScreenRect.yMin, Is.GreaterThanOrEqualTo(head.yMax - .1));
+                        }
+                        Debug.Log("[SegmentedReply] CafeDemoV2 head clearance reduced by 10 UI units; canvas scale=" +
+                            bubbles.PresentationCanvas.scaleFactor + "; screen=" + Screen.width + "x" + Screen.height);
+                        // Isolate the player's own clearance from cross-speaker bubble avoidance.
+                        bubbles.ClearMessages();
+                        yield return null; // Existing views are destroyed at the end of the frame.
+                        string playerId = player.GetComponent<WorldEntity>().EntityId;
+                        bubbles.PushMessage(playerId, "你好。", DialogueSpeakerKind.Player);
+                        Set(bubbles, "headSpacing", 10f); bubbles.Refresh(Time.unscaledTimeAsDouble);
+                        var playerView = bubbles.GetComponentsInChildren<DialogueBubbleView>().Single();
+                        float playerBefore = playerView.RectTransform.anchoredPosition.y;
+                        ScreenCapture.CaptureScreenshot(SegmentationScreenshotPath("player-before.png"));
+                        until = Time.unscaledTimeAsDouble + .3; while (Time.unscaledTimeAsDouble < until) yield return null;
+                        Set(bubbles, "headSpacing", 0f); bubbles.Refresh(Time.unscaledTimeAsDouble);
+                        Assert.That(playerBefore - playerView.RectTransform.anchoredPosition.y, Is.EqualTo(10f).Within(.1));
+                        var playerAnchor = player.GetComponent<DialogueBubbleAnchor>();
+                        Assert.That(bubbles.TryGetHeadRect(playerAnchor, out Rect playerHead), Is.True);
+                        Assert.That(playerView.ScreenRect.yMin, Is.GreaterThanOrEqualTo(playerHead.yMax - .1));
+                        ScreenCapture.CaptureScreenshot(SegmentationScreenshotPath("player-after.png"));
+                        until = Time.unscaledTimeAsDouble + .3; while (Time.unscaledTimeAsDouble < until) yield return null;
+                        Debug.Log("[SegmentedReply] Isolated player clearance reduced by 10 pixels; head/hair bounds clear.");
+                    }
+                }
+            }
+            finally { Time.timeScale = oldScale; sizeProperty.SetValue(gameView, previousSize); }
+        }
+
+        [UnityTest] public IEnumerator SegmentedReply_EmptyOverflowAndDisable_DoNotLeakMarkersOrDelayedBubbles()
+        {
+            Assert.That(DialoguePresentationText.Segments("[[PAUSE]]  [[PAUSE]]"), Is.Empty);
+            Assert.That(DialoguePresentationText.Segments(" a [[PAUSE]] [[PAUSE]] b [[PAUSE]] c [[PAUSE]] d "),
+                Is.EqualTo(new[] { "a", "b", "c\nd" }));
+            foreach (string text in new[] { "甲[[PAUSE]]乙[[PAUSE]]丙[[PAUSE]]丁", "甲\n乙\n丙\n丁",
+                "甲\r\n乙\r\n丙\r\n丁", "甲\n[[PAUSE]]\r\n乙\r丙\n丁" })
+            {
+                Assert.That(DialoguePresentationText.Segments(text), Is.EqualTo(new[] { "甲", "乙", "丙\n丁" }));
+                Assert.That(DialoguePresentationText.HistorySegments(DialoguePresentationText.PlainText(text)),
+                    Is.EqualTo(new[] { "甲", "乙", "丙\n丁" }));
+            }
+            Assert.That(DialoguePresentationText.Segments("\r\n [[PAUSE]] \n"), Is.Empty);
+            var bubbles = Object.FindAnyObjectByType<DialogueBubbleManager>(); bubbles.ClearMessages();
+            var presenter = merchant.GetComponent<DialogueBubbleCognitivePresenter>();
+            Assert.That(presenter.TryPresentCognitiveUtterance("[[PAUSE]] [[PAUSE]]"), Is.False);
+            Assert.That(presenter.TryPresentCognitiveUtterance("第一段。[[PAUSE]]第二段。"), Is.True);
+            presenter.enabled = false;
+            double until = Time.unscaledTimeAsDouble + 2.2; while (Time.unscaledTimeAsDouble < until) yield return null;
+            Assert.That(bubbles.GetMessages(merchant.EntityId).Select(m => m.Text), Is.EqualTo(new[] { "第一段。" }));
+            bubbles.ClearMessages();
+            Assert.That(bubbles.BubbleLifetimeSeconds, Is.EqualTo(20f), "CafeDemoV2 serialized lifetime.");
+            double created = Time.unscaledTimeAsDouble;
+            string playerId = player.GetComponent<WorldEntity>().EntityId;
+            bubbles.PushMessage(merchant.EntityId, "NPC", DialogueSpeakerKind.Npc, created);
+            bubbles.PushMessage(playerId, "玩家第一行\n玩家第二行", DialogueSpeakerKind.Player, created);
+            bubbles.Refresh(created + 19.99);
+            Assert.That(bubbles.GetMessages(merchant.EntityId).Count(), Is.EqualTo(1));
+            Assert.That(bubbles.GetMessages(playerId).Single().Text, Is.EqualTo("玩家第一行\n玩家第二行"));
+            bubbles.Refresh(created + 20);
+            Assert.That(bubbles.GetMessages(merchant.EntityId), Is.Empty);
+            Assert.That(bubbles.GetMessages(playerId), Is.Empty);
+            Debug.Log("[SegmentedReply] NPC/player bubbles retained before 20 seconds and expired at 20 seconds.");
+        }
+
+        [UnityTest] public IEnumerator SegmentedReply_HistoryParagraphs_RenderOnceAndSurviveReopen()
+        {
+            var history = Object.FindAnyObjectByType<DialogueHistoryPanel>(FindObjectsInactive.Include);
+            var scroll = (ScrollRect)typeof(DialogueHistoryPanel).GetField("scrollView", Private).GetValue(history);
+            var gameView = EditorWindow.GetWindow(typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView"));
+            var sizeProperty = gameView.GetType().GetProperty("selectedSizeIndex", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            int previousSize = (int)sizeProperty.GetValue(gameView);
+            Set(history, "backendClient", fake);
+            history.enabled = true;
+            try
+            {
+                sizeProperty.SetValue(gameView, 3); gameView.Focus(); gameView.Repaint();
+                yield return null; yield return null;
+                string playerText = "玩家第一行\n玩家第二行";
+                string[] replies = { "单段回复。", "先说第一部分。[[PAUSE]]再说第二部分。\n补充第三部分。",
+                    "先讲发生了什么。\r\n最后讲自己的想法。" };
+                foreach (string text in replies)
+                {
+                    var request = Send(playerText);
+                    Assert.That(fake.Reply(Reply(request, text)), Is.True);
+                }
+                Assert.That(shown.Count, Is.EqualTo(3));
+                var responses = drafts.Where(d => d.EventType == "dialogue_response").ToArray();
+                Assert.That(responses.Length, Is.EqualTo(3), "One saved draft per complete NPC reply.");
+                Assert.That(responses.Select(d => d.NaturalLanguagePayload),
+                    Is.EqualTo(replies.Select(DialoguePresentationText.PlainText)));
+                var items = drafts.Select((d, i) => new DialogueHistoryItem {
+                    event_id = "history-ui-event-" + i, experience_seq = i + 1, timestamp = i + 1,
+                    actor = d.EventType == "dialogue_response" ? merchant.EntityId : "player_01",
+                    role = d.EventType == "dialogue_response" ? "npc" : "player", text = d.NaturalLanguagePayload }).ToArray();
+                Assert.That(items.Length, Is.EqualTo(6));
+                var page = new DialogueHistoryPage { observer_id = merchant.EntityId,
+                    conversation_id = dialogue.CurrentConversationId, items = items, next_after_seq = items.Length };
+                history.Toggle(); history.StopAllCoroutines();
+                Assert.That(history.AppendPage(page), Is.True);
+                Assert.That(history.AppendPage(page), Is.False, "Replayed old page cannot duplicate history.");
+                var cached = (List<ChatHistoryMessage>)typeof(DialogueHistoryPanel).GetField("messages", Private).GetValue(history);
+                string identity = JsonConvert.SerializeObject(cached);
+                var expected = new[] { playerText, replies[0], playerText, "先说第一部分。", "再说第二部分。",
+                    "补充第三部分。", playerText, "先讲发生了什么。", "最后讲自己的想法。" };
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    if (pass == 1) { history.Close(); history.Toggle(); history.StopAllCoroutines(); }
+                    yield return null; Canvas.ForceUpdateCanvases();
+                    var views = scroll.content.GetComponentsInChildren<ChatHistoryMessageView>();
+                    Assert.That(views.Length, Is.EqualTo(9), "All history segments render immediately.");
+                    Assert.That(views.Select(v => v.transform.Find("Bubble/Message").GetComponent<TMPro.TMP_Text>().text), Is.EqualTo(expected));
+                    Assert.That(views.Count(v => v.transform.Find("Speaker").gameObject.activeSelf), Is.EqualTo(6));
+                    Assert.That(cached.Count, Is.EqualTo(6));
+                    Assert.That(JsonConvert.SerializeObject(cached), Is.EqualTo(identity), "Rendering preserves IDs, sequence and source text.");
+                    Assert.That(history.DisplayText, Does.Not.Contain("[[PAUSE]]"));
+                    for (int i = 1; i < views.Length; i++)
+                    {
+                        var above = (RectTransform)views[i - 1].transform;
+                        var below = (RectTransform)views[i].transform;
+                        Assert.That(below.offsetMax.y, Is.LessThanOrEqualTo(above.offsetMin.y - 5));
+                    }
+                    Assert.That(scroll.content.rect.height, Is.GreaterThan(scroll.viewport.rect.height));
+                    Assert.That(scroll.verticalNormalizedPosition, Is.EqualTo(0).Within(.01));
+                    scroll.verticalNormalizedPosition = 1;
+                    float position = scroll.content.anchoredPosition.y;
+                    typeof(DialogueHistoryPanel).GetMethod("Render", Private).Invoke(history, null);
+                    Assert.That(scroll.content.anchoredPosition.y, Is.EqualTo(position).Within(.1));
+                    if (pass == 1)
+                    {
+                        ScreenCapture.CaptureScreenshot(SegmentationScreenshotPath("history-segmented.png"));
+                        double until = Time.unscaledTimeAsDouble + .3; while (Time.unscaledTimeAsDouble < until) yield return null;
+                    }
+                }
+                Assert.That(fake.Requests.Count, Is.EqualTo(3));
+                Assert.That(drafts.Count(d => d.EventType == "dialogue_response"), Is.EqualTo(3));
+                Assert.That(DialoguePresentationText.HistorySegments("甲\r\n\r\n乙[[PAUSE]]丙"), Is.EqualTo(new[] { "甲", "乙", "丙" }));
+                Assert.That(DialoguePresentationText.HistorySegments("没有段落边界的旧回复。"), Is.EqualTo(new[] { "没有段落边界的旧回复。" }));
+                Debug.Log("[SegmentedHistory] single/two/three parts, one name per turn, reopen, dedupe and scroll PASS; 3 responses remain 3 saved drafts.");
+            }
+            finally { history.Close(); history.enabled = false; sizeProperty.SetValue(gameView, previousSize); }
+        }
+
         [UnityTest] public IEnumerator GoalResult_ClosedInput_PresentsOnceFromOriginalNpc()
         {
             var outcomes = new List<GoalOutcome>(); var terminal = new List<GoalPlanPresentation>();

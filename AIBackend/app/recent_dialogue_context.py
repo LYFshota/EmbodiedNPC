@@ -41,6 +41,13 @@ class RecentDialogueTimeline(list[dict]):
         self.truncated = truncated
         self.target_messages = target
         self.expanded_messages = expanded
+        # Request-local read-only evidence, attached after the existing speech selection.
+        self.linked_outcomes = ()
+
+    def linked_for_seqs(self, retained):
+        selected = set(retained)
+        return [dict(item, linked_dialogue_seqs=sorted(selected.intersection(item['linked_dialogue_seqs'])))
+                for item in self.linked_outcomes if selected.intersection(item['linked_dialogue_seqs'])]
 
     @classmethod
     def select(cls, messages, sources, target, char_budget, overlap, *, truncated=False,

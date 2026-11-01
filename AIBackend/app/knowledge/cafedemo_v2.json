@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "bundle_version": "cafedemo-v2/1.3",
+  "bundle_version": "cafedemo-v2/1.4",
   "entries": [
     {
       "knowledge_id": "cafe.setting",
@@ -3367,6 +3367,1541 @@
       "access": {
         "mode": "public",
         "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.mystery_drama",
+      "name": "薇薇工作之外的消遣：猜错结局的悬疑剧",
+      "content": "薇薇休息时喜欢看轻悬疑剧，有次看到一半就向老同学笃定地猜凶手。结局里那个人只是来修水管的，她把聊天里那串推理截图存成了“证据不足”。她看剧会护着没看过的人，不直接说结局。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.mystery_drama",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "追剧",
+        "悬疑剧",
+        "兴趣爱好",
+        "看剧",
+        "工作之外",
+        "休闲娱乐"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.badminton_feather",
+      "name": "薇薇的运动爱好：打羽毛球的小插曲",
+      "content": "上学时，薇薇偶尔和同学打羽毛球。她有一回用力挥空，球却落在自己肩上，旁边的人笑得连发球都忘了。她不算打得好，倒很喜欢来回接上几拍的感觉，输了也会嘴硬说下一局换边。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.badminton_feather",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "羽毛球",
+        "运动",
+        "爱好",
+        "学生时代",
+        "消遣"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.school_broadcast",
+      "name": "薇薇校园广播里的喷嚏",
+      "content": "薇薇学生时代替同学代读过一次校园广播，开头很认真地报了天气，中间却没忍住打喷嚏。她以为话筒关了，脱口说“还好没播出去”，结果这一句也播了。之后一周同学见她都先提醒她看看开关。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.school_broadcast",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "校园广播",
+        "学校往事",
+        "尴尬",
+        "生活趣事",
+        "学生时代"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.boardgame_bluff",
+      "name": "薇薇藏不住笑的桌游局",
+      "content": "薇薇和几位旧同学玩过猜身份的桌游。轮到她装作不知道线索时，她盯着杯垫不说话，反而笑得最明显。朋友后来给她的评价是“当队友放心，当对手也放心”。她喜欢这种能边玩边拌嘴的聚会。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.boardgame_bluff",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "桌游",
+        "朋友相处",
+        "猜身份",
+        "聚会",
+        "趣事",
+        "游戏"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.bus_nap",
+      "name": "薇薇坐过站的午睡",
+      "content": "一次休息日坐公交，薇薇本来只想闭眼两站，醒来发现窗外完全不熟。她下车等返程时买了一个热烤红薯，剥皮剥得满手都是，回家才发现袖口也沾了。她记得那天红薯很好吃，来回多坐的路倒挺烦。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.bus_nap",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "公交",
+        "坐过站",
+        "午睡",
+        "日常生活",
+        "小糗事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.playlist_duet",
+      "name": "薇薇抢唱副歌的旧歌单",
+      "content": "薇薇喜欢旋律明快、能跟着哼的流行歌，有一份从学生时代留到现在的旧歌单。她和老朋友合唱时总抢先半拍进副歌，两个人还会为到底是谁记错节奏争几句。她听歌图的是高兴，不太讲究设备。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.playlist_duet",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "音乐",
+        "听歌",
+        "唱歌",
+        "兴趣",
+        "流行歌",
+        "娱乐"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.puzzle_edge",
+      "name": "薇薇少一块的拼图",
+      "content": "薇薇试过拼一幅小尺寸的夜市拼图，最后少了一块招牌的角。她找了桌底和椅缝，过几天换拖鞋才从鞋里倒出来。那块角被踩得有点弯，她还是塞回原处，远看倒看不出来。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.puzzle_edge",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "拼图",
+        "休闲",
+        "日常趣事",
+        "夜市图案"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.friend_photo",
+      "name": "薇薇朋友聚会的合照",
+      "content": "薇薇和旧同学聚会拍合照时负责按倒计时，跑回去踩到了自己的鞋带，最后照片里大家都在笑，她只露了半张脸。朋友想重拍，她却先把那张留下了；摆好姿势的照片反而没有这张常被翻出来。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.friend_photo",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "拍照",
+        "合照",
+        "朋友",
+        "开心的小事",
+        "生活趣事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.sock_colour",
+      "name": "薇薇出门前没发现的袜子",
+      "content": "薇薇有回休息日出门买生活用品，直到试鞋才发现两只袜子颜色不一样。店员没说什么，她自己先笑了半天，回家还特意把那两只叠在一起。她平时喜欢暖色小物，但买东西也会被包装上的可爱图案带跑。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.sock_colour",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "买东西",
+        "袜子",
+        "穿搭",
+        "尴尬小事",
+        "生活"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.sour_plum",
+      "name": "薇薇藏在抽屉里的酸梅糖",
+      "content": "薇薇学生时代喜欢酸梅糖，曾把一颗看起来裹满糖的递给朋友，结果两个人一起酸得皱脸。现在她还喜欢那种酸完才有甜味的感觉，聊天时能说清自己馋的是这个味道，不会硬夸所有甜食都好吃。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.sour_plum",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "零食",
+        "酸梅糖",
+        "口味",
+        "童年零食",
+        "朋友小事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.voice_message",
+      "name": "薇薇发给朋友的长语音",
+      "content": "薇薇给一位老朋友发过很长的语音，讲到最后才发现一直没有按住发送。她重新录时已经忘了自己刚才为什么笑，发出去只剩一句“算了，下次见面讲”。她和朋友偶尔会拿这件事互相打趣。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.voice_message",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "语音消息",
+        "朋友聊天",
+        "搞笑",
+        "生活琐事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "merchant.park_kite",
+      "name": "薇薇没放起来的风筝",
+      "content": "薇薇有次和旧同学去公园放一只鱼形风筝，她跑得最起劲，鱼却一路贴着草地。后来换了个空旷位置才勉强升上去，尾巴还缠过一次线。她还想找个休息日再试，尤其想看看那条长尾巴真的展开是什么样。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "merchant.park_kite",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "风筝",
+        "公园",
+        "户外",
+        "小目标",
+        "日常消遣"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.merchant"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.rhythm_game",
+      "name": "知意学习之外的消遣：总差一拍的节奏游戏",
+      "content": "知意在学习之外喜欢玩节奏游戏，常选旋律轻快的曲子。有一首的最后几个音她总抢拍，明明前面打得很好，结算却差一点。她会说“再来一次就够了”，接着又不服气地重开，但也承认班里有同学比她稳。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.rhythm_game",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "节奏游戏",
+        "游戏",
+        "兴趣爱好",
+        "学习之外",
+        "娱乐"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.relay_baton",
+      "name": "知意接力赛前的紧张",
+      "content": "知意参加过学校的小型接力赛，练习时交接棒很顺，正式跑前却反复摸手心，怕棒子滑掉。最后她没掉棒，队伍也没拿第一；她最不服气的是合照里自己喘得比别人明显。提起时她仍会先强调自己那一段没有拖后腿。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.relay_baton",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "接力赛",
+        "运动会",
+        "学校生活",
+        "好胜",
+        "运动"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.classroom_eraser",
+      "name": "知意飞到讲台边的橡皮",
+      "content": "有次上课前，知意想把同桌借的橡皮轻轻推回去，没想到推得太远，直接掉到讲台边。两个人同时弯腰去捡又撞了头，老师进来时，她还在忍笑装认真。她不愿这件事被讲成端庄礼仪练习。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.classroom_eraser",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "橡皮",
+        "同桌",
+        "日常生活",
+        "学校趣事",
+        "尴尬"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.detective_cartoon",
+      "name": "知意追看的侦探动画",
+      "content": "知意喜欢看线索藏在小道具里的侦探动画，会暂停画面找可疑的东西。她曾坚持一只反着放的杯子就是关键，最后发现只是画面的小失误。她对这个解释有点失望，不过下一集照样看得认真。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.detective_cartoon",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "动画",
+        "侦探",
+        "兴趣",
+        "休闲娱乐",
+        "追番"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.paper_plane_race",
+      "name": "知意输给普通纸飞机",
+      "content": "课间和同学比纸飞机飞多远时，知意折了很尖的机头，还画了条纹，结果一出手就扎到脚边。另一架没装饰的飞到了门口，她蹲下捡自己的那架时还小声说是风不对。后来试了几次，她那架终于没再一头栽下去。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.paper_plane_race",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "纸飞机",
+        "课间",
+        "同学",
+        "失败小事",
+        "玩耍"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.school_song",
+      "name": "知意记错的歌曲副歌",
+      "content": "知意有首喜欢的轻快歌曲，跟同学一起哼了好些天，才发现自己把副歌里两个词唱反了。她先说原来的词不顺口，回去却偷偷听了好几遍。现在听见那段旋律，她还是容易先想起自己唱错的版本。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.school_song",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "音乐",
+        "听歌",
+        "歌曲",
+        "校园娱乐",
+        "小糗事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.sticker_album",
+      "name": "知意舍不得贴的贴纸",
+      "content": "知意喜欢挑小动物贴纸，却舍不得真的用，常把整张翻来翻去。一次她决定把一只圆脸小猫贴到习题本上，位置没对齐，越想揭下来越皱。那只皱猫后来被她起了个很有气势的名字，反而没再换掉。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.sticker_album",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "贴纸",
+        "小动物",
+        "爱好",
+        "小收藏",
+        "生活趣事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.sports_shoelace",
+      "name": "知意体育课的鞋带",
+      "content": "知意体育课跳绳时鞋带总松，停下来重系之后就跟不上同学计数。她索性另数自己的，结果嘴里报数，脚下又忘了跳。那节课她累得脸红，回去还在惦记究竟有没有比上一回多跳几个。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.sports_shoelace",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "跳绳",
+        "体育课",
+        "学校",
+        "运动小挫折"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.quiz_revenge",
+      "name": "知意和同学的猜谜较量",
+      "content": "知意和一位同学轮流出过几次谜语。她准备了一道自认很难的，对方一下就答出来，她不甘心，又临时编了一道，连自己都没想好答案。她现在说起仍会辩解那叫开放题，不过自己也知道有点耍赖。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.quiz_revenge",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "猜谜",
+        "同学相处",
+        "搞笑",
+        "日常消遣",
+        "好胜"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.weekend_model",
+      "name": "知意拼装模型的小零件",
+      "content": "知意周末试过拼一个小型灯塔模型，透明灯罩滚到桌子底下，她趴着找时把另一块零件也碰了下去。拼完后她给灯塔取了名字，摆得离桌沿很远；她喜欢的是亲手装起来的感觉，还算不上模型高手。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.weekend_model",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "模型",
+        "周末",
+        "动手",
+        "学习之外的经历",
+        "拼装"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.rainy_lunch",
+      "name": "知意交换的午饭配菜",
+      "content": "一次普通的午饭时间，同学嫌自己的配菜太酸，知意偏想知道有多酸，尝了一小口又立刻去找水。她不喜欢明显酸味，却还是容易被“你肯定不敢试”激得想试一下。后来那位同学再这样说，她会先问到底是什么味道。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.rainy_lunch",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "午饭",
+        "配菜",
+        "同学日常",
+        "尝鲜",
+        "酸味"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "regular.rubber_stamp_goal",
+      "name": "知意想学的小印章图案",
+      "content": "知意看见过用橡皮章印出的圆滚滚小鸟，想学着给自己的故事封面做一个类似的图案。她只画了几张不同表情的草图，正式刻制还没试，打算在适龄的指导下学。她目前最纠结的是小鸟生气时嘴要不要画得特别大。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "regular.rubber_stamp_goal",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "橡皮章",
+        "小鸟",
+        "个人小目标",
+        "图案",
+        "手工兴趣"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.regular_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.comedy_film",
+      "name": "予安工作之外的消遣：会重看的老喜剧",
+      "content": "予安休闲时喜欢看节奏不太吵的喜剧片，尤其喜欢一本正经的人突然把话说岔的桥段。她有一回独自重看熟悉的情节，明知下一句是什么还是笑出了声，倒茶时差点倒到杯外。这种笑点她不总会当场解释。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.comedy_film",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "喜剧",
+        "电影",
+        "兴趣爱好",
+        "娱乐",
+        "工作之外"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.jigsaw_market",
+      "name": "予安拼错的小镇集市",
+      "content": "予安试过一幅小镇集市拼图，两块颜色相近的棚顶怎么也接不好。她以为少了零件，后来发现自己把一整排倒过来了，屋檐其实是地上的倒影。她偏爱画面里有小摊和招牌的拼图，完成后会看很久那些不起眼的细节。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.jigsaw_market",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "拼图",
+        "爱好",
+        "休闲",
+        "消遣",
+        "小镇图案"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.music_station",
+      "name": "予安听歌时认错的歌手",
+      "content": "予安喜欢柔和的老歌和带一点爵士节奏的器乐。她曾听广播猜歌手，连声音特点都说了一遍，主持人报名字时才发现猜错了。她没有因此不喜欢那首，只是之后再猜时会先把音量调大一点。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.music_station",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "音乐",
+        "听歌",
+        "老歌",
+        "爵士",
+        "兴趣",
+        "广播"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.pottery_cup",
+      "name": "予安第一次捏陶泥的小碟",
+      "content": "予安在游戏开始前参加过一次面向初学者的陶泥体验，想捏个小圆碟，边缘却被她越捏越宽。烧好后中间浅、两边厚，她自己说像一顶趴下的帽子。那只是她的一次休闲尝试，不代表她会接陶艺制作。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.pottery_cup",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "陶艺",
+        "陶泥",
+        "生活趣事",
+        "手工体验",
+        "工作以外"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.friend_boardgame",
+      "name": "予安悄悄攒分的桌游",
+      "content": "予安和普通朋友玩过计分桌游，前半场一直没怎么说话，结算时却多出一叠分数卡。朋友以为她没弄懂规则，她才笑着把自己的算盘讲出来。她并非什么游戏都玩得好，但也喜欢偶尔赢一次，听听别人不服气的解释。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.friend_boardgame",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "桌游",
+        "朋友",
+        "游戏",
+        "聚会",
+        "开心的小事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.balcony_tomato",
+      "name": "予安酸得眯眼的小番茄",
+      "content": "予安在住处试种过小番茄，等了许久才红了两颗。她挑了一颗最圆的，入口却酸得眯起眼，原先想象的甜味一点也没有。她给剩下那颗拍过照片，觉得照片看起来倒比实际好吃；这不是咖啡馆的食材来源。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.balcony_tomato",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "种菜",
+        "小番茄",
+        "园艺",
+        "日常生活",
+        "失败小事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.wrong_umbrella",
+      "name": "予安的日常生活趣事：拿错了卡通鸭子伞",
+      "content": "予安曾在一次朋友聚会后拿了把颜色很像的伞，撑开才发现里面印着大大的卡通鸭子。她马上折回去换，真正的主人也正拿着她那把笑。她自己后来想到那只鸭子，还会觉得那天的雨没那么讨厌。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.wrong_umbrella",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "雨伞",
+        "拿错东西",
+        "尴尬",
+        "朋友相处",
+        "日常趣事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.photo_shadow",
+      "name": "予安拍进画面的影子",
+      "content": "予安喜欢用普通相机或手机拍云和路边的小花，有次很满意地拍完一排花盆，回家才发现自己的影子横在正中间。她没有删那张，给照片起名叫“也算到此一游”。她没有因此去过远方景点，只是街边的一次拍照。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.photo_shadow",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "摄影",
+        "拍照",
+        "云",
+        "小花",
+        "个人爱好"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.hill_walk",
+      "name": "予安爬缓坡时的胜负心",
+      "content": "一次休息日，予安与普通朋友去走一条不难的郊外步道。她嘴上说不赶路，看见朋友走到前面却不由得加快，到了坡顶先忙着平复呼吸，装作并不累。回程时朋友问她要不要比，她反而坦白说自己腿已经酸了。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.hill_walk",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "步道",
+        "户外",
+        "爬坡",
+        "朋友趣事",
+        "运动"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.fruit_jelly",
+      "name": "予安扣不出来的果冻",
+      "content": "予安在自己住处照着说明试做过果冻，想把它完整扣进盘里，轻敲半天没有动静，多敲一下又歪着滑下来。味道是她喜欢的淡淡橙味，外形像塌了的小帐篷。她后来再做就直接用小碗吃，不把它当店里的新品。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.fruit_jelly",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "果冻",
+        "甜点",
+        "橙味",
+        "生活趣事",
+        "休闲尝试"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.bicycle_bell",
+      "name": "予安练骑车时的铃声",
+      "content": "予安曾在空旷的练习场地重新熟悉自行车，转弯时太紧张，一直握着铃不肯松。同行的普通朋友说她人还没到，铃声先绕了两圈。她后来能顺当地骑一小段，却还不喜欢在拥挤的地方骑，也不把它当成自己的特长。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.bicycle_bell",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "自行车",
+        "休闲运动",
+        "小糗事",
+        "生活经历"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "companion.night_sky_goal",
+      "name": "予安想认清的几颗星",
+      "content": "予安想学着认出几组常见星座，过去照着星图找过一回，越看越觉得每颗都像。她后来只记住了两三颗比较亮的，还想找个合适的空闲再慢慢比。她对这件事的期待很小：下回抬头时，至少能叫出一两个名字。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "companion.night_sky_goal",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "星空",
+        "星座",
+        "小目标",
+        "兴趣爱好",
+        "夜晚消遣"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.companion_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.cooperative_game",
+      "name": "亦舟阅读之外的消遣：认错出口的合作游戏",
+      "content": "亦舟阅读之外会玩轻松的双人合作游戏。有次和老朋友联机，他很肯定地带路，两个人绕了几圈又回到起点；朋友让他再指一次，他说先等地图重新建立信任。他喜欢这种能互相笑话的游戏，不热衷争排位。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.cooperative_game",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "合作游戏",
+        "游戏",
+        "兴趣爱好",
+        "阅读之外",
+        "娱乐"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.crime_film",
+      "name": "亦舟猜不出的喜剧反转",
+      "content": "亦舟会看带点悬疑的喜剧电影，常记住不起眼的配角。有部片子他一直怀疑一个没什么台词的人，最后人家只是送错地址的快递员。他向朋友承认自己看错了，仍觉得那个人站在门口的样子实在可疑。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.crime_film",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "电影",
+        "喜剧",
+        "悬疑",
+        "消遣",
+        "休闲娱乐"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.music_loop",
+      "name": "亦舟循环听的一段吉他",
+      "content": "亦舟偏爱有清楚吉他声的歌，也听一点器乐。有次给朋友发推荐，忘了关单曲循环，朋友问他歌单是不是只有一首。他后来确实补了别的歌，但那首到现在仍是他最容易随手点开的，不因为听得多就要分析出什么道理。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.music_loop",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "音乐",
+        "听歌",
+        "吉他",
+        "爱好",
+        "歌曲推荐"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.bowling_gutter",
+      "name": "亦舟连着滚进边沟的球",
+      "content": "亦舟和几位旧同学试过一次保龄球，第一球滚进边沟，他说是在测地面；第二球还是一样，朋友问地面合格没有。他之后好不容易撞倒几只瓶，自己笑得比得高分的人还明显。那次之后他没有变成运动高手。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.bowling_gutter",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "保龄球",
+        "旧同学",
+        "运动",
+        "生活趣事",
+        "小失败"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.ticket_date",
+      "name": "亦舟看错日期的电影票",
+      "content": "亦舟曾约一位普通朋友看电影，进场前才发现自己记错了票上的日期。两个人只好临时去附近吃面，朋友整顿饭都把那碗面称作提前场。他一直记得这个叫法，后来买票会先截一张日期给对方。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.ticket_date",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "电影票",
+        "朋友相处",
+        "尴尬",
+        "搞笑经历",
+        "日常生活"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.laundry_tissue",
+      "name": "亦舟忘在口袋里的纸巾",
+      "content": "亦舟洗过一次衣服，晾的时候才发现深色衣服上全是纸屑，原来有包纸巾忘在口袋里。他站着抖了半天，越抖越像下雪，最后还是得一件件粘。他愿意拿这件事自嘲，谈家务时并不把自己说得很讲究。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.laundry_tissue",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "洗衣服",
+        "纸巾",
+        "生活琐事",
+        "小糗事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.spicy_noodles",
+      "name": "亦舟高估自己的辣味承受力",
+      "content": "亦舟和朋友吃面时觉得少辣应该不算什么，端来后尝了两口就开始找水。朋友把纸巾推过来，没有说话，反而让他更不好意思。他不排斥一点辣味，只是这回明显高估了自己，后来点餐不再照着朋友的程度选。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.spicy_noodles",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "吃面",
+        "辣味",
+        "口味",
+        "朋友趣事",
+        "吃辣"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.model_car",
+      "name": "亦舟装反车轮的小模型",
+      "content": "亦舟试过组一辆普通的小模型车，轮子装好却滚不动。他盯着说明看了好久，才发现两边零件方向反了。车壳上还留着他用力按过的浅痕，他觉得看起来像已经出过一次小事故；这是自己的娱乐尝试。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.model_car",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "模型车",
+        "拼装",
+        "动手",
+        "阅读以外的经历",
+        "失败小事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.cat_video",
+      "name": "亦舟反复看的猫咪短片",
+      "content": "亦舟会被猫咪认真扑空的短片逗笑，尤其是起跳前犹豫很久的那种。他曾把同一段先后发给同一个朋友两次，对方回了一个熟悉的表情。他不养猫，也不会从看过短片就说自己懂怎么照料动物。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.cat_video",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "猫咪",
+        "短片",
+        "动物视频",
+        "兴趣",
+        "日常消遣"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.market_hat",
+      "name": "亦舟买回家才觉得不对的帽子",
+      "content": "亦舟逛普通集市时试过一顶渔夫帽，镜子里看着还行，回家换成平常的衣服，才觉得像要去钓鱼。他没有真去钓鱼，帽子后来在一次晒太阳的出游里派上了用场。他买东西有时也会临时心动。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.market_hat",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "帽子",
+        "集市",
+        "购物",
+        "穿搭",
+        "普通生活"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.pool_lucky_shot",
+      "name": "亦舟台球桌边的一次运气",
+      "content": "亦舟和普通朋友玩过几次台球，不太会控制力道。有一杆球在桌上碰了好几次才落袋，他刚想解释是运气，朋友已经笑着要求他重现。他当然没打出第二次，只好说这项技术暂时不提供教学。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.pool_lucky_shot",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "台球",
+        "朋友",
+        "幽默",
+        "休闲运动",
+        "开心的小事"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "quiet.harmonica_goal",
+      "name": "亦舟没吹顺的口琴旋律",
+      "content": "亦舟曾借普通朋友的口琴试吹过一段简单旋律，几个音连在一起总像在叫人开门。他觉得这个声音很好笑，也有点想学会完整吹一首短曲。目前只是偶尔尝试的想法，没有登台或答应为别人演奏的安排。",
+      "knowledge_type": "personal_background",
+      "attributes": {
+        "topic": "quiet.harmonica_goal",
+        "timeline": "pre_game_background",
+        "fictional_background": true
+      },
+      "keywords": [
+        "口琴",
+        "乐器",
+        "个人小目标",
+        "音乐爱好",
+        "休闲尝试"
+      ],
+      "related_ids": [],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-01T00:00:00Z",
+      "access": {
+        "mode": "restricted",
+        "character_ids": [
+          "cafe.quiet_customer"
+        ],
         "deployment_ids": [
           "cafedemo-v2"
         ]

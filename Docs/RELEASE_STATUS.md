@@ -1,6 +1,6 @@
 # Early Prototype release scope
 
-> Current published preview: [v0.1.3-preview](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.3-preview). Dated/versioned sections below retain their original validation scope; earlier NOT_RUN or capacity limits are not a statement of current implementation. Current module behavior is documented in [Architecture](ARCHITECTURE.md).
+> Current preview: [v0.1.4-preview](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.4-preview). Dated/versioned sections below retain their original validation scope; earlier NOT_RUN or capacity limits are not a statement of current implementation. Current module behavior is documented in [Architecture](ARCHITECTURE.md).
 
 The public source keeps TitleScene → CafeDemoV2, the café, four NPCs and Xingmang,
 AIBackend, Contracts and project dependencies. Private Git history, InternalDocs,
@@ -56,3 +56,14 @@ Runtime source is synchronized from private development main 7a47164ebd43633ca04
 Includes the complete player knowledge catalog, 108 defaults, public/restricted access, constant/retrieval usage, incremental embeddings, hybrid two-step cognition, ten drinks, dialogue presentation and rare emotion icons, plus player-scoped read-only experience ZIP export. Exported authored text can contain personal information; sharing is voluntary. API credentials and model weights are excluded from experience exports.
 
 Application and first-party assemblies use 0.1.3-preview / 0.1.3.0. The Backend API version remains independent. Release-specific Windows build/startup/export/restart evidence and limitations are listed on the v0.1.3-preview Release page; no full regression or clean physical machine certification is implied.
+
+
+## v0.1.4-preview
+
+Release baseline is the public v0.1.3-preview tag. The current public default-branch documentation and the existing resource/license cleanup are retained. The release integrates private-main concurrency, retained-dialogue GoalOutcome linking, unified reply/history segmentation, 48 additional role-private backgrounds (156 defaults total), and developer concurrency controls. No private history, WIP, player data or internal reports are included.
+
+Cloud model defaults are 6/6/2 and Ollama defaults to 1/1/1. Config changes use existing profile save/activation and restart. Background work uses bounded lanes, state/scope checks and drained native operations; it remains a single-process design.
+
+Related Backend coverage: 514 tests, 496 passing, 8 assertion failures and 10 errors. The matched previous public tag ran 450 tests with 28 non-passing cases; every candidate non-passing test ID also fails on that baseline. This is not a green full-suite claim. New concurrency, dialogue-linked outcome and everyday-knowledge cases pass. Prior measured real DeepSeek concurrency evidence is reused rather than rerunning paid load tests. Release-specific Unity, Windows package and extracted-startup results are provided with the Release validation notes.
+
+Existing player knowledge catalogs are not automatically overwritten or extended. Back up/export custom knowledge before explicitly restoring defaults to adopt the 156-entry catalog. Historical outcome association requires the original source dialogue to remain within the existing recent window and does not prove current item possession or location.

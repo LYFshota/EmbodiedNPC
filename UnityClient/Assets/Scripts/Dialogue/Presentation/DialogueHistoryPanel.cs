@@ -339,7 +339,8 @@ namespace EmbodiedNPC.Dialogue.Presentation
                     message.Text = EmoteText(Field(message.EmoteObservation, AgentEventPayloadKeys.EmoteId));
                 if (display.Length > 0) display.Append("\n\n");
                 display.Append(message.IsPlayer ? "Player: " : "NPC: ").Append(message.IsPlayer ? SettingsUiLanguage.T("我", "Me") :
-                    SettingsUiLanguage.NpcDisplayName(message.ObserverEntityId, message.Speaker)).Append("\n").Append(message.Text);
+                    SettingsUiLanguage.NpcDisplayName(message.ObserverEntityId, message.Speaker)).Append("\n")
+                    .Append(message.IsPlayer ? message.Text : DialoguePresentationText.PlainText(message.Text));
             }
             historyText.richText = false;
             historyText.text = display.ToString();

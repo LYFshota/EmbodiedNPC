@@ -9,6 +9,7 @@ import sqlite3
 import time
 from typing import Callable
 
+from .worker_runtime import store_call
 from .action_proposal_validator import ActionProposalValidator
 from .contracts import (CognitiveDecision, CognitiveRequest, GoalProposal, SystemDailyModeIntent,
                         SystemKeepMode, SERVICE_ZONE_EVENT, is_service_zone_consideration)
@@ -17,7 +18,8 @@ from .cognitive_step_models import (CognitiveStepResult, DialogueContinuationSte
     TaskCognitiveStep, TaskTerminalStep, TaskReadStep)
 from .cognitive_task_models import CognitiveTaskReceipt, TaskExecutionTicket
 from .experience_ledger import ExperienceLedger
-from .recent_dialogue_context import RecentDialoguePolicy
+from .recent_dialogue_context import RecentDialoguePolicy, RecentDialogueTimeline
+from .recent_action_results import read_dialogue_linked_results
 from .local_model_scheduler import PrioritizedModelExecutor
 from .model_requests import CognitiveModelRequestFactory
 from .providers import InferenceOptions, ModelProvider
@@ -129,20 +131,20 @@ class CognitiveBackendEntry:
             if not (is_counter_cleaning_consideration(request) if autonomous else is_service_zone_consideration(request)):
                 raise ValueError("SYSTEM_MODE_SOURCE_INVALID")
             from .cognitive_step_models import SystemModeStep, AutonomousWorkStep, CounterTaskStep, CounterTaskTerminal
-            context = (await asyncio.to_thread(self._tasks.prepare, request) if autonomous and self._tasks else None)
+            context = (await store_call(self._tasks.prepare, request) if autonomous and self._tasks else None)
             projection = None
             if context is not None:
-                recovered = await asyncio.to_thread(self._tasks.recover, request, context)
+                recovered = await store_call(self._tasks.recover, request, context)
                 if recovered is not None: return CognitiveBackendResult(recovered[0], None, recovered[1])
-                projection = await asyncio.to_thread(self._tasks.read, context)
-                projection['immediate_clean_available'] = not await asyncio.to_thread(self._tasks.has_counter_task, request, context)
+                projection = await store_call(self._tasks.read, context)
+                projection['immediate_clean_available'] = not await store_call(self._tasks.has_counter_task, request, context)
             model = CognitiveModelRequestFactory.create_event(request, inference_options=options, task_context=projection,
                 budget_payload_builder=payload_builder, knowledge_context_limit=self._context_length)
             result = await self._model_executor.execute_preemptible_background(self._provider, model)
             step = (CounterTaskStep if context else AutonomousWorkStep if autonomous else SystemModeStep).model_validate(extract_json_object(result.text), context={"reply_language": request.reply_language}).root
             task_diagnostic.emit('read' if isinstance(step,TaskReadStep) else 'decision',request=request,decision=step,task_state='validated')
             if isinstance(step, TaskReadStep):
-                outcome = await asyncio.to_thread(self._tasks.read, context, step.task_query)
+                outcome = await store_call(self._tasks.read, context, step.task_query)
                 await asyncio.sleep(0)
                 model = CognitiveModelRequestFactory.create_event(request, inference_options=options,task_context=projection,
                     task_read_outcome=outcome,cognition_phase=1,budget_payload_builder=payload_builder,knowledge_context_limit=self._context_length)
@@ -152,7 +154,7 @@ class CognitiveBackendEntry:
             receipt = None
             intent = getattr(step, 'task_operation', None)
             if intent is not None:
-                try: receipt = await asyncio.to_thread(self._tasks.mutate, request, context, intent)
+                try: receipt = await store_call(self._tasks.mutate, request, context, intent)
                 except (sqlite3.Error, ValueError):
                     operation = 'create' if intent.op=='create_task' else 'cancel' if intent.change=='cancel' else 'update'
                     receipt = self._tasks.receipt(request, context, operation)
@@ -160,7 +162,7 @@ class CognitiveBackendEntry:
             decision = CognitiveDecision(decision_kind="NO_ACTION") if isinstance(step, SystemKeepMode) else step
             if autonomous and decision.decision_kind == "AUTONOMOUS_ACTION_INTENT":
                 if not may_propose_autonomous_action(request, decision.action_proposal): raise WorldActionNotEligibleError()
-                if context is not None and await asyncio.to_thread(self._tasks.has_counter_task, request, context):
+                if context is not None and await store_call(self._tasks.has_counter_task, request, context):
                     raise ValueError('TASK_COUNTER_ALREADY_MANAGED')
                 return CognitiveBackendResult(decision=decision, validated_goal=self._action_validator.validate_and_adapt(decision, request.context))
             return CognitiveBackendResult(decision=decision, validated_goal=None, task_receipt=receipt)
@@ -169,17 +171,17 @@ class CognitiveBackendEntry:
                     or event.target_entity_id != request.run.agent_entity_id
                     or request.context.relevant_player is None):
                 raise ValueError("DIALOGUE_CONTINUATION_OWNER_INVALID")
-        task_context = (await asyncio.to_thread(self._tasks.prepare, request) if self._tasks is not None else None)
+        task_context = (await store_call(self._tasks.prepare, request) if self._tasks is not None else None)
         task_diagnostic.emit('protocol',request=request,task_state='prepared',task_supported=task_context is not None)
         task_projection = None
         if task_context is not None:
             if task_context.automatic:
-                await asyncio.to_thread(self._tasks.begin_consideration,request,task_context)
-            recovered = await asyncio.to_thread(self._tasks.recover, request, task_context)
+                await store_call(self._tasks.begin_consideration,request,task_context)
+            recovered = await store_call(self._tasks.recover, request, task_context)
             await asyncio.sleep(0)
             if recovered is not None:
                 return CognitiveBackendResult(recovered[0], None, recovered[1])
-            task_projection = await asyncio.to_thread(self._tasks.read, task_context)
+            task_projection = await store_call(self._tasks.read, task_context)
             task_projection["available_goal_kinds"] = list(task_context.scope.allowed_goal_kinds)
         recent_dialogue = await self._read_recent_dialogue(request, policy=recent_policy)
         recent_interactions = []
@@ -194,20 +196,25 @@ class CognitiveBackendEntry:
                               for p in (wire.observer, *wire.current_subjects)
                               if p.entity_id in {request.run.agent_entity_id, player.player_entity_id}}
                 try:
-                    recent_interactions = await asyncio.to_thread(self._experience_ledger.read_recent_interactions,
+                    recent_interactions = await store_call(self._experience_ledger.read_recent_interactions,
                         request.run.agent_entity_id, conversation, request.request_id, event.event_id, identities)
+                    if (isinstance(recent_dialogue, RecentDialogueTimeline)
+                            and isinstance(self._experience_ledger, ExperienceLedger)):
+                        recent_dialogue.linked_outcomes = await store_call(
+                            read_dialogue_linked_results, self._experience_ledger, recent_dialogue,
+                            request.run.agent_entity_id, conversation, request.request_id, event.event_id, identities)
                 except (sqlite3.Error, ValueError) as error:
                     logger.warning('recent_interactions_unavailable request_id=%s reason=%s',
                                    request.request_id, type(error).__name__)
         relationship_context = (
-            await asyncio.to_thread(self._relationship_context_resolver.resolve, request)
+            await store_call(self._relationship_context_resolver.resolve, request)
             if self._relationship_context_resolver is not None else None
         )
-        catalog = (await asyncio.to_thread(self._memory_recall.prepare, request)
+        catalog = (await store_call(self._memory_recall.prepare, request)
                    if self._memory_recall is not None and not continuation else None)
-        knowledge_snapshot = (await asyncio.to_thread(self._knowledge_resolver.capture, request)
+        knowledge_snapshot = (await store_call(self._knowledge_resolver.capture, request)
                               if self._knowledge_resolver is not None else None)
-        knowledge_context = (await asyncio.to_thread(self._knowledge_resolver.prefetch,
+        knowledge_context = (await store_call(self._knowledge_resolver.prefetch,
             knowledge_snapshot, request, recent_dialogue) if knowledge_snapshot is not None else None)
         await asyncio.sleep(0)  # Deliver cancellation before submitting foreground work.
         model_request = CognitiveModelRequestFactory.create_event(
@@ -242,7 +249,7 @@ class CognitiveBackendEntry:
 
             async def read_branch(call, unavailable):
                 try:
-                    return await asyncio.to_thread(call)
+                    return await store_call(call)
                 except Exception as error:
                     # Read failures are source-local; cancellation is BaseException and
                     # propagates. Never retry or turn an unavailable source into no-match.
@@ -277,12 +284,12 @@ class CognitiveBackendEntry:
             task_outcome = outcomes.get("task")
             if outcome is not None:
                 if memory_plan.subject_role == "shared":
-                    outcome = await asyncio.to_thread(qualify_shared_experience, outcome,
+                    outcome = await store_call(qualify_shared_experience, outcome,
                                                       catalog, self._experience_ledger)
-                outcome = await asyncio.to_thread(qualify_self_statement_delivery, outcome,
+                outcome = await store_call(qualify_self_statement_delivery, outcome,
                                                   catalog, self._experience_ledger)
             if knowledge_snapshot is not None:
-                knowledge_context = await asyncio.to_thread(self._knowledge_resolver.validate_snapshot,
+                knowledge_context = await store_call(self._knowledge_resolver.validate_snapshot,
                     knowledge_snapshot, knowledge_context)
             # SQLite reads may finish in their worker after cancellation; cancelled runs
             # never submit Step 1 and never publish an intermediate result.
@@ -317,7 +324,7 @@ class CognitiveBackendEntry:
         await asyncio.sleep(0)
         if knowledge_snapshot is not None and knowledge_context is not None and (
                 knowledge_context.items or knowledge_context.constant_items):
-            checked = await asyncio.to_thread(self._knowledge_resolver.validate_snapshot,
+            checked = await store_call(self._knowledge_resolver.validate_snapshot,
                                              knowledge_snapshot, knowledge_snapshot.context)
             if checked.status in {"SNAPSHOT_CHANGED", "UNAVAILABLE"}:
                 # A mutation during inference cannot yield a reply/action grounded in
@@ -351,14 +358,14 @@ class CognitiveBackendEntry:
         validated_goal = self._action_validator.validate_and_adapt(decision, request.context)
         ticket = None
         if automatic_action:
-            ticket = await asyncio.to_thread(self._tasks.executions.reserve, request, task_context, decision)
+            ticket = await store_call(self._tasks.executions.reserve, request, task_context, decision)
         intent = getattr(decision, "task_operation", None)
         receipt = None
         # All language, source, look-at and action checks precede the transaction.
         if intent is not None:
             await asyncio.sleep(0)
             try:
-                receipt = await asyncio.to_thread(self._tasks.mutate, request, task_context, intent)
+                receipt = await store_call(self._tasks.mutate, request, task_context, intent)
                 if receipt.outcome in ("cancellation_requested", "deduplicated"):
                     text = (("The cancellation request was saved; the original execution still needs verification."
                              if receipt.outcome == "cancellation_requested" else "That task is already saved.")
@@ -414,7 +421,7 @@ class CognitiveBackendEntry:
                 raise ValueError("DIALOGUE_CONTINUATION_CURRENT_IDENTITY_REQUIRED")
             identities = {p.entity_id: (p.identity_namespace, p.identity_type, p.persistent_id)
                           for p in (wire.observer, player)}
-            return await asyncio.to_thread(self._experience_ledger.read_continuation_dialogue,
+            return await store_call(self._experience_ledger.read_continuation_dialogue,
                                            request.run.agent_entity_id, payload.get("conversation_id"),
                                            payload, payload["player_entity_id"], identities,
                                            **policy.limits(self._context_length))
@@ -426,7 +433,7 @@ class CognitiveBackendEntry:
             return []
         required = next((item.value for item in event.payload if item.key == "required_response_request_id"), None)
         if required:
-            await asyncio.to_thread(self._experience_ledger.require_dialogue_response,
+            await store_call(self._experience_ledger.require_dialogue_response,
                                     request.run.agent_entity_id, conversation_id, required,
                                     next((item.value for item in event.payload if item.key == "required_response_session_id"), None),
                                     event.source_entity_id)
@@ -443,7 +450,7 @@ class CognitiveBackendEntry:
                       for p in (wire.observer, player)}
         try:
             recent_limits = policy.limits(self._context_length)
-            return await asyncio.to_thread(self._experience_ledger.read_recent_dialogue,
+            return await store_call(self._experience_ledger.read_recent_dialogue,
                                            request.run.agent_entity_id, conversation_id,
                                            request.request_id, event.event_id,
                                            identities=identities, **recent_limits)

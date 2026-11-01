@@ -585,6 +585,14 @@ namespace EmbodiedNPC.Settings
             maxOutputTokens.text = main.max_output_tokens.ToString(CultureInfo.InvariantCulture);
             contextLength.text = loadedLegacyContextLength.ToString(CultureInfo.InvariantCulture);
             mainTimeout.text = main.timeout_seconds.ToString(CultureInfo.InvariantCulture);
+            if (totalConcurrency != null)
+            {
+                bool local = main.provider_type == "ollama" || main.provider_type == "mock";
+                int total = main.model_total_concurrency > 0 ? main.model_total_concurrency : local ? 1 : 6;
+                totalConcurrency.text = total.ToString();
+                foregroundConcurrency.text = (main.model_foreground_concurrency > 0 ? main.model_foreground_concurrency : total).ToString();
+                backgroundConcurrency.text = (main.model_background_concurrency > 0 ? main.model_background_concurrency : Math.Min(total, local ? 1 : 2)).ToString();
+            }
             embeddingEnabled.SetIsOnWithoutNotify(embed.enabled);
             reuseMainApi.SetIsOnWithoutNotify(embed.reuse_main_api);
             embeddingProvider.SetValueWithoutNotify(embed.provider_type == "ollama" ? 1 : 0);
@@ -764,12 +772,15 @@ namespace EmbodiedNPC.Settings
             if (!TryInt(maxOutputTokens.text, 1, 32768, out int tokens)) { SetStatus("最大输出 Token 应在 1 到 32768 之间。", "Max output tokens must be between 1 and 32768."); return false; }
             if (!TryMainContext(contextLength.text, out int context)) { SetStatus("请选择模型实际支持的容量，或输入 1–1000000 的自定义值。", "Choose the model's supported capacity, or enter a custom value from 1 to 1000000."); return false; }
             if (!TryFloat(mainTimeout.text, .01f, 600, out float timeout)) { SetStatus("主模型超时应在 0.01 到 600 秒之间。", "Main timeout must be between 0.01 and 600 seconds."); return false; }
+            if (!TryConcurrency(out int total, out int foreground, out int background))
+            { SetStatus("并发须为 1–32，前后台均不能超过总并发。", "Concurrency must be 1–32; class limits cannot exceed total."); return false; }
             main = new MainModelConfig
             {
                 provider_type = MainType(), base_url = mainBaseUrl.text.Trim(),
                 api_key = mainProvider.value == 1 ? null : mainApiKey.text.Trim(), model = model, temperature = temp,
                 thinking = thinking.isOn, max_output_tokens = tokens, context_length = context,
                 timeout_seconds = timeout,
+                model_total_concurrency = total, model_foreground_concurrency = foreground, model_background_concurrency = background,
             };
             return true;
         }

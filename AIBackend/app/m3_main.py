@@ -50,6 +50,7 @@ from .episode_models import EpisodeBoundaryPolicy, MemoryJobPolicy
 from .episode_processing import EpisodeProcessingLoop, EpisodeStorageGuard
 from .episode_repository import EpisodeRepository
 from .memory_job_repository import MemoryJobRepository
+from .worker_runtime import store_call
 from .local_model_scheduler import PrioritizedModelExecutor
 from .memory_pipeline import SEMANTIC_MEMORY_CONSOLIDATOR_VERSION
 from .base_memory_consolidator import BaseMemoryConsolidator
@@ -142,6 +143,7 @@ def demo_identity_error(request, *, local_demo: bool = False) -> str | None:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    model_executor.open()
     knowledge_management.auth.start()
     attempted = set()
 
@@ -163,6 +165,12 @@ async def lifespan(_: FastAPI):
             ("consolidation", memory_consolidation_worker),
             ("episode", episode_processing_loop),
         )
+        # Signal every consumer before awaiting any drain: later workers must
+        # not continue claiming while an earlier worker is shutting down.
+        for name, worker in resources:
+            request_stop = getattr(worker, "request_stop", None)
+            if name in attempted and callable(request_stop):
+                request_stop()
         for name, worker in resources:
             if name not in attempted:
                 continue
@@ -178,6 +186,8 @@ async def lifespan(_: FastAPI):
             except (Exception, asyncio.CancelledError):
                 failures.append(name)
                 logger.error("BACKEND_CLEANUP_FAILED resource=%s", name)
+            if name in {"maintenance", "relationship", "consolidation"} and not stopped:
+                embedding_safe = False
             if name in {"knowledge", "canonical"}:
                 task = getattr(worker, "_task", None)
                 quiescent = getattr(worker, "is_quiescent", None)
@@ -189,11 +199,12 @@ async def lifespan(_: FastAPI):
                     if legacy_unjoined:
                         quiescent = False
                 embedding_safe = embedding_safe and bool(quiescent)
+        await model_executor.close()
         close = getattr(canonical_embedding_provider, "close", None)
         if callable(close):
             if embedding_safe:
                 try:
-                    await asyncio.to_thread(close)
+                    await store_call(close)
                 except Exception:
                     failures.append("embedding")
                     logger.error("BACKEND_CLEANUP_FAILED resource=embedding")
@@ -206,7 +217,7 @@ async def lifespan(_: FastAPI):
     try:
         try:
             try:
-                await asyncio.to_thread(knowledge_resolver.store.initialize)
+                await store_call(knowledge_resolver.store.initialize)
             except (OSError, ValueError) as error:
                 # Fail the Knowledge subsystem closed; preserve damaged files and
                 # keep unrelated cognition/settings available for repair.
@@ -302,9 +313,15 @@ episode_processing_loop = EpisodeProcessingLoop(
     job_policy=memory_job_policy,
     storage_guard=episode_storage_guard,
 )
-model_executor = PrioritizedModelExecutor()
 provider = (build_provider_from_model_config(startup_model_config_document)
             if has_activation(startup_model_config_document) else build_model_provider())
+active_main_config = (startup_model_config_document.main_model
+                      if has_activation(startup_model_config_document) else None)
+model_limits = (active_main_config.concurrency_limits() if active_main_config is not None
+                else ((1, 1, 1) if provider.name in ("ollama", "mock") else (6, 6, 2)))
+model_executor = PrioritizedModelExecutor(*model_limits,
+    preempt_background=(active_main_config.provider_type if active_main_config else provider.name) in ("ollama", "mock"))
+logger.info("Model admission total=%s foreground=%s background=%s", *model_limits)
 canonical_embedding_provider = None
 canonical_embedding_indexer = None
 if has_activation(startup_model_config_document):
@@ -379,6 +396,7 @@ memory_consolidation_worker = MemoryConsolidationWorker(
     consolidation_admission,
     CanonicalMemoryRepository(database.connect, admission=consolidation_admission),
     job_policy=memory_job_policy,
+    concurrency=model_executor.background_limit,
     interval_seconds=float(os.getenv("MEMORY_JOB_POLL_INTERVAL_SECONDS", "1")),
 )
 relationship_reflection_worker = RelationshipReflectionWorker(
@@ -390,11 +408,13 @@ relationship_reflection_worker = RelationshipReflectionWorker(
     ),
     RelationshipReflectionModel(provider, model_executor, context_length=active_context_length),
     relationship_reflection_repository,
+    concurrency=model_executor.background_limit,
     interval_seconds=float(os.getenv("RELATIONSHIP_REFLECTION_POLL_INTERVAL_SECONDS", "1")),
 )
 memory_maintenance_worker = MemoryMaintenanceWorker(
     MemoryMaintenanceRepository(database.connect, canonical_embedding_provider, expected_player_uid=demo_player_uid),
     provider, model_executor,
+    concurrency=model_executor.background_limit,
     policy=MaintenancePolicy(
         backlog_threshold=int(os.getenv("MEMORY_MAINTENANCE_BACKLOG_THRESHOLD", "4")),
         max_wait_seconds=float(os.getenv("MEMORY_MAINTENANCE_MAX_WAIT_SECONDS", "300")),
@@ -584,7 +604,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     sync=TaskRuntimeSyncRequest.model_validate(message)
                     if not local_demo:
                         raise ValueError('TASK_LOCAL_RUNTIME_REQUIRED')
-                    snapshot=await asyncio.to_thread(task_cognition.synchronize,websocket,sync)
+                    snapshot=await store_call(task_cognition.synchronize,websocket,sync)
                     await send_json(snapshot)
                 except (ValueError,sqlite3.Error):
                     from .task_diagnostics import emit
@@ -598,7 +618,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     try:
                         control = TaskCancelControl.model_validate(message)
                         if not local_demo: raise ValueError('TASK_LOCAL_RUNTIME_REQUIRED')
-                        reply = await asyncio.to_thread(cancel, task_cognition, control)
+                        reply = await store_call(cancel, task_cognition, control)
                         await send_json(reply)
                     except (ValueError, sqlite3.Error) as error:
                         await send_json(dict(message_type='task_cancel_result',schema_version='1.1',accepted=False,
@@ -616,7 +636,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         if not local_demo or demo_identity_error(original,local_demo=local_demo) is not None:
                             raise ValueError('TASK_LOCAL_RUNTIME_REQUIRED')
                         task_cognition.bind(websocket,original,recovery=True)
-                        reply=await asyncio.to_thread(task_cognition.executions.control,control)
+                        reply=await store_call(task_cognition.executions.control,control)
                         await send_json(reply)
                     except (ValueError,sqlite3.Error) as error:
                         # A failure is never an action permit. Preserve correlation
@@ -652,7 +672,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         if cognition_requests.get(key) != original:
                             raise ValueError("TASK_CONTROL_REQUEST_MISMATCH")
                         continue  # The owned task sends its one result; client timeout still applies.
-                    recovered = await asyncio.to_thread(task_cognition.recover, original, context)
+                    recovered = await store_call(task_cognition.recover, original, context)
                     if recovered is None:
                         await send_json(cognition_error(original, "COGNITIVE_TASK_COMMAND_NOT_FOUND"))
                     else:
@@ -791,7 +811,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 task.add_done_callback(lambda done, owned_key=key, dialogue_key=input_key:
                                        cognition_done(owned_key, done, dialogue_key))
             elif message_type == "experience_append_request":
-                response = await asyncio.to_thread(experience_ingestion_service.append, request)
+                response = await store_call(experience_ingestion_service.append, request)
                 await send_json(response.model_dump())
                 input_key = appended_input_key(request)
                 if input_key is not None:
