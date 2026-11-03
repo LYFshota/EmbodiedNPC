@@ -14,26 +14,6 @@ EmbodiedNPC 是一个探索**游戏 NPC 长期交互与自主行为**的开源�
   <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC 咖啡馆实机画面" width="760">
 </p>
 
-## 🎮 下载试玩
-
-**[下载 Windows x64 试玩版](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [查看 v0.1.5-preview 更新说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
-
-1. 解压 ZIP，双击 `Start.cmd` 启动游戏和 Backend，无需单独安装 Unity 或 Python。
-2. 在设置中配置你自己的主模型（Main LLM），可使用兼容的云端 API 或本地模型服务。
-3. 进入咖啡馆，和 NPC 交谈、提出委托，或观察他们的日常生活。
-
-试玩包已包含本地记忆向量模型 **EmbeddingGemma-300M Q4 ONNX**；主聊天模型和 API Key 需要自行准备。
-
-| 操作 | 按键 |
-| --- | --- |
-| 移动 / 视角 | WASD / 鼠标 |
-| 交互 | E |
-| 玩家动作 | G |
-| 释放 / 捕获鼠标 | Left Alt |
-| 菜单 / 返回 | ESC |
-
-设置与记忆保存在解压目录中的 `UserData`。建议新版解压到独立文件夹，保留旧版数据备份。
-
 ## ✨ 核心能力
 
 - **有个性的多 NPC 对话**：四名角色拥有不同的背景、性格和交流习惯，支持中英文交谈，能够结合近期对话承接话题。
@@ -49,6 +29,16 @@ EmbodiedNPC 是一个探索**游戏 NPC 长期交互与自主行为**的开源�
 本版新增**咖啡馆日常行为、点心菜单与取餐服务、玩家表情联动、Left Alt 鼠标切换**，并改进了记忆、关系处理与交互表现。
 
 点心目前支持牛角包、马卡龙、小蛋糕和布丁，店员会走到展示位置完成取餐动作，并显示服务结果。更多版本细节和验证记录见 [Releases](https://github.com/LYFshota/EmbodiedNPC/releases)。
+
+## 🎮 下载试玩
+
+**[下载 Windows x64 试玩版](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [查看 v0.1.5-preview 更新说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
+
+1. 解压 ZIP，双击 `Start.cmd` 启动游戏和 Backend，无需单独安装 Unity 或 Python。
+2. 在设置中配置你自己的主模型（Main LLM），可使用兼容的云端 API 或本地模型服务。
+3. 进入咖啡馆，和 NPC 交谈、提出委托，或观察他们的日常生活。
+
+试玩包已包含本地记忆向量模型 **EmbeddingGemma-300M Q4 ONNX**；主聊天模型和 API Key 需要自行准备。
 
 ## 🧩 系统架构
 
