@@ -1,0 +1,9 @@
+{
+  "quantity_ids": ["1", "2", "3", "4"],
+  "items": [
+    {"id":"croissant", "chinese":"牛角包", "english":"Croissant", "description":"展示柜里的弯月形酥皮点心，也可称可颂；未配置具体馅料。", "location":"showcase"},
+    {"id":"macaron", "chinese":"马卡龙", "english":"Macaron", "description":"食物架上彩色圆形夹心小点心；颜色不代表已确认的口味。", "location":"rack"},
+    {"id":"cupcake", "chinese":"小蛋糕", "english":"Cupcake", "description":"展示柜里的纸杯装小蛋糕；未配置具体口味，不等同于任意蛋糕品种。", "location":"showcase"},
+    {"id":"pudding", "chinese":"布丁", "english":"Pudding", "description":"食物架上盛在小盘中的布丁状甜点；未配置具体配方或口味。", "location":"rack"}
+  ]
+}

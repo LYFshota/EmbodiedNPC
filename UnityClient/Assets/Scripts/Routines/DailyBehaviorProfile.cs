@@ -83,6 +83,21 @@ namespace EmbodiedNPC.Routines
                 "seated_idle", "natural_idle", "observe_environment", "dialogue") };
         // Binding order is deterministic preference. It is not an action manifest or a weighted planner.
         public DailyBehaviorMode DefaultMode => defaultMode;
+        [SerializeField] private DailyAmbientBinding[] ambientActivities = Array.Empty<DailyAmbientBinding>();
+        [SerializeField] private Vector2 ambientInterval = new(22, 44);
+        [SerializeField] private Vector2 ambientDwell = new(4, 9);
+        public Vector2 AmbientInterval => ambientInterval;
+        public Vector2 AmbientDwell => ambientDwell;
+        public DailyAmbientBinding[] AmbientActivities => ambientActivities;
+        public bool AllowsAmbient(DailyBehaviorMode mode, DailyAmbientActivity activity)
+        {
+            if (!Allows(mode) || ambientActivities == null) return false;
+            foreach (var binding in ambientActivities)
+                if (binding != null && binding.mode == mode && binding.activity == activity) return true;
+            return false;
+        }
+        public void ConfigureAmbient(DailyAmbientBinding[] bindings, Vector2 interval, Vector2 dwell)
+        { ambientActivities = bindings; ambientInterval = interval; ambientDwell = dwell; }
         public float MinimumModeSeconds => minimumModeSeconds;
         public float TransitionCooldown => transitionCooldown;
         public bool Allows(DailyBehaviorMode mode) => allowedModes != null && Array.IndexOf(allowedModes, mode) >= 0;

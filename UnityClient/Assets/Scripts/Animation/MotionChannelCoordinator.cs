@@ -8,7 +8,7 @@ namespace EmbodiedNPC.Animation
 
     /// <summary>Per-actor presentation arbiter; never owns gameplay work.</summary>
     [DisallowMultipleComponent]
-    public sealed class MotionChannelCoordinator : MonoBehaviour
+    public sealed partial class MotionChannelCoordinator : MonoBehaviour
     {
         private bool legacyTask, navigation, interaction, emergency, carrying;
         private long nextGestureId;
@@ -33,17 +33,18 @@ namespace EmbodiedNPC.Animation
         public bool IsInteractionMotionActive => interaction;
         public bool IsCarryPresentationActive => carrying;
         // Holding is a visual occupancy, not a new task or world-state authority.
-        public void SetCarryPresentationActive(bool active) { carrying = active; if (active) CancelGesture(); }
+        public void SetCarryPresentationActive(bool active) { carrying = active; if (active) { CancelAmbient("carry"); CancelGesture(); } }
 
         // Compatibility only: old callers describe a whole task, not an atomic interaction phase.
-        public void BeginTaskMotion() { legacyTask = true; CancelGesture(); }
+        public void BeginTaskMotion() { legacyTask = true; CancelAmbient("formal_task"); CancelGesture(); }
         public void EndTaskMotion() => legacyTask = false;
-        public void SetNavigationActive(bool active) { navigation = active; if (active) CancelGesture(); }
-        public void SetInteractionActive(bool active) { interaction = active; if (active) CancelGesture(); }
+        public void SetNavigationActive(bool active) { navigation = active; if (active) { if (!IsAmbientNavigation) CancelAmbient("navigation"); CancelGesture(); } }
+        public void SetInteractionActive(bool active) { interaction = active; if (active) { CancelAmbient("interaction"); CancelGesture(); } }
         public void BeginEmergencyMotion()
         {
             legacyTask = navigation = interaction = false;
             emergency = true;
+            CancelAmbient("emergency");
             CancelGesture();
         }
         public void EndEmergencyMotion() => emergency = false;
@@ -56,6 +57,7 @@ namespace EmbodiedNPC.Animation
                 !isActiveAndEnabled || (gesture != "wave" && gesture != "nod") || accompaniesGoalProposal ||
                 IsTaskMotionActive || emergency || carrying || ActiveGestureId != 0) return false;
             id = ActiveGestureId = ++nextGestureId;
+            if (gesture == "wave") CancelAmbient("wave");
             ActiveGesture = gesture;
             gestureDeadline = now + Mathf.Clamp(timeoutSeconds, 0.1f, 10f);
             return true;
@@ -71,7 +73,11 @@ namespace EmbodiedNPC.Animation
             return true;
         }
         public void CancelGesture() { if (ActiveGestureId != 0) CompleteGesture(ActiveGestureId); }
-        public void Tick(double now) { if (ActiveGestureId != 0 && now >= gestureDeadline) CancelGesture(); }
+        public void Tick(double now)
+        {
+            if (ActiveGestureId != 0 && now >= gestureDeadline) CancelGesture();
+            if (ActiveAmbientId != 0 && (ambientOwner == null || !ambientOwner.isActiveAndEnabled)) CancelAmbient("owner_disabled");
+        }
         public bool RequestGesture(string gesture, bool accompaniesGoalProposal)
         {
             if (!TryBeginGesture(gesture, accompaniesGoalProposal, Time.unscaledTimeAsDouble, 3f, out long id)) return false;
@@ -83,6 +89,7 @@ namespace EmbodiedNPC.Animation
         private void OnDisable()
         {
             legacyTask = navigation = interaction = emergency = carrying = false;
+            CancelAmbient("coordinator_disabled");
             CancelGesture();
         }
     }

@@ -7,7 +7,7 @@ using System.Text;
 
 namespace EmbodiedNPC.Planning.MiniGoap
 {
-    public enum PlannerActionType { WalkTo, PickUp, Give, PutDown, Open, PrepareDrink, CleanCounter }
+    public enum PlannerActionType { WalkTo, PickUp, Give, PutDown, Open, PrepareDrink, CleanCounter, ServeSnack }
     public enum PlanSearchStatus { Found, AlreadySatisfied, NoPlan, SearchLimitExceeded }
 
     public sealed class ActionDefinition

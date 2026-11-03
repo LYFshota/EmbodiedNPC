@@ -42,7 +42,55 @@ def semantic_id(prefix: str, value: object) -> str:
 
 NPC_SELF_STATEMENT_LABEL = "NPC_SELF_STATEMENT"
 NPC_SELF_STATEMENT_PREFIX = "NPC曾自述（未独立证实）："
-SEMANTIC_ADMISSION_POLICY_VERSION = "memory-consolidation-admission/2.0"
+DIALOGUE_EXCHANGE_PREFIX = "共同交流记录（仅证实交流，所述经历未独立证实）："
+DIALOGUE_EXCHANGE_LABEL = "DIALOGUE_ASSERTIONS_NOT_WORLD_PROOF"
+SEMANTIC_ADMISSION_POLICY_VERSION = "memory-consolidation-admission/2.1"
+
+
+def _dialogue_exchange_subjects(events, owner, observer_entity_id, identity):
+    """Certify a direct dyadic exchange, never the truth of its free-form contents."""
+    if not events or not owner or (owner.identity_namespace, owner.identity_type) != ("npc", "Character"):
+        return None
+    player = None
+    directions = set()
+    for event in events:
+        if (event.source_type != "dialogue" or not event.natural_language_payload
+                or not event.natural_language_payload.strip() or len(event.target_entity_ids) != 1
+                or identity(event, observer_entity_id) != owner):
+            return None
+        actor = identity(event, event.actor_entity_id)
+        target_entity = event.target_entity_ids[0]
+        target = identity(event, target_entity)
+        if (event.event_type == "dialogue_input" and target_entity == observer_entity_id
+                and actor and (actor.identity_namespace, actor.identity_type) == ("player", "Player")
+                and event.provenance in {"HEARD", "SYSTEM_CONFIRMED"}):
+            peer = actor
+        elif (event.event_type == "dialogue_response" and event.actor_entity_id == observer_entity_id
+                and actor == owner and target and (target.identity_namespace, target.identity_type) == ("player", "Player")
+                and event.provenance in {"EXECUTED_BY_SELF", "HEARD", "SYSTEM_CONFIRMED"}):
+            peer = target
+        else:
+            return None
+        if player is not None and peer != player:
+            return None
+        player = peer
+        directions.add(event.event_type)
+    # Recipient presence in NPC-only speech cannot invent Player participation.
+    return tuple(sorted((owner, player))) if directions == {"dialogue_input", "dialogue_response"} else None
+
+
+def context_dialogue_exchange_subjects(context, events):
+    return _dialogue_exchange_subjects(events, context.observer_persistent_identity,
+        context.observer_entity_id, lambda event, entity:
+            context.identity_by_handle.get(event.participant_handles.get(entity)))
+
+
+def raw_dialogue_exchange_subjects(events, owner):
+    if not events or len({event.observer_id for event in events}) != 1:
+        return None
+    return _dialogue_exchange_subjects(events, owner, events[0].observer_id,
+        lambda event, entity: next((TrustedPersistentIdentity.from_participant(p)
+            for p in event.persistent_participants if p.entity_id == entity), None))
 
 
 def is_owner_speech(event, owner: TrustedPersistentIdentity | None,
@@ -225,18 +273,20 @@ class MemoryConsolidationAdmission:
         owner = context.observer_persistent_identity
         owner_speech_context = context_is_owner_speech(context, events)
         self_speech = subjects == (owner,) and owner_speech_context
+        dialogue_exchange = episodic and candidate.evidence_kind == "DIALOGUE_EXCHANGE"
+        if dialogue_exchange and subjects != context_dialogue_exchange_subjects(context, events):
+            raise _CandidateRejection("DIALOGUE_EXCHANGE_SOURCE_REQUIRED")
         # Autonomous speech is admissible only as the persistent owner's own claim.
         # Ordinary NPC-only speech follows exactly the same subject boundary.
         autonomous = any(e.structured_payload.get("initiative") == "dialogue_continuation" for e in events)
         npc_only = all((e.source_type == "dialogue" and e.event_type == "dialogue_response") or
                        (e.source_type == "social_interaction" and e.event_type == "social_response") for e in events)
         # A Player input accompanying ordinary speech is only dialogue context.
-        # The schema cannot prove whether a free-form summary describes the
-        # conversation or a shared past. Reject ambiguous Episodic attribution;
-        # never rewrite its subjects/evidence. Independent Player facts still use
-        # their own input. Genuine outcome evidence does not match this context.
+        # Untyped/EVENT summaries cannot certify shared past from speech. Only an
+        # explicit, source-validated dialogue account can describe the exchange;
+        # its subjects/evidence are never rewritten into independent world proof.
         social_speech = any(e.event_type == 'social_response' for e in events)
-        if (autonomous or npc_only or social_speech or (episodic and owner_speech_context)) and not self_speech:
+        if (autonomous or npc_only or social_speech or (episodic and owner_speech_context)) and not (self_speech or dialogue_exchange):
             raise _CandidateRejection("NPC_SPEECH_CANNOT_CERTIFY_OTHER_SUBJECT_OR_WORLD")
         if episodic:
             summary = normalize_text(candidate.summary)
@@ -247,6 +297,10 @@ class MemoryConsolidationAdmission:
             self._check_summary(context, summary)
             if self_speech:
                 summary = NPC_SELF_STATEMENT_PREFIX + summary
+                if len(summary) > 500:
+                    raise _CandidateRejection("SUMMARY_INVALID")
+            elif dialogue_exchange:
+                summary = DIALOGUE_EXCHANGE_PREFIX + summary
                 if len(summary) > 500:
                     raise _CandidateRejection("SUMMARY_INVALID")
             owner_scope = (["persistent", identity_key(owner)] if owner else

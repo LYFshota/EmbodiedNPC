@@ -72,10 +72,8 @@ MonoBehaviour:
   expressive: {fileID: 0}
   motionChannels: {fileID: 0}
   visualBody: {fileID: 0}
-  acquireDistance: 4
-  maintainDistance: 5
-  acquireYaw: 45
-  releaseYaw: 55
+  acquireDistance: 3
+  maintainDistance: 3.6
   acquireDelay: 0.3
   releaseGrace: 0.3
   idleLookPoints: []
@@ -97,8 +95,8 @@ MonoBehaviour:
   visualBody: {fileID: 3049843914277556836}
   actorRoot: {fileID: 0}
   gesturePlayback: {fileID: 0}
-  fullYaw: 30
-  maxYaw: 50
+  fullYaw: 60
+  maxYaw: 75
   combinedYawCap: 75
   downPitch: 20
   upPitch: 25

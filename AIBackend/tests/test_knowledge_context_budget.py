@@ -1,4 +1,6 @@
 """Only the repaired allocation boundary; reuse existing Knowledge/M3 fixtures."""
+
+from tests.relationship_test_context import social_context
 import asyncio
 import json
 import unittest
@@ -103,48 +105,6 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         line = next(v for v in model.messages[-1].content.splitlines() if v.startswith("Knowledge context JSON: "))
         return json.loads(line.split(": ", 1)[1])
 
-    def test_relationship_window_keeps_updates_uncertainty_and_sources_without_double_caps(self):
-        from tests.test_relationship_summary_reader import RelationshipSummaryReaderTests, NPC_A, PLAYER_A, PLAYER_B
-        fixture = RelationshipSummaryReaderTests(); fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
-        texts = tuple("此前交流的完整背景。" * 40 + tail for tail in (
-            "玩家曾明确要求保持距离；这是当时的交流解释。",
-            "玩家后来表示可以聊饮品，但不希望未经同意的帮助。",
-            "这次交流缓和，不能由此认定已经建立亲密关系。",
-            "旧的疏远解释后来被澄清，但同意边界仍需保留。",
-            "最近似乎更信任我；尚未确认，不能覆盖旧的可靠承诺。"))
-        for value in texts:
-            fixture.add(value)
-        legacy = fixture.reader.get(NPC_A, PLAYER_A)
-        full = fixture.reader.get_for_cognition(NPC_A, PLAYER_A)
-        self.assertLess(legacy.selected_count, 5)
-        self.assertEqual(full.interpretations, texts)
-        self.assertGreater(full.token_budget_used, 1200)
-        self.assertEqual([s["generated_at"] for s in full.sources], [1, 2, 3, 4, 5])
-        self.assertEqual(full.sources[-1]["reflection_id"], "reflection_5")
-        self.assertEqual(fixture.reader.get_for_cognition(NPC_A, PLAYER_B).interpretations, ())
-        social = RelationshipContext(interpretations=full.interpretations, sources=full.sources,
-            truncated=full.truncated, policy_version=full.policy_version)
-        request = knowledge_fixtures.official_merchant_request("我们之前的交往边界？")
-        model = CognitiveModelRequestFactory.create_event(request, relationship_context=social,
-            knowledge_context_limit=16384)
-        self.assertGreater(ContextTokenEstimator().estimate_text(social.model_dump_json()), 800)
-        for value in texts:
-            self.assertIn(value, model.messages[-1].content)
-        self.assertIn("Recency alone does not establish truth", model.messages[-1].content)
-        self.assertNotIn(PLAYER_A.persistent_id, model.messages[-1].content)
-        # A conflict/update window is atomic under pressure; never retain only the old side.
-        base = CognitiveModelRequestFactory.create_event(request, relationship_context=social.model_copy(
-            update={"interpretations": (), "sources": (), "truncated": True}), knowledge_context_limit=16384)
-        cap = self.capacity_for_input(ContextTokenEstimator().estimate_text(base.model_dump_json()) + 350)
-        trimmed = CognitiveModelRequestFactory.create_event(request, relationship_context=social,
-            knowledge_context_limit=cap)
-        line = next(v for v in trimmed.messages[-1].content.splitlines() if v.startswith("Relationship context JSON: "))
-        projection = json.loads(line.split(": ", 1)[1])
-        self.assertEqual(projection["interpretations"], [])
-        self.assertEqual(projection["sources"], [])
-        self.assertTrue(projection["truncated"])
-        self.assertLessEqual(ContextTokenEstimator().estimate_text(trimmed.model_dump_json()), ContextBudgetPolicy.cognition(cap, 1024).input_hard_cap)
 
     def test_global_16k_cap_keeps_long_knowledge_and_omits_relationship_atomically(self):
         fixture = memory_fixtures.MemoryD2Tests(); entry = fixture.entry([memory_fixtures.recall, memory_fixtures.TERMINAL])
@@ -155,8 +115,7 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         request = knowledge_fixtures.official_merchant_request("coffee.latte，以及我以前喜欢的颜色？")
         knowledge = self.knowledge.resolver.resolve(request)
         self.assertGreater(ContextTokenEstimator().estimate_text(knowledge.serialized()), 1000)
-        social = RelationshipContext(interpretations=("以前的边界和承诺。" * 60, "后来澄清的边界，推测仍未确认。" * 60),
-            truncated=False, policy_version="test/p1")
+        social = social_context(*("以前的边界和承诺。" * 8, "后来澄清的边界，推测仍未确认。" * 8))
         recent = [{"speaker": "player", "text": "请保留我刚才表达的同意条件。"}, {"speaker": "npc", "text": "我会尊重这个条件。"}]
         catalog = entry._memory_recall.prepare(memory_fixtures.cognitive_request())
         outcome = entry._memory_recall.recall(catalog, MemoryRecallPlan(semantic_query="颜色", subject_ref=catalog.requester_ref))
@@ -168,11 +127,11 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
             text = model.messages[-1].content
             line = next(v for v in text.splitlines() if v.startswith("Relationship context JSON: "))
             relationship = json.loads(line.split(": ", 1)[1])
-            self.assertIn(relationship["interpretations"], [list(social.interpretations), []])
-            if not relationship["interpretations"]:
+            self.assertIn(relationship.get("current_state"), [social.current_state.model_dump(mode="json",exclude_none=True), None])
+            if not relationship.get("current_state"):
                 saw_optional_omission = True
                 self.assertTrue(relationship["truncated"])
-                self.assertEqual(relationship["sources"], [])
+                self.assertNotIn("sources", relationship)
             self.assertIn("请保留我刚才表达的同意条件", text)
             if recalled: self.assertIn(outcome.evidence.items[0].summary, text)
             if known: self.assertEqual(self.knowledge_payload(model)["items"][0]["content"], content)
@@ -199,8 +158,8 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
                 self.assertEqual(self.knowledge_payload(model)["items"][0]["content"], content)
             line = next(v for v in model.messages[-1].content.splitlines() if v.startswith("Relationship context JSON: "))
             relationship = json.loads(line.split(": ", 1)[1])
-            self.assertIn(relationship["interpretations"], [list(social.interpretations), []])
-            if not relationship["interpretations"]: self.assertTrue(relationship["truncated"])
+            self.assertIn(relationship.get("current_state"), [social.current_state.model_dump(mode="json",exclude_none=True), None])
+            if not relationship.get("current_state"): self.assertTrue(relationship["truncated"])
             self.assertEqual(CognitiveModelRequestFactory.context_from(model), request.context)
             self.assertLessEqual(ContextTokenEstimator().estimate_text(model.model_dump_json()),
                                  ContextBudgetPolicy.cognition(16384, 1024).input_hard_cap)
@@ -211,7 +170,7 @@ class KnowledgeContextBudgetTests(unittest.TestCase):
         request = knowledge_fixtures.official_merchant_request("卡布奇诺配方，以及我以前喜欢的颜色？")
         catalog = entry._memory_recall.prepare(memory_fixtures.cognitive_request())
         outcome = entry._memory_recall.recall(catalog, MemoryRecallPlan(semantic_query="颜色", subject_ref=catalog.requester_ref))
-        social = RelationshipContext(interpretations=("此前交流友善。",), truncated=False, policy_version="test/1")
+        social = social_context(*("此前交流友善。",))
         knowledge = self.knowledge.resolver.resolve(request)
         recent = [{"speaker": "player", "text": "之前聊过天气。"}, {"speaker": "npc", "text": "今天阳光不错。"},
                   {"speaker": "player", "text": "不相关旧话题" * 1500}, {"speaker": "npc", "text": "旧回复" * 1500}]

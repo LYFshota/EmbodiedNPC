@@ -66,6 +66,12 @@ class TaskExecutions:
             if proposal.action_id!='prepare_drink' or proposal.bindings!={'drink_type':task.goal.drink_type} or task.player!=context.scope.player:
                 raise TaskError('TASK_ACTION_GOAL_MISMATCH')
             args['player_entity_id']=request.context.relevant_player.player_entity_id
+        elif task.goal.kind=='serve_snack':
+            if (proposal.action_id!='serve_snack' or
+                    proposal.bindings!={'snack_type':task.goal.snack_type,'quantity':task.goal.quantity} or
+                    task.player!=context.scope.player):
+                raise TaskError('TASK_ACTION_GOAL_MISMATCH')
+            args['player_entity_id']=request.context.relevant_player.player_entity_id
         else:
             counter=request.context.counter_work
             if (proposal.action_id!='clean_counter' or counter is None or not counter.needs_cleaning or

@@ -28,6 +28,7 @@ namespace CafeDemo
         [SerializeField] private InputAction zoom = new InputAction("OrbitZoom", InputActionType.Value, "<Mouse>/scroll/y");
         private readonly RaycastHit[] hits = new RaycastHit[32];
         private readonly InputAction releasePointer = new InputAction("OrbitRelease", InputActionType.Button, "<Keyboard>/escape");
+        private readonly InputAction togglePointer = new InputAction("OrbitToggleCapture", InputActionType.Button, "<Keyboard>/leftAlt");
         private bool pointerCaptured;
         private bool inputSuspended;
         private bool dialogueCursorMode;
@@ -92,11 +93,11 @@ namespace CafeDemo
         private void OnEnable()
         {
             if (!target || !playerRoot) { Debug.LogError("CafeDemo orbit camera requires target and player references.", this); enabled = false; return; }
-            rotateButton.Enable(); pointerDelta.Enable(); zoom.Enable(); releasePointer.Enable();
+            rotateButton.Enable(); pointerDelta.Enable(); zoom.Enable(); releasePointer.Enable(); togglePointer.Enable();
             CapturePointer(!dialogueCursorMode && !settingsCursorMode);
         }
-        private void OnDisable() { ExitPresentationCamera(); rotateButton.Disable(); pointerDelta.Disable(); zoom.Disable(); releasePointer.Disable(); CapturePointer(false); SetPlayerVisible(true); }
-        private void OnDestroy() { rotateButton.Dispose(); pointerDelta.Dispose(); zoom.Dispose(); releasePointer.Dispose(); }
+        private void OnDisable() { ExitPresentationCamera(); rotateButton.Disable(); pointerDelta.Disable(); zoom.Disable(); releasePointer.Disable(); togglePointer.Disable(); CapturePointer(false); SetPlayerVisible(true); }
+        private void OnDestroy() { rotateButton.Dispose(); pointerDelta.Dispose(); zoom.Dispose(); releasePointer.Dispose(); togglePointer.Dispose(); }
 
         private void CapturePointer(bool capture)
         {
@@ -106,7 +107,15 @@ namespace CafeDemo
         }
         private void OnApplicationFocus(bool focused)
         {
-            if (!focused) CapturePointer(false);
+            // Ignore a key edge delivered with Game View/window focus restoration.
+            uiReleasedFrame = Time.frameCount;
+            if (!focused)
+            {
+                togglePointer.Disable();
+                restorePointerCapture = false;
+                CapturePointer(false);
+            }
+            else if (isActiveAndEnabled) togglePointer.Enable();
         }
 
         private void LateUpdate()
@@ -120,6 +129,13 @@ namespace CafeDemo
             if (dialogueCursorMode || settingsCursorMode)
             {
                 if (pointerCaptured) CapturePointer(false);
+            }
+            else if (togglePointer.WasPressedThisFrame() &&
+                !PresentationInputBlocked() && !releasePointer.WasPressedThisFrame())
+            {
+                restorePointerCapture = false;
+                CapturePointer(!pointerCaptured);
+                captureChanged = true; // Discard pointer delta/scroll from the transition frame.
             }
             else if (restorePointerCapture)
             {

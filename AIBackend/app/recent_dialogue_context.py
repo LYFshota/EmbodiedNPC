@@ -1,5 +1,7 @@
 """Bounded speech windows and local continuity, after ledger source verification."""
 
+import json
+import math
 from dataclasses import dataclass
 
 
@@ -34,10 +36,12 @@ class RecentDialogueTimeline(list[dict]):
     """Model-visible speech plus internal original-source metadata, never durable state."""
 
     def __init__(self, messages=(), *, sources=None, truncated=False, target=8, expanded=0,
-                 current_session_id=None):
+                 current_session_id=None, reference_clock=None):
         super().__init__(messages)
         self.sources = sources or {}
         self.current_session_id = current_session_id
+        # Accepted current input clock, not wall time or UI/conversation lifecycle.
+        self.reference_clock = dict(reference_clock) if reference_clock else None
         self.truncated = truncated
         self.target_messages = target
         self.expanded_messages = expanded
@@ -51,7 +55,7 @@ class RecentDialogueTimeline(list[dict]):
 
     @classmethod
     def select(cls, messages, sources, target, char_budget, overlap, *, truncated=False,
-               current_session_id=None):
+               current_session_id=None, reference_clock=None):
         ordered = sorted(messages, key=lambda m: m["seq"])
         start = max(0, len(ordered) - target)
         floor = max(0, start - overlap)
@@ -88,7 +92,8 @@ class RecentDialogueTimeline(list[dict]):
         base = {m["seq"] for m in ordered[start:]}
         return cls(kept, sources={seq: sources[seq] for seq in retained},
                    truncated=truncated or len(kept) < len(ordered), target=target,
-                   expanded=len(retained - base), current_session_id=current_session_id)
+                   expanded=len(retained - base), current_session_id=current_session_id,
+                   reference_clock=reference_clock)
 
     def budget_groups(self):
         """Small dependency blocks, with the nearest NPC block first.
@@ -141,6 +146,38 @@ class RecentDialogueTimeline(list[dict]):
             source_session = self.sources.get(message["seq"], {}).get("source_session_id")
             scope = ({"session_scope": "current_session" if source_session == self.current_session_id
                       else "earlier_session"} if self.current_session_id and source_session else {})
-            result.append({**message, **scope,
+            result.append({**message, **scope, **self._relative_time(message),
                            **({"context_incomplete": True} if incomplete else {})})
         return result
+
+    def _relative_time(self, message):
+        """Only subtract verified occurrence clocks within the same source session."""
+        reference = self.reference_clock or {}
+        source = self.sources.get(message["seq"], {})
+        clock = reference.get("clock_domain")
+        if (clock not in ("unity_realtime", "backend_utc")
+                or not reference.get("source_session_id")
+                or any(source.get(key) != reference.get(key)
+                       for key in ("source_session_id", "clock_domain"))):
+            return {}
+        current, previous = reference.get("occurred_at"), source.get("occurred_at")
+        if (any(type(value) not in (int, float) or not math.isfinite(value) or value < 0
+                for value in (current, previous)) or previous != message.get("occurred_at")
+                or previous > current):
+            return {}
+        return {"seconds_before_current_input": round(current - previous, 3)}
+
+
+def render_dialogue_timeline(turns):
+    """One JSON speech per line, retaining source text, clock and lineage fields."""
+    if not turns:
+        return "[]"
+    # Put time and speaker before the words without changing utterance order.
+    fields = ("seq", "role", "seconds_before_current_input", "occurred_at",
+              "reply_to_seq", "anchor_seq", "context_seq", "session_scope", "context_incomplete", "text")
+
+    def row(turn):
+        ordered = {key: turn[key] for key in fields if key in turn}
+        ordered.update((key, value) for key, value in turn.items() if key not in ordered)
+        return json.dumps(ordered, ensure_ascii=False, separators=(",", ":"))
+    return "[\n" + ",\n".join(row(turn) for turn in turns) + "\n]"

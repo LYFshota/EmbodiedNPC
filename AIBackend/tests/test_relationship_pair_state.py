@@ -83,8 +83,7 @@ class RelationshipPairStateTests(unittest.TestCase):
 
     def wire_response(self, response):
         payload = response.model_dump(mode="json")
-        updates = payload.pop("state_updates")
-        payload["state_update"] = updates[0] if updates else None
+        assert "state_updates" in payload
         return json.dumps(payload)
 
     def record(self, candidate, response):
@@ -92,7 +91,7 @@ class RelationshipPairStateTests(unittest.TestCase):
             observer=candidate.observer, subject=candidate.subject, episode_id=candidate.episode_id,
             episode_input_hash=candidate.episode_input_hash, outcome=response.outcome,
             interpretation=response.interpretation, evidence_event_ids=candidate.evidence_event_ids,
-            policy_version="relationship-reflection/2.0", generated_at=123)
+            policy_version="relationship-reflection/3.0", generated_at=123)
 
     def commit(self, candidate, response, previous=None):
         previous = previous or self.repo.read_current_pair_state(candidate.observer, candidate.subject)
@@ -173,7 +172,7 @@ class RelationshipPairStateTests(unittest.TestCase):
         self.assertFalse(late.changed)
         self.assertEqual(late.watermark, first.watermark)
         self.assertTrue(late.late_episode_skipped)
-        self.assertTrue(self.repo.exists_for_episode_pair(NPC, PLAYER, old.episode_id, "relationship-reflection/2.0"))
+        self.assertTrue(self.repo.exists_for_episode_pair(NPC, PLAYER, old.episode_id))
 
     def test_forged_handle_quote_npc_narration_and_pair_fail_closed(self):
         candidate = self.candidate(npc_text="We are best friends.")
@@ -215,7 +214,7 @@ class RelationshipPairStateTests(unittest.TestCase):
         state = self.commit(self.candidate(), self.response("A fourth boundary."))
         self.assertEqual(len(state.items), 4)
         self.assertTrue(state.changed)
-        self.assertIsNone(state.capacity_limited)
+        self.assertEqual(state.capacity_limited, ())
 
     def test_full_state_retains_unapplied_add_as_explicit_capacity_result(self):
         previous = self.fill_capacity()
@@ -225,13 +224,12 @@ class RelationshipPairStateTests(unittest.TestCase):
         state = self.commit(candidate, response)
         self.assertEqual(state.items, previous.items)
         self.assertFalse(state.changed)
-        self.assertEqual(state.capacity_limited.text, response.state_updates[0].text)
-        self.assertEqual(state.capacity_limited.evidence[0].quote, words)
+        self.assertEqual(state.capacity_limited[0].text, response.state_updates[0].text)
+        self.assertEqual(state.capacity_limited[0].evidence[0].quote, words)
         record = self.repo.get(state.reflection_id)
         self.assertEqual(record.outcome.value, "INTERPRETATION")
         self.assertEqual(record.interpretation, response.interpretation)
-        self.assertTrue(self.repo.exists_for_episode_pair(NPC, PLAYER, candidate.episode_id,
-                                                       "relationship-reflection/2.0"))
+        self.assertTrue(self.repo.exists_for_episode_pair(NPC, PLAYER, candidate.episode_id))
         from app.relationship_summary_reader import RelationshipSummaryReader
         projected = RelationshipSummaryReader(self.repo).get(NPC, PLAYER)
         self.assertEqual(tuple(item.text for item in projected.current_state.items),
@@ -247,7 +245,7 @@ class RelationshipPairStateTests(unittest.TestCase):
             operation="CORRECT", target="s0", quote=words))
         self.assertEqual(corrected.items[1:], previous.items[1:])
         self.assertEqual(corrected.items[0].predecessor_id, previous.items[0].item_id)
-        self.assertIsNone(corrected.capacity_limited)
+        self.assertEqual(corrected.capacity_limited, ())
         words = "Sometimes call me Alex at work."
         conflicted = self.commit(self.candidate(words), self.response("Work naming scope is disputed.",
             operation="CONFLICT", target="s0", quote=words))
@@ -255,17 +253,17 @@ class RelationshipPairStateTests(unittest.TestCase):
         self.assertEqual(len(conflicted.items[0].evidence), 2)
         self.assertEqual(conflicted.items[0].predecessor_text, corrected.items[0].text)
         self.assertEqual(conflicted.items[0].kind, "CONFLICT")
-        self.assertIsNone(conflicted.capacity_limited)
+        self.assertEqual(conflicted.capacity_limited, ())
 
     def test_full_state_duplicate_and_no_change_do_not_create_capacity_result(self):
         previous = self.fill_capacity()
         repeated = self.commit(self.candidate(), self.response("Please call me Alex."))
         self.assertEqual(repeated.items, previous.items)
         self.assertFalse(repeated.changed)
-        self.assertIsNone(repeated.capacity_limited)
+        self.assertEqual(repeated.capacity_limited, ())
         unchanged = self.commit(self.candidate("See you."), self.response())
         self.assertEqual(unchanged.items, previous.items)
-        self.assertIsNone(unchanged.capacity_limited)
+        self.assertEqual(unchanged.capacity_limited, ())
 
     def test_capacity_result_cannot_bypass_source_handle_or_cas_checks(self):
         previous = self.fill_capacity()
@@ -336,8 +334,8 @@ class RelationshipPairStateTests(unittest.TestCase):
             "from app.relationship_reflection_repository import RelationshipReflectionRepository; "
             "from app.memory_consolidation_context import TrustedPersistentIdentity as I; "
             "r=RelationshipReflectionRepository(SQLiteDatabase(sys.argv[1]).connect); "
-            "print(r.exists_for_episode_pair(I('npc','Character','npc-a'),I('player','Player','player-a'),sys.argv[2],'relationship-reflection/2.0')); "
-            "print(r.read_current_pair_state(I('npc','Character','npc-a'),I('player','Player','player-a')).capacity_limited.text)")
+            "print(r.exists_for_episode_pair(I('npc','Character','npc-a'),I('player','Player','player-a'),sys.argv[2])); "
+            "print(r.read_current_pair_state(I('npc','Character','npc-a'),I('player','Player','player-a')).capacity_limited[0].text)")
         result = subprocess.run([sys.executable, "-B", "-c", script, str(self.path), candidate.episode_id],
             check=True, text=True, capture_output=True, env=os.environ.copy())
         self.assertEqual(result.stdout.splitlines(), ["True", "Avoid finances."])
@@ -350,7 +348,7 @@ class RelationshipPairStateTests(unittest.TestCase):
         late = self.commit(old, self.response("An old reading.", quote="An old greeting."))
         self.assertEqual(late.items, previous.items)
         self.assertTrue(late.late_episode_skipped)
-        self.assertIsNone(late.capacity_limited)
+        self.assertEqual(late.capacity_limited, ())
 
     def test_restart_in_new_process_reads_same_pair_and_isolates_other_uid(self):
         state = self.commit(self.candidate(), self.response("Use Alex."))
@@ -366,41 +364,6 @@ class RelationshipPairStateTests(unittest.TestCase):
         self.assertEqual(PairState.model_validate_json(lines[0]), state)
         self.assertEqual(lines[1], "0")
 
-    def test_old_schema_data_migrates_without_reprocessing_legacy_policy(self):
-        # Build an actual v19 predecessor, then open it with the production migration chain.
-        old_path = self.path.parent / "old.sqlite3"
-        with patch("app.sqlite_database.migrate_relationship_state"), patch("app.sqlite_database.LATEST_SCHEMA_VERSION", 19):
-            old_db = SQLiteDatabase(old_path)
-        with closing(old_db.connect()) as connection:
-            self.assertNotIn("state_revision", [r[1] for r in connection.execute("PRAGMA table_info(relationship_reflections)")])
-        self.db = old_db
-        self.repo = RelationshipReflectionRepository(old_db.connect)
-        self.ledger = ExperienceLedger(old_db.connect)
-        self.episodes = EpisodeRepository(old_db.connect)
-        self.resolver = MemoryContextResolver(self.ledger, self.episodes)
-        candidate = self.candidate()
-        record = self.record(candidate, self.response()).model_copy(update={"policy_version":"relationship-reflection/1.0"})
-        self.repo.insert(record)
-        with closing(old_db.connect()) as connection:
-            old_row = tuple(connection.execute("SELECT * FROM relationship_reflections").fetchone())
-        self.db = SQLiteDatabase(old_path)
-        self.db.migrate()
-        self.repo = RelationshipReflectionRepository(self.db.connect)
-        with closing(self.db.connect()) as connection:
-            migrated_row = tuple(connection.execute("SELECT * FROM relationship_reflections").fetchone())
-            self.assertEqual(migrated_row[:len(old_row)], old_row)
-            self.assertEqual(migrated_row[len(old_row):], (None, None, None))
-            self.assertEqual(connection.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0], 20)
-        scanner = RelationshipReflectionScanner(MemoryJobRepository(self.db.connect), self.resolver,
-                                               RelationshipReflectionCandidateBuilder(), self.repo)
-        self.assertEqual(scanner.scan_next_batch().candidates, ())
-        legacy = self.repo.read_current_pair_state(NPC, PLAYER)
-        self.assertEqual(legacy.coverage, "LEGACY_PARTIAL")
-        self.assertIsNotNone(legacy.interaction_evidence)
-        self.assertEqual(legacy.items, ())
-        state = self.commit(self.candidate(), self.response("Use Alex."))
-        self.assertEqual(state.coverage, "LEGACY_PARTIAL")
-        self.assertEqual(self.repo.get(record.reflection_id), record)
 
     def test_snapshot_is_immutable(self):
         state = self.commit(self.candidate(), self.response("Use Alex."))
@@ -423,12 +386,12 @@ class RelationshipPairStateTests(unittest.TestCase):
         visible = provider.requests[0].messages[1].content
         self.assertIn("PREVIOUS DERIVED STATE", visible)
         self.assertIn("Use Alex.", visible)
-        self.assertIn("Please call me Alex.", visible)
+        self.assertNotIn("Please call me Alex.", visible)
         self.assertIn('"limit":4,"used":1,"remaining":3', visible)
         self.assertNotIn(PLAYER.persistent_id, visible)
         self.assertEqual(self.repo.read_current_pair_state(NPC, PLAYER).items[0].text, "Use formal address at work.")
 
-    def test_single_object_wire_preserves_add_correct_conflict_and_old_snapshot(self):
+    def test_plural_wire_preserves_add_correct_conflict_and_old_snapshot(self):
         from test_relationship_reflection_execution import FakeProvider, RecordingExecutor, StubScanner
         previous = self.commit(self.candidate(), self.response("Use Alex."))
         old_json = previous.model_dump_json()
@@ -454,7 +417,7 @@ class RelationshipPairStateTests(unittest.TestCase):
         self.assertEqual(len(previous.items[0].evidence), 2)
         self.assertEqual(PairState.model_validate_json(old_json).items[0].text, "Use Alex.")
 
-    def test_single_object_wire_still_rejects_invalid_evidence_and_pair(self):
+    def test_plural_wire_still_rejects_invalid_evidence_and_pair(self):
         from test_relationship_reflection_execution import FakeProvider, RecordingExecutor, StubScanner
         candidate = self.candidate(npc_text="We are best friends.")
         for response in (self.response("Friends.", event="e1", quote="We are best friends."),
@@ -522,15 +485,15 @@ class RelationshipPairStateTests(unittest.TestCase):
             self.assertEqual(len(batch.issues), 1)
             self.assertEqual(self.repo.read_current_pair_state(NPC, PLAYER), state)
 
-    def test_short_chinese_delta_fits_unchanged_background_output_reserve(self):
+    def test_short_chinese_delta_fits_background_output_reserve(self):
         from app.context_token_estimator import ContextTokenEstimator
         from test_relationship_reflection_execution import FakeProvider, RecordingExecutor
         response = self.response("工作时保持正式称呼。", operation="CORRECT", target="s0",
                                  quote="上班时请用正式称呼。")
         response = response.model_copy(update={"interpretation":"玩家明确限定工作时的称呼边界。"})
         model = RelationshipReflectionModel(FakeProvider([]), RecordingExecutor())
-        self.assertEqual(model.policy.response_reserve, 256)
-        self.assertLessEqual(ContextTokenEstimator().estimate_text(response.model_dump_json()), 256)
+        self.assertEqual(model.policy.response_reserve, 1024)
+        self.assertLessEqual(ContextTokenEstimator().estimate_text(response.model_dump_json()), 1024)
 
     def test_schema20_failure_rolls_back_columns_index_triggers_and_can_retry(self):
         path = self.path.parent / "rollback.sqlite3"

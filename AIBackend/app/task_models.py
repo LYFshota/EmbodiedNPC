@@ -11,6 +11,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from .drink_types import DrinkType
+from .snack_catalog import SnackType, SnackQuantity
 
 
 Identifier = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]+$", min_length=1, max_length=160)]
@@ -19,7 +20,7 @@ Text = Annotated[str, Field(min_length=1, max_length=240, pattern=r"\S")]
 PositiveInt = Annotated[int, Field(ge=1)]
 Revision = Annotated[int, Field(ge=0)]
 Timestamp = Annotated[float, Field(ge=0, allow_inf_nan=False)]
-GoalKind = Literal["serve_drink", "clean_assigned_counter"]
+GoalKind = Literal["serve_drink", "clean_assigned_counter", "serve_snack"]
 TriggerKind = Literal["next_visit", "when_idle"]
 TaskStatus = Literal["waiting", "executing", "blocked", "completed", "cancelled"]
 
@@ -63,7 +64,7 @@ class TaskScope(TaskModel):
     owner: TaskIdentity
     visit_id: Identifier
     player: TaskIdentity | None = None
-    allowed_goal_kinds: tuple[GoalKind, ...] = Field(default=(), max_length=2)
+    allowed_goal_kinds: tuple[GoalKind, ...] = Field(default=(), max_length=3)
 
     @model_validator(mode="after")
     def identities(self):
@@ -79,12 +80,18 @@ class ServeDrinkGoal(TaskModel):
     drink_type: DrinkType
 
 
+class ServeSnackGoal(TaskModel):
+    kind: Literal["serve_snack"] = "serve_snack"
+    snack_type: SnackType
+    quantity: SnackQuantity
+
+
 class CleanAssignedCounterGoal(TaskModel):
     kind: Literal["clean_assigned_counter"] = "clean_assigned_counter"
     counter_key: Literal["assigned_counter"] = "assigned_counter"
 
 
-TaskGoal = Annotated[ServeDrinkGoal | CleanAssignedCounterGoal, Field(discriminator="kind")]
+TaskGoal = Annotated[ServeDrinkGoal | CleanAssignedCounterGoal | ServeSnackGoal, Field(discriminator="kind")]
 
 
 class TaskSource(TaskModel):
@@ -194,13 +201,27 @@ class DrinkReceipt(ReceiptBase):
         return self
 
 
+class SnackReceipt(ReceiptBase):
+    kind: Literal["snack_served"] = "snack_served"
+    player: TaskIdentity
+    player_entity_id: EntityId
+    snack_type: SnackType
+    quantity: SnackQuantity
+
+    @model_validator(mode="after")
+    def player_role(self):
+        if not self.player.is_player:
+            raise ValueError("TASK_RECEIPT_PLAYER_INVALID")
+        return self
+
+
 class CounterReceipt(ReceiptBase):
     kind: Literal["counter_cleaned"] = "counter_cleaned"
     target_entity_id: EntityId
     condition_revision: PositiveInt
 
 
-TaskReceipt = Annotated[DrinkReceipt | CounterReceipt, Field(discriminator="kind")]
+TaskReceipt = Annotated[DrinkReceipt | CounterReceipt | SnackReceipt, Field(discriminator="kind")]
 
 
 class TrustedTaskResult(TaskModel):
@@ -211,7 +232,7 @@ class TrustedTaskResult(TaskModel):
     trace_id: Identifier
     actor_entity_id: EntityId
     outcome_id: Identifier
-    goal_type: Literal["prepare_drink", "clean_counter"]
+    goal_type: Literal["prepare_drink", "clean_counter", "serve_snack"]
     status: Literal["succeeded", "failed", "cancelled", "timed_out", "uncertain"]
     effect: Literal["committed", "not_committed", "unknown"]
     world_revision: Revision
@@ -279,7 +300,7 @@ class TaskRecord(TaskModel):
             raise ValueError("TASK_RECORD_IDENTITY_INVALID")
         if (self.source_kind == "player_request") != (self.player is not None):
             raise ValueError("TASK_SOURCE_PLAYER_MISMATCH")
-        if self.goal.kind == "serve_drink" and self.player is None:
+        if self.goal.kind in ("serve_drink", "serve_snack") and self.player is None:
             raise ValueError("TASK_DRINK_PLAYER_REQUIRED")
         if self.source_kind == "self_initiated" and self.goal.kind != "clean_assigned_counter":
             raise ValueError("TASK_SELF_GOAL_NOT_SUPPORTED")

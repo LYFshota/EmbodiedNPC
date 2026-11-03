@@ -21,10 +21,8 @@ namespace EmbodiedNPC.Animation
         [SerializeField] private ExpressiveController expressive;
         [SerializeField] private MotionChannelCoordinator motionChannels;
         [SerializeField] private Transform visualBody;
-        [SerializeField, Min(0)] private float acquireDistance = 4f;
-        [SerializeField, Min(0)] private float maintainDistance = 5f;
-        [SerializeField, Range(0, 90)] private float acquireYaw = 45f;
-        [SerializeField, Range(0, 90)] private float releaseYaw = 55f;
+        [SerializeField, Min(0)] private float acquireDistance = 3f;
+        [SerializeField, Min(0)] private float maintainDistance = 3.6f;
         [SerializeField, Min(0)] private float acquireDelay = .3f;
         [SerializeField, Min(0)] private float releaseGrace = .3f;
         [SerializeField] private Transform[] idleLookPoints = Array.Empty<Transform>();
@@ -89,9 +87,9 @@ namespace EmbodiedNPC.Animation
 
             if (Source == AttentionSource.CasualPlayer && !TryResolve(CurrentTargetEntityId, out target))
                 ClearSelection(); // Destruction/unregistration must not retain a stale identity during grace.
-            if (Source == AttentionSource.CasualPlayer && HasCurrentEvidence(CurrentTargetEntityId) &&
+            if (Source == AttentionSource.CasualPlayer && HasCurrentVisualEvidence(CurrentTargetEntityId) &&
                 TryResolve(CurrentTargetEntityId, out target) && target.IsAgent(AgentRole.Player) &&
-                Within(target, maintainDistance, releaseYaw))
+                Within(target, maintainDistance))
             { SuspendIdleLook(); Select(AttentionSource.CasualPlayer, target); return; }
 
             WorldEntity candidate = null;
@@ -99,8 +97,8 @@ namespace EmbodiedNPC.Animation
             if (perceivedState != null && perceivedState.isActiveAndEnabled && perceivedState.Aggregator != null)
                 foreach (var pair in perceivedState.Aggregator.Entities)
                 {
-                    if (!HasCurrentEvidence(pair.Key) || !TryResolve(pair.Key, out target) ||
-                        !target.IsAgent(AgentRole.Player) || !Within(target, acquireDistance, acquireYaw)) continue;
+                    if (!HasCurrentVisualEvidence(pair.Key) || !TryResolve(pair.Key, out target) ||
+                        !target.IsAgent(AgentRole.Player) || !Within(target, acquireDistance)) continue;
                     float distance = (target.transform.position - owner.transform.position).sqrMagnitude;
                     if (distance < nearest || (distance == nearest &&
                         string.CompareOrdinal(target.EntityId, candidate == null ? null : candidate.EntityId) < 0))
@@ -218,12 +216,14 @@ namespace EmbodiedNPC.Animation
             return registry.TryGetEntity(id, out entity) && entity != owner && entity.isActiveAndEnabled &&
                 entity.gameObject.activeInHierarchy;
         }
-        private bool Within(WorldEntity entity, float distance, float yaw)
+        // VisionSensor already applies this NPC's calibrated eye height, FOV and
+        // occlusion. Proximity and the player's camera cannot establish visual contact.
+        private bool HasCurrentVisualEvidence(string id) => HasCurrentEvidence(id) &&
+            perceivedState.Aggregator.Entities[id].KnownFields.TryGetValue("visibility_state", out string visible) && visible == "current_visible";
+        private bool Within(WorldEntity entity, float distance)
         {
             Vector3 direction = entity.transform.position - owner.transform.position;
-            Vector3 planar = Vector3.ProjectOnPlane(direction, visualBody.up);
-            return direction.sqrMagnitude <= distance * distance &&
-                (planar.sqrMagnitude < .0001f || Vector3.Angle(visualBody.forward, planar) <= yaw);
+            return direction.sqrMagnitude <= distance * distance;
         }
         private void Select(AttentionSource source, WorldEntity target)
         {

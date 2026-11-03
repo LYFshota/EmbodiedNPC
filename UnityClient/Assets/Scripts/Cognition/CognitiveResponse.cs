@@ -32,7 +32,11 @@ namespace EmbodiedNPC.Cognition
 
         public bool IsValid => IsEntityId(action_id) && bindings != null && bindings.Count > 0 &&
                                bindings.Count <= 16 && bindings.All(pair => IsEntityId(pair.Key)) &&
-                               (action_id == "prepare_drink"
+                               (action_id == "serve_snack"
+                                   ? bindings.Count == 2 && bindings.TryGetValue("snack_type", out var snack) &&
+                                     EmbodiedNPC.Actions.SnackCatalog.IsValid(snack) && bindings.TryGetValue("quantity", out var quantity) &&
+                                     EmbodiedNPC.Actions.SnackCatalog.IsQuantity(quantity)
+                                   : action_id == "prepare_drink"
                                    ? bindings.Count == 1 && bindings.TryGetValue("drink_type", out string drink) &&
                                      EmbodiedNPC.Actions.DrinkTypes.IsValid(drink)
                                    : bindings.All(pair => IsEntityId(pair.Value)));
@@ -134,6 +138,11 @@ namespace EmbodiedNPC.Cognition
         public static bool TryMap(CognitiveActionProposal proposal, out GoalProposal goal)
         {
             goal = null;
+            if (proposal != null && proposal.IsValid && proposal.action_id == "serve_snack")
+            {
+                goal = new GoalProposal { type = "serve_snack", snack_type = proposal.bindings["snack_type"], quantity = proposal.bindings["quantity"] };
+                return true;
+            }
             if (proposal != null && proposal.IsValid && proposal.action_id == "prepare_drink")
             {
                 goal = new GoalProposal { type = "prepare_drink", drink_type = proposal.bindings["drink_type"] };
@@ -194,7 +203,8 @@ namespace EmbodiedNPC.Cognition
                    validated_goal != null && validated_goal.type == mapped.type &&
                    validated_goal.target_entity_id == mapped.target_entity_id &&
                    validated_goal.destination_entity_id == mapped.destination_entity_id &&
-                   validated_goal.drink_type == mapped.drink_type;
+                   validated_goal.drink_type == mapped.drink_type && validated_goal.snack_type == mapped.snack_type &&
+                   validated_goal.quantity == mapped.quantity;
         }
     }
 

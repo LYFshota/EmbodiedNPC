@@ -121,7 +121,7 @@ class CognitiveTasks:
             return TaskIdentity(identity_namespace=value.identity_namespace, identity_type=value.identity_type,
                                 persistent_id=value.persistent_id)
         actions = request.context.capabilities.available_actions if request.context.capabilities else ()
-        kinds = tuple(kind for action, kind in (("prepare_drink", "serve_drink"), ("clean_counter", "clean_assigned_counter"))
+        kinds = tuple(kind for action, kind in (("prepare_drink", "serve_drink"), ("clean_counter", "clean_assigned_counter"), ("serve_snack", "serve_snack"))
                       if request.run.agent_entity_id == "npc_cafe_01" and any(a.action_id == action for a in actions))
         scope = TaskScope(owner=identity(wire.observer), player=identity(participant), visit_id=runtime.visit_id,
                           allowed_goal_kinds=kinds)
@@ -245,6 +245,14 @@ class CognitiveTasks:
             binding = next((b for b in capability.bindings if b.name == "drink_type" and b.kind == "enum"), None) if capability else None
             if binding is None or goal.drink_type not in binding.enum_values:
                 raise TaskError("TASK_GOAL_NOT_AUTHORIZED")
+        if goal is not None and goal.kind == "serve_snack":
+            actions = request.context.capabilities.available_actions if request.context.capabilities else ()
+            capability = next((a for a in actions if a.action_id == "serve_snack"), None)
+            bindings = {b.name: b for b in capability.bindings} if capability else {}
+            for name, value in (("snack_type", goal.snack_type), ("quantity", goal.quantity)):
+                binding = bindings.get(name)
+                if binding is None or binding.kind != "enum" or value not in binding.enum_values:
+                    raise TaskError("TASK_GOAL_NOT_AUTHORIZED")
         if isinstance(intent, CreateTaskIntent):
             if (context.automatic or context.counter) and intent.source == 'requester':
                 raise TaskError('TASK_NEW_COMMISSION_SOURCE_REQUIRED')

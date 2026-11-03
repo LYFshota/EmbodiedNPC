@@ -161,6 +161,20 @@ namespace EmbodiedNPC.Dialogue.Presentation
                 else result = outcome.Status switch { PlanExecutionStatus.Cancelled => T("清洁已取消", "Cleaning cancelled"),
                     PlanExecutionStatus.TimedOut => T("清洁超时", "Cleaning timed out"), _ => T("清洁未完成", "Cleaning incomplete") };
             }
+            else if (task.ActionId == "serve_snack")
+            {
+                if (outcome.Status == PlanExecutionStatus.Succeeded)
+                {
+                    if (!entry.Runner.TryGetSnackReceipt(key,out var receipt) || receipt.Player != player.EntityId ||
+                        receipt.SnackType != task.SnackType || receipt.Quantity != task.SnackQuantity ||
+                        receipt.WorldRevision <= task.WorldRevision || receipt.WorldRevision > outcome.WorldRevision ||
+                        !drinkReceiptIds.Add(receipt.Id)) return;
+                    string name=EmbodiedNPC.Actions.SnackCatalog.Name(receipt.SnackType,SettingsUiLanguage.IsEnglish);
+                    result=T($"已提供：{name} × {receipt.Quantity}",$"Provided: {name} × {receipt.Quantity}");
+                }
+                else result=outcome.Status switch { PlanExecutionStatus.Cancelled=>T("点心服务已取消","Snack service cancelled"),
+                    PlanExecutionStatus.TimedOut=>T("点心服务超时","Snack service timed out"),_=>T("点心服务未完成","Snack service incomplete") };
+            }
             else if (task.ActionId == "prepare_drink")
             {
                 if (outcome.Status == PlanExecutionStatus.Succeeded)
@@ -216,7 +230,7 @@ namespace EmbodiedNPC.Dialogue.Presentation
             if (template == null) return;
             if (entry.View == null) entry.View = Instantiate(template, transform, false);
             entry.View.name = "Task_" + entry.Snapshot.Key.Actor;
-            entry.View.SetText(entry.Name, (entry.Snapshot.ActionId == "clean_counter" ? T("柜台清洁 · ", "Cleaning · ") : entry.Snapshot.ActionId == "prepare_drink" ? T("饮品制作 · ", "Drink · ") :
+            entry.View.SetText(entry.Name, (entry.Snapshot.ActionId == "clean_counter" ? T("柜台清洁 · ", "Cleaning · ") : entry.Snapshot.ActionId == "prepare_drink" ? T("饮品制作 · ", "Drink · ") : entry.Snapshot.ActionId == "serve_snack" ? T("点心服务 · ", "Snack · ") :
                 T("取物任务 · ", "Delivery · ")) + FormatPhase(entry.Snapshot));
         }
         // Keep this small text readable on narrow displays without changing the shared CanvasScaler.
@@ -343,6 +357,14 @@ namespace EmbodiedNPC.Dialogue.Presentation
         public static string FormatPhase(TaskFeedbackSnapshot value)
         {
             var progress = value.Progress;
+            if (value.ActionId == "serve_snack")
+            {
+                string snack=EmbodiedNPC.Actions.SnackCatalog.Name(value.SnackType,SettingsUiLanguage.IsEnglish);
+                bool rack=EmbodiedNPC.Actions.SnackCatalog.Get(value.SnackType)?.location=="rack";
+                if (progress.Action == PlannerActionType.WalkTo) return rack ? T("前往食物架…","Going to food rack…") : T("前往点心展示柜…","Going to food showcase…");
+                if (progress.Action == PlannerActionType.ServeSnack) return T($"正在取{snack} × {value.SnackQuantity}…",$"Getting {snack} × {value.SnackQuantity}…");
+                return T("点心订单已接受…","Snack order accepted…");
+            }
             if (value.ActionId == "prepare_drink")
             {
                 string name = EmbodiedNPC.Actions.DrinkTypes.Name(value.DrinkType, SettingsUiLanguage.IsEnglish);

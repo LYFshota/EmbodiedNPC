@@ -40,13 +40,13 @@ namespace EmbodiedNPC.World
         [SerializeField, Min(0)] private int worldRevision;
         private readonly List<SkillResult> eventHistory = new();
         private long nextEventSequence;
-        private readonly Dictionary<(string actor,string proposal,string trace),Func<string,string,string,string,int,bool>> taskGuards = new();
+        private readonly Dictionary<(string actor,string proposal,string trace),Func<string,string,string,string,int,string,string,bool>> taskGuards = new();
         // 任务回执来自通过即时校验的世界提交；注册 guard 只收紧该 attempt 的
         // 副作用权限，不替代各 TryCommit/技能入口原有的能力和状态校验。
-        internal void RegisterTaskGuard(string actor,string proposal,string trace,Func<string,string,string,string,int,bool> guard)
+        internal void RegisterTaskGuard(string actor,string proposal,string trace,Func<string,string,string,string,int,string,string,bool> guard)
         { taskGuards.Add((actor,proposal,trace),guard); }
-        private bool TaskEffectAllowed(string actor,string proposal,string trace,string action,string target,string player,string drink,int condition) =>
-            !taskGuards.TryGetValue((actor,proposal,trace),out var guard) || guard(action,target,player,drink,condition);
+        private bool TaskEffectAllowed(string actor,string proposal,string trace,string action,string target,string player,string drink,int condition,string snack=null,string quantity=null) =>
+            !taskGuards.TryGetValue((actor,proposal,trace),out var guard) || guard(action,target,player,drink,condition,snack,quantity);
 
         public int WorldRevision => worldRevision;
         public SkillResult LastResult { get; private set; }

@@ -13,7 +13,7 @@ from uuid import uuid4
 from pydantic import TypeAdapter
 
 from .task_models import (
-    CounterReceipt, DrinkReceipt, ExecutionRequest, Identifier, PositiveInt, TaskCommandResult,
+    CounterReceipt, DrinkReceipt, SnackReceipt, ExecutionRequest, Identifier, PositiveInt, TaskCommandResult,
     TaskCreate, TaskError, TaskExecution, TaskModel, TaskPage, TaskQuery, TaskRecord,
     TaskSchedule, TaskScope, TaskUpdate, Text, TrustedTaskResult,
 )
@@ -230,7 +230,7 @@ class TaskService:
             number = task.execution.attempt_no + 1 if task.execution else 1
             if number > 2:
                 raise TaskError("TASK_ATTEMPT_LIMIT")
-            if task.goal.kind == "serve_drink":
+            if task.goal.kind in ("serve_drink", "serve_snack"):
                 if request.player_entity_id is None or request.target_entity_id is not None or request.condition_revision is not None:
                     raise TaskError("TASK_DRINK_BINDINGS_INVALID")
             elif request.target_entity_id is None or request.condition_revision is None or request.player_entity_id is not None:
@@ -279,7 +279,8 @@ class TaskService:
         if execution is None or execution.attempt_id != result.attempt_id:
             raise TaskError("TASK_ATTEMPT_MISMATCH")
         request = execution.request
-        expected_goal = "prepare_drink" if task.goal.kind == "serve_drink" else "clean_counter"
+        expected_goal = {"serve_drink": "prepare_drink", "serve_snack": "serve_snack",
+                         "clean_assigned_counter": "clean_counter"}[task.goal.kind]
         if (result.scene_instance_id != request.scene_instance_id or result.proposal_id != request.proposal_id
                 or result.trace_id != request.trace_id or result.actor_entity_id != request.actor_entity_id
                 or result.goal_type != expected_goal or result.world_revision < request.world_revision):
@@ -295,6 +296,11 @@ class TaskService:
             if (not isinstance(receipt, DrinkReceipt) or receipt.player != task.player
                     or receipt.player_entity_id != request.player_entity_id or receipt.drink_type != task.goal.drink_type):
                 raise TaskError("TASK_DRINK_RECEIPT_MISMATCH")
+        elif task.goal.kind == "serve_snack":
+            if (not isinstance(receipt, SnackReceipt) or receipt.player != task.player
+                    or receipt.player_entity_id != request.player_entity_id
+                    or receipt.snack_type != task.goal.snack_type or receipt.quantity != task.goal.quantity):
+                raise TaskError("TASK_SNACK_RECEIPT_MISMATCH")
         elif (not isinstance(receipt, CounterReceipt) or receipt.target_entity_id != request.target_entity_id
               or receipt.condition_revision != request.condition_revision):
             raise TaskError("TASK_COUNTER_RECEIPT_MISMATCH")

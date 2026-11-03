@@ -75,7 +75,7 @@ namespace EmbodiedNPC.Cognition
             foreach(string key in new[]{"attempt_id","phase","diagnostic"}) if(o[key].Type!=JTokenType.String && o[key].Type!=JTokenType.Null) return false;
             if(!TaskRuntimeContextDto.IsToken((string)o["task_id"]) || !new[]{"waiting","executing","blocked","completed","cancelled"}.Contains((string)o["status"]) ||
                 !new[]{"player_request","self_initiated"}.Contains((string)o["source"]) ||
-                !new[]{"serve_drink","clean_assigned_counter"}.Contains((string)o["goal_kind"])) return false;
+                !new[]{"serve_drink","clean_assigned_counter","serve_snack"}.Contains((string)o["goal_kind"])) return false;
             if(o["condition"].Type!=JTokenType.Null)
             {
                 var c=o["condition"] as JObject;

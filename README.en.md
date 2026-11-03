@@ -18,7 +18,7 @@ The project explores a working loop: **perception → cognition → memory and a
 
 ## Download and try
 
-[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.4-preview/EmbodiedNPC-Windows-x64-v0.1.4-preview.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.4-preview)
+[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
 
 1. Extract the complete archive and run `Start.cmd`. No Unity Editor or separate Python installation is needed.
 2. **Configure your own Main LLM** for dialogue and decisions. The ZIP bundles EmbeddingGemma-300M Q4 ONNX for memory vectors, so no extra Embedding download or API setup is normally needed. External Embedding and disabled-vector options remain available.
@@ -28,13 +28,25 @@ The project explores a working loop: **perception → cognition → memory and a
 
 - **Distinct character conversations:** Four NPCs have separate personas, personalities and dialogue styles, support Chinese and English, and use recent dialogue to continue topics.
 - **Long-term memory and experience processing:** Actual conversations and action experiences are recorded, processed in the background and recalled on demand. Processing and recall can still fail.
-- **World knowledge management:** Includes 156 entries covering coffee, characters and the neighborhood. Players can search, edit, add, import and export entries, and configure which NPCs know them and how they are used.
+- **World knowledge management:** Includes 161 entries covering coffee, characters and the neighborhood. Players can search, edit, add, import and export entries, and configure which NPCs know them and how they are used.
 - **Local perception and overhearing:** NPCs perceive nearby surroundings and can record nearby text speech when range and occlusion permit. Overhearing does not automatically trigger an interruption.
 - **Scene actions and feedback:** Characters with the appropriate capabilities can deliver items, prepare ten hot drinks and clean counters. The game validates and executes actions, then feeds actual results back into cognition and memory.
 - **Persistent tasks and meeting arrangements:** Limited future requests can be saved for consideration at the next meeting or another suitable opportunity, deferred or cancelled. A saved arrangement is not proof of completion.
 - **Expressions and dialogue motion:** Dialogue motions, expressions and conversational rhythms can vary by character, with occasional happy, confused, surprised and thinking icons.
 - **Separate model configuration:** The main model and vector-retrieval model are configured independently, using local or remote services.
 - **Experience data export:** Export retained conversations, memories, personas, knowledge, relationships, tasks and other data from Settings for personal records or feedback. Exports may contain personal information: review before sharing. The game does not upload them automatically.
+
+### v0.1.5-preview changes
+
+- **Local ambient activity**: Vivi moves, pauses and wipes behind the counter. Wen and Jiang share a seated drinking flow with independent timing. These Unity-local presentations do not repeatedly call an LLM or commit formal cleaning facts.
+- **Revocable presentation ownership**: formal work takes priority; conversation can finish a cup return or pause counter travel. Mode changes, cancellation and disable clean up owned presentation state.
+- **Player expressions**: a subtle idle smile and blended wave/cheer/proud expressions return to the base expression while preserving blinking.
+- **Snack service**: croissant, macaron, cupcake and pudding; one type and 1–4 portions per request. Vivi visits the configured display point, performs a short reach and reports only confirmed success. Existing deferred tasks are supported. This is logical service, without physical food handover, inventory or stock simulation.
+- **Left Alt**: release/recapture the cursor, respecting settings and dialogue input focus and the existing ESC flow.
+- **Memory and social understanding**: attributed shared conversations remain distinct from verified world events. Episode interpretation and persistent relationship deltas are separate, with atomic bounded updates. Recent dialogue includes source-clock distances; built-in embeddings warm up before Backend readiness.
+- **Release fixes**: portable assembly includes the same authored snack catalog. Public first-import model recovery is retained.
+
+This preview targets fresh playtest data; old Preview saves are not supported. Extract to a new folder without copying old UserData. Configure your own Main LLM/API key or local model service. See the Release notes for the exact Windows validation scope and any unverified real-model paths; scripted/Mock checks are not real-model end-to-end validation.
 
 ### New in v0.1.4-preview
 

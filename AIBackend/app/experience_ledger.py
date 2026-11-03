@@ -468,7 +468,10 @@ class ExperienceLedger:
         if timeline:
             return self._project_timeline(inputs, by_turn, max_messages, char_budget,
                                           boundary_overlap, truncated=truncated,
-                                          current_session_id=boundary["source_session_id"])
+                                          current_session_id=boundary["source_session_id"],
+                                          reference_clock=({key: boundary[key] for key in
+                                              ("source_session_id", "clock_domain", "occurred_at")}
+                                              if continuation_anchor is None else None))
         return self._project_dialogue(inputs, by_turn, max_messages, char_budget,
                                       scoped=True, truncated=truncated)
 
@@ -554,7 +557,7 @@ class ExperienceLedger:
             and outcome["world_revision"] <= reply["world_revision"])
 
     def _project_timeline(self, inputs, by_turn, target, char_budget, overlap, *, truncated=False,
-                          current_session_id=None):
+                          current_session_id=None, reference_clock=None):
         messages, sources = [], {}
         for row in inputs:
             if not (json.loads(row["payload_json"]).get("natural_language_payload") or "").strip():
@@ -596,7 +599,8 @@ class ExperienceLedger:
                 message["context_seq"] = previous["seq"]
         return RecentDialogueTimeline.select(messages, sources, target, char_budget,
                                               overlap, truncated=truncated,
-                                              current_session_id=current_session_id)
+                                              current_session_id=current_session_id,
+                                              reference_clock=reference_clock)
 
     def _project_dialogue(self, inputs, by_turn, max_messages, char_budget, *,
                           scoped=False, truncated=False):

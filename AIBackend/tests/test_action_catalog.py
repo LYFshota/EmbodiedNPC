@@ -55,5 +55,5 @@ class ActionCatalogTests(unittest.TestCase):
         self.assertEqual(("move_to_entity",), tuple(
             registration.descriptor.action_id for registration in registrations
         ))
-        self.assertEqual(("bring_object", "move_to_entity", "open_door", "prepare_drink", "clean_counter"),
+        self.assertEqual(("bring_object", "move_to_entity", "open_door", "prepare_drink", "clean_counter", "serve_snack"),
                          BUILT_IN_ACTION_CATALOG.available_action_ids)

@@ -8,7 +8,7 @@ from .memory_consolidation_context import MemoryConsolidationContextError, Memor
 from .memory_job_repository import MemoryJobRepository
 from .memory_pipeline import SEMANTIC_MEMORY_CONSOLIDATOR_VERSION
 from .relationship_reflection_candidate import (
-    RELATIONSHIP_REFLECTION_POLICY_VERSION, RelationshipReflectionCandidate,
+    RelationshipReflectionCandidate,
     RelationshipReflectionCandidateBuilder, RelationshipReflectionCandidateError,
 )
 from .relationship_reflection_repository import RelationshipReflectionRepository
@@ -73,7 +73,6 @@ class RelationshipReflectionScanner:
             for candidate in candidates:
                 if not self.reflections.exists_for_episode_pair(
                     candidate.observer, candidate.subject, candidate.episode_id,
-                    RELATIONSHIP_REFLECTION_POLICY_VERSION,
                 ):
                     pending.append(candidate)
         self._end_of_round = len(jobs) < limit

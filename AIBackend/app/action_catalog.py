@@ -7,6 +7,7 @@ from typing import Iterable, Mapping
 
 from .action_contracts import ActionBindingDescriptor, ActionDescriptor, ActionRegistration
 from .drink_types import DRINK_TYPE_IDS
+from .snack_catalog import SNACK_TYPE_IDS, SNACK_QUANTITY_IDS, menu_guidance
 
 
 class ActionCatalog:
@@ -115,6 +116,15 @@ PREPARE_DRINK_REGISTRATION = ActionRegistration(ActionDescriptor(
     'outcome confirms completion.'
 ))
 
+SERVE_SNACK_REGISTRATION = ActionRegistration(ActionDescriptor(
+    action_id="serve_snack", version="1.0",
+    description="Provide one configured snack type and quantity through a logical Cafe service; not physical item delivery.",
+    binding_schema=(ActionBindingDescriptor(name="snack_type", kind="enum", enum_values=SNACK_TYPE_IDS),
+                    ActionBindingDescriptor(name="quantity", kind="enum", enum_values=SNACK_QUANTITY_IDS)),
+    target_requirements=("authorized_snack_service", "requesting_player"),
+    default_timeout_seconds=30, interruption_policy="cancel", confirmation_policy="on_rebind",
+), model_usage=menu_guidance())
+
 CLEAN_COUNTER_REGISTRATION = ActionRegistration(ActionDescriptor(
     action_id="clean_counter", version="1.0",
     description="Wipe the single authorized spare counter surface when it needs cleaning.",
@@ -133,4 +143,5 @@ BUILT_IN_ACTION_CATALOG = ActionCatalog((
     OPEN_DOOR_REGISTRATION,
     PREPARE_DRINK_REGISTRATION,
     CLEAN_COUNTER_REGISTRATION,
+    SERVE_SNACK_REGISTRATION,
 ))

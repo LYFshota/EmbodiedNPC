@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace EmbodiedNPC.Animation
 {
-    /// <summary>Read-only projection of the real preparation interaction onto one masked Animator layer.</summary>
+    /// <summary>Read-only projection of formal drink/snack work onto the existing masked interaction layer.</summary>
     [DisallowMultipleComponent, DefaultExecutionOrder(30)]
     public sealed class DrinkPreparationPresenter : MonoBehaviour
     {
@@ -21,6 +21,7 @@ namespace EmbodiedNPC.Animation
         public float CurrentWeight => playback?.Weight ?? 0;
         public bool IsPlaying => playback?.IsPlaying == true;
         public bool IsReady => playback?.IsReady == true;
+        public bool IsSnackReady => isActiveAndEnabled && playback?.IsAlternateReady == true;
         public bool SteamActive => steam != null && steam.isPlaying;
         public bool PropVisible => preparationProp != null && preparationProp.activeInHierarchy;
 
@@ -40,7 +41,7 @@ namespace EmbodiedNPC.Animation
         private void Unsubscribe() { if (runner != null) runner.GoalOutcomePublished -= OnOutcome; }
         private void OnOutcome(GoalOutcome outcome) => ResetPresentation();
         private void Initialize()
-        { playback?.Reset(); playback = new InteractionLayerPlayback(animator, LayerName, "PrepareDrink", preparationProp, steam); }
+        { playback?.Reset(); playback = new InteractionLayerPlayback(animator, LayerName, "PrepareDrink", preparationProp, steam, "ServeSnack"); }
         public void Tick(float deltaTime)
         {
             var task = runner == null ? null : runner.CurrentTaskFeedback;
@@ -49,7 +50,12 @@ namespace EmbodiedNPC.Animation
                 capability != null && capability.IsAuthorized && motion != null && motion.isActiveAndEnabled &&
                 motion.IsInteractionMotionActive && !motion.IsEmergencyMotionActive && !motion.IsNavigationActive &&
                 !motion.IsCarryPresentationActive;
-            playback?.Tick(prepare, deltaTime);
+            bool snack = isActiveAndEnabled && IsSnackReady && runner != null && runner.isActiveAndEnabled && runner.IsExecuting &&
+                task != null && task.ActionId == "serve_snack" && task.Progress.Action == PlannerActionType.ServeSnack &&
+                TryGetComponent(out SnackServiceCapability snackCapability) && snackCapability.IsAuthorized &&
+                motion != null && motion.isActiveAndEnabled && motion.IsInteractionMotionActive &&
+                !motion.IsEmergencyMotionActive && !motion.IsNavigationActive && !motion.IsCarryPresentationActive;
+            playback?.Tick(prepare || snack, deltaTime, alternate: snack, showProp: !snack);
         }
         public void ResetPresentation() => playback?.Reset();
         private void Update() => Tick(Time.deltaTime);

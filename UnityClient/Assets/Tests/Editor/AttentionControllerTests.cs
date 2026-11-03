@@ -37,12 +37,14 @@ namespace EmbodiedNPC.Tests
             var body = new GameObject("Visual"); objects.Add(body); body.transform.SetParent(owner.transform, false);
             attention = body.AddComponent<AttentionController>();
             attention.Configure(owner, state, registry, null, null, channels, body.transform);
-            Move(3.9f, 0);
+            Move(2.9f, 0);
         }
         [TearDown] public void TearDown()
         { for (int i = objects.Count - 1; i >= 0; i--) Object.DestroyImmediate(objects[i]); objects.Clear(); }
-        private void Move(float distance, float yaw) => player.transform.position =
-            Quaternion.Euler(0, yaw, 0) * Vector3.forward * distance;
+        private void Move(float distance, float yaw)
+        {
+            player.transform.position = Quaternion.Euler(0, yaw, 0) * Vector3.forward * distance;
+        }
         private void Evidence(string visible = "current_visible", string proximity = "out_of_range")
         {
             sequence++;
@@ -53,8 +55,18 @@ namespace EmbodiedNPC.Tests
         }
         [Test] public void RegistryOnlyPlayer_CannotAcquire()
         { attention.Tick(1); Assert.That(attention.Source, Is.EqualTo(AttentionSource.None)); }
+        [Test] public void PlayerCameraCannotOverrideNpcVisionAndRange()
+        {
+            var cameraObject = new GameObject("PlayerViewAway"); objects.Add(cameraObject);
+            cameraObject.AddComponent<Camera>();
+            Evidence(); attention.Tick(.3f); Assert.That(attention.HasGazePoint, Is.True);
+            attention.ResetAttention(); Move(3.2f, 0); attention.Tick(1);
+            Assert.That(attention.HasGazePoint, Is.False);
+            Move(2.8f, 0); Evidence("lost", "nearby"); attention.Tick(1);
+            Assert.That(attention.HasGazePoint, Is.False);
+        }
         [TestCase("current_visible", "out_of_range")]
-        [TestCase("lost", "nearby")]
+        [TestCase("current_visible", "nearby")]
         public void CurrentObserverEvidence_AllowsAcquire(string visible, string proximity)
         {
             Evidence(visible, proximity); attention.Tick(.05f); Assert.That(attention.HasGazePoint, Is.False);
@@ -65,15 +77,16 @@ namespace EmbodiedNPC.Tests
         { Evidence(visible); attention.Tick(1); Assert.That(attention.HasGazePoint, Is.False); }
         [Test] public void DistanceHysteresis_MaintainsThenReleases()
         {
-            Evidence(); attention.Tick(.3f); Move(4.1f, 0); attention.Tick(.3f);
-            Assert.That(attention.IsLiveTracking, Is.True); Move(5.1f, 0); attention.Tick(.1f);
+            Evidence(); attention.Tick(.3f); Move(3.1f, 0); attention.Tick(.3f);
+            Assert.That(attention.IsLiveTracking, Is.True); Move(3.7f, 0); attention.Tick(.1f);
             Assert.That(attention.IsLiveTracking, Is.False); attention.Tick(.21f);
             Assert.That(attention.HasGazePoint, Is.False);
         }
-        [Test] public void AngleHysteresis_MaintainsThenReleases()
+        [Test] public void NpcVisionOwnsFovInsteadOfASecondNarrowRootCone()
         {
-            Move(3, 44); Evidence(); attention.Tick(.3f); Move(3, 50); attention.Tick(.3f);
-            Assert.That(attention.IsLiveTracking, Is.True); Move(3, 56); attention.Tick(.31f);
+            Move(2.5f, 55); Evidence(); attention.Tick(.3f);
+            Assert.That(attention.IsLiveTracking, Is.True);
+            Evidence("lost", "nearby"); attention.Tick(.31f);
             Assert.That(attention.HasGazePoint, Is.False);
         }
         [Test] public void LostEvidence_FreezesPointEvenWhenHiddenTransformMoves()

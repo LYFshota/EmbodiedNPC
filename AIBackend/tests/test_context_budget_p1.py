@@ -1,5 +1,7 @@
 """P1 acceptance at the trusted ledger -> final provider payload boundary."""
 
+from tests.relationship_test_context import social_context
+
 import copy
 import json
 import logging
@@ -246,14 +248,12 @@ class ContextBudgetP1Tests(unittest.IsolatedAsyncioTestCase):
             self.fixture.pair(i, text="输入" + "甲" * 100, reply="乙" * 100)
         knowledge = KnowledgeContext(status="OK", items=tuple(dict(
             knowledge_id=f"k{i}", content="有条件的参考知识。" * 15, version=1) for i in range(3)))
-        social = RelationshipContext(interpretations=("历史主观解释，不授权动作。" * 10,),
-            sources=({"reflection_id": "test", "generated_at": 1.0},),
-            truncated=False, policy_version="p1-test")
+        social = social_context(*("历史主观解释，不授权动作。" * 10,))
         reader, models = await self.build(two_steps=True, knowledge=knowledge, relationship=social)
         self.assertEqual(16, messages(reader))
         for model in models:
             self.assertIn("k0", model.messages[-1].content)
-            self.assertIn(social.interpretations[0], model.messages[-1].content)
+            self.assertIn(social.current_state.items[0].text, model.messages[-1].content)
         self.assertIn("玩家最喜欢的颜色是蓝色", models[1].messages[-1].content)
         self.assertNotIn("MEMORY_RECALL", encode(models[1].response_schema))
 

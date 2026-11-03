@@ -51,7 +51,7 @@ namespace EmbodiedNPC.Planning
             {
                 return admission;
             }
-            if (admission.ResolvedGoal is ResolvedPrepareDrinkGoal || admission.ResolvedGoal is ResolvedCleanCounterGoal) return admission;
+            if (admission.ResolvedGoal is ResolvedServeSnackGoal || admission.ResolvedGoal is ResolvedPrepareDrinkGoal || admission.ResolvedGoal is ResolvedCleanCounterGoal) return admission;
 
             if (admission.ResolvedMoveGoal != null)
             {

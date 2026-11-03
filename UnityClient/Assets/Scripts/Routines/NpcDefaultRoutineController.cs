@@ -22,11 +22,26 @@ namespace EmbodiedNPC.Routines
         [SerializeField] private MonoBehaviour defaultRoutineBehaviour;
         [SerializeField, Min(0f)] private float engagementHoldSeconds = 8f;
         [SerializeField, Min(0f)] private float resumeDelay = 1f;
+        [SerializeField] private bool stationaryAmbientOnly;
         private INpcDefaultRoutine defaultRoutine;
         private double engagementUntil;
         private float quietSeconds;
         public bool IsEngagementHeld => Time.unscaledTimeAsDouble < engagementUntil;
         public string LastEngagementReason { get; private set; } = string.Empty;
+        public bool IsConversationBlockingAmbient => IsEngagementHeld ||
+            dialogue != null && dialogue.IsPresentationVisible && dialogue.SelectedTarget != null && dialogue.SelectedTarget.Entity == owner ||
+            expressive != null && expressive.ConversationSpeakerId != null;
+        public bool IsAmbientActivityBlocked => owner == null || orchestrator == null || motionChannels == null ||
+            !motionChannels.isActiveAndEnabled || goalPlanRunner != null && goalPlanRunner.HasActiveTask ||
+            orchestrator.HasActiveRun || IsEngagementHeld || motionChannels.IsEmergencyMotionActive ||
+            motionChannels.IsInteractionMotionActive || motionChannels.IsFormalTaskMotionActive ||
+            motionChannels.IsCarryPresentationActive || motionChannels.ActiveGesture == "wave" ||
+            motionChannels.IsNavigationActive && !(motionChannels.IsAmbientNavigation &&
+                defaultRoutineBehaviour is ReturnToHomeRoutine home && home.OwnsPath) ||
+            dialogue != null && dialogue.IsPresentationVisible && dialogue.SelectedTarget != null && dialogue.SelectedTarget.Entity == owner ||
+            expressive != null && expressive.ConversationSpeakerId != null;
+        public bool CanStartAmbient(bool navigation) => isActiveAndEnabled && !IsAmbientActivityBlocked &&
+            (!navigation || !stationaryAmbientOnly && goalPlanRunner != null && defaultRoutine is ReturnToHomeRoutine);
         // The originating player Run and its conversation may change situation, but cannot bypass task occupancy.
         public bool IsCognitiveModeTransitionBlocked(CognitiveRun ownRun) => IsOwnedCognitionBlocked(ownRun, false);
         // The driver installs outcome ownership before the original handoff. Only that
@@ -40,7 +55,8 @@ namespace EmbodiedNPC.Routines
             motionChannels.IsInteractionMotionActive || motionChannels.IsFormalTaskMotionActive ||
             motionChannels.IsCarryPresentationActive || motionChannels.ActiveGestureId != 0 ||
             motionChannels.IsNavigationActive || (expressive != null && expressive.Speech != null && expressive.Speech.IsSpeaking);
-        public bool IsDailyActivityBlocked => goalPlanRunner == null || orchestrator == null || motionChannels == null ||
+        public bool IsDailyActivityBlocked => stationaryAmbientOnly || motionChannels != null && motionChannels.ActiveAmbientId != 0
+            ? IsAmbientActivityBlocked : goalPlanRunner == null || orchestrator == null || motionChannels == null ||
             goalPlanRunner.HasActiveTask || orchestrator.HasActiveRun || IsEngagementHeld ||
             motionChannels.IsEmergencyMotionActive || motionChannels.IsInteractionMotionActive ||
             motionChannels.IsFormalTaskMotionActive || motionChannels.IsCarryPresentationActive ||
@@ -52,7 +68,7 @@ namespace EmbodiedNPC.Routines
         private void Awake()
         {
             defaultRoutine = defaultRoutineBehaviour as INpcDefaultRoutine;
-            if (defaultRoutine == null || owner == null || goalPlanRunner == null || orchestrator == null ||
+            if ((!stationaryAmbientOnly && (defaultRoutine == null || goalPlanRunner == null)) || owner == null || orchestrator == null ||
                 motionChannels == null || expressive == null || dialogue == null || entityRegistry == null)
             {
                 Debug.LogWarning("[DefaultRoutine] Invalid routine or required references; execution disabled.", this);
@@ -67,6 +83,7 @@ namespace EmbodiedNPC.Routines
         }
         private void OnDisable()
         {
+            motionChannels?.CancelAmbient("admission_disabled");
             if (dialogue != null) dialogue.DialogueSubmissionAccepted -= OnAcceptedUtterance;
             if (goalPlanRunner != null) goalPlanRunner.GoalOutcomePublished -= OnGoalOutcome;
             if (orchestrator != null) orchestrator.RunStarted -= OnRunStarted;
@@ -76,6 +93,8 @@ namespace EmbodiedNPC.Routines
         }
         public void RefreshEngagement(string reason)
         {
+            if (reason == "player_utterance") motionChannels?.RequestAmbientEnd(reason);
+            else motionChannels?.CancelAmbient(reason);
             engagementUntil = Time.unscaledTimeAsDouble + engagementHoldSeconds;
             LastEngagementReason = reason ?? string.Empty;
             quietSeconds = 0f;
@@ -86,6 +105,8 @@ namespace EmbodiedNPC.Routines
             // Release only our path before a same-frame action admission reads navigation busy state.
             quietSeconds = 0f;
             defaultRoutine?.SuspendRoutine();
+            if (IsConversationBlockingAmbient) motionChannels?.RequestAmbientEnd("conversation");
+            else motionChannels?.CancelAmbient("cognitive_run");
         }
         private bool IsPlayer(string id) => entityRegistry != null &&
             entityRegistry.TryGetEntity(id, out WorldEntity entity) && entity.IsAgent(AgentRole.Player);
@@ -103,9 +124,19 @@ namespace EmbodiedNPC.Routines
         }
         private void LateUpdate()
         {
+            if (motionChannels != null && motionChannels.ActiveAmbientId != 0)
+            {
+                if (IsAmbientActivityBlocked)
+                {
+                    if (IsConversationBlockingAmbient) motionChannels.RequestAmbientEnd("conversation");
+                    else motionChannels.CancelAmbient("interaction_or_task");
+                }
+                else if (motionChannels.IsAmbientUsingArms) return;
+            }
             if (defaultRoutine == null || defaultRoutineBehaviour == null || !defaultRoutineBehaviour.isActiveAndEnabled) return;
             // Navigation is deliberately excluded: the routine's own path is ordinary locomotion.
-            bool blocked = IsDailyActivityBlocked;
+            bool blocked = motionChannels != null && motionChannels.ActiveAmbientId != 0
+                ? IsAmbientActivityBlocked : IsDailyActivityBlocked;
             if (blocked || IsEngagementHeld)
             {
                 quietSeconds = 0f;

@@ -25,7 +25,7 @@ public static class PublicPreviewBuild
 
     private static void Build(string output)
     {
-        if (PlayerSettings.bundleVersion != "0.1.4-preview")
+        if (PlayerSettings.bundleVersion != "0.1.5-preview")
             throw new Exception("Release application version mismatch");
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.Mono2x);
         Directory.CreateDirectory(Path.GetDirectoryName(output));

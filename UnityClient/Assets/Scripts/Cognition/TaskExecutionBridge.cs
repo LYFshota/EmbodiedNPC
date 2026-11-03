@@ -41,6 +41,9 @@ namespace EmbodiedNPC.Cognition
         private bool ValidGoal()
         {
             if(goal==null || goal.Properties().Any(p=>p.Value.Type!=JTokenType.String)) return false;
+            if((string)goal["kind"]=="serve_snack")
+                return goal.Count==3 && SnackCatalog.IsValid((string)goal["snack_type"]) && SnackCatalog.IsQuantity((string)goal["quantity"]) &&
+                    !string.IsNullOrEmpty(execution_request.player_entity_id) && execution_request.target_entity_id==null && execution_request.condition_revision==null;
             return (string)goal["kind"]=="serve_drink" ? goal.Count==2 && DrinkTypes.IsValid((string)goal["drink_type"]) &&
                 !string.IsNullOrEmpty(execution_request.player_entity_id) && execution_request.target_entity_id==null && execution_request.condition_revision==null :
                 (string)goal["kind"]=="clean_assigned_counter" && goal.Count==2 && (string)goal["counter_key"]=="assigned_counter" &&
@@ -57,20 +60,35 @@ namespace EmbodiedNPC.Cognition
                 command_id==runtime.command_id && visit_id==runtime.visit_id && scene_instance_id==runtime.scene_instance_id &&
                 owner.Matches(identity?.observer) && player.Matches(participant) && request.context.current_event.has_world_revision &&
                 request.context.current_event.world_revision==execution_request.world_revision && MatchesProposal(response?.decision?.action_proposal) &&
-                ((string)goal["kind"]=="serve_drink" ? execution_request.player_entity_id==request.context.relevant_player.player_entity_id :
+                ((string)goal["kind"]!="clean_assigned_counter" ? execution_request.player_entity_id==request.context.relevant_player.player_entity_id :
                     execution_request.target_entity_id==request.context.counter_work?.target_entity_id &&
                     execution_request.condition_revision==request.context.counter_work?.condition_revision) &&
                 response?.decision?.target_daily_mode==null && response.decision.dialogue_turn_policy!="MAY_CONTINUE";
         }
-        public bool MatchesProposal(CognitiveActionProposal proposal) => proposal?.bindings?.Count==1 &&
-            ((string)goal?["kind"]=="serve_drink" ? proposal.action_id=="prepare_drink" &&
+        public bool MatchesProposal(CognitiveActionProposal proposal)
+        {
+            if(proposal?.bindings==null) return false;
+            if((string)goal?["kind"]=="serve_snack")
+                return proposal.action_id=="serve_snack" && proposal.bindings.Count==2 &&
+                    proposal.bindings.TryGetValue("snack_type",out var snack) && snack==(string)goal["snack_type"] &&
+                    proposal.bindings.TryGetValue("quantity",out var quantity) && quantity==(string)goal["quantity"];
+            return proposal.bindings.Count==1 && ((string)goal?["kind"]=="serve_drink" ? proposal.action_id=="prepare_drink" &&
                 proposal.bindings.TryGetValue("drink_type",out var drink) && drink==(string)goal["drink_type"] :
                 proposal.action_id=="clean_counter" && proposal.bindings.TryGetValue("target",out var target) && target==execution_request.target_entity_id);
-        internal bool MatchesWorldReceipt(GoalOutcome outcome,DrinkReceipt? drink,CounterCleaningReceipt? counter)
+        }
+        internal bool MatchesWorldReceipt(GoalOutcome outcome,DrinkReceipt? drink,CounterCleaningReceipt? counter,SnackServiceReceipt? snack=null)
         {
             var expected=execution_request;
             if(outcome.Status!=PlanExecutionStatus.Succeeded || outcome.ProposalRevision!=0 || outcome.ActorEntityId!=agent_entity_id ||
                 outcome.ProposalId!=expected.proposal_id || outcome.TraceId!=trace_id) return false;
+            if((string)goal["kind"]=="serve_snack")
+                return outcome.GoalType=="serve_snack" && !drink.HasValue && !counter.HasValue && snack.HasValue &&
+                    TaskRuntimeContextDto.IsToken(snack.Value.Id) && snack.Value.Actor==agent_entity_id &&
+                    snack.Value.Proposal==expected.proposal_id && snack.Value.Trace==trace_id &&
+                    snack.Value.Player==expected.player_entity_id && snack.Value.SnackType==(string)goal["snack_type"] &&
+                    snack.Value.Quantity==(string)goal["quantity"] &&
+                    expected.world_revision<snack.Value.WorldRevision && snack.Value.WorldRevision<=outcome.WorldRevision;
+            if(snack.HasValue) return false;
             if((string)goal["kind"]=="serve_drink")
                 return outcome.GoalType=="prepare_drink" && !counter.HasValue && drink.HasValue &&
                     TaskRuntimeContextDto.IsToken(drink.Value.Id) && drink.Value.Actor==agent_entity_id &&
@@ -194,7 +212,8 @@ namespace EmbodiedNPC.Cognition
             if(runtime?.CanRetainExecution!=true)
             {ObserveExecution("rejected",error:"TASK_RUNTIME_NOT_READY");return false;}
             player=registry!=null && registry.TryGetEntity(request.context.relevant_player.player_entity_id,out var entity)?entity:null;
-            stationId=(string)ticket.goal["kind"]=="serve_drink"?GetComponent<DrinkPreparationCapability>()?.Station?.Entity?.EntityId:
+            stationId=(string)ticket.goal["kind"]=="serve_snack"?GetComponent<SnackServiceCapability>()?.Station?.EntityId:
+                (string)ticket.goal["kind"]=="serve_drink"?GetComponent<DrinkPreparationCapability>()?.Station?.Entity?.EntityId:
                 GetComponent<CounterCleaningCapability>()?.Station?.Entity?.EntityId;
             backend.TaskExecutionResultReceived-=OnResult;backend.TaskExecutionResultReceived+=OnResult;
             backend.CognitiveResponseReceived-=OnTaskMutation;backend.CognitiveResponseReceived+=OnTaskMutation;
@@ -231,13 +250,18 @@ namespace EmbodiedNPC.Cognition
             player.TryGetPersistentIdentityKey(out var playerKey) && ticket.player.identity_namespace==playerKey.Namespace &&
             ticket.player.identity_type==playerKey.IdentityType && ticket.player.persistent_id==playerKey.PersistentId &&
             ((string)ticket.goal["kind"]=="clean_assigned_counter" || (GetComponent<TaskConsiderationSource>()?.IsPlayerVisible()??false)) && world!=null && runner!=null &&
-            ((string)ticket.goal["kind"]=="serve_drink" ? GetComponent<DrinkPreparationCapability>()?.IsAuthorized==true &&
+            ((string)ticket.goal["kind"]=="serve_snack" ? GetComponent<SnackServiceCapability>()?.IsAuthorized==true &&
+                GetComponent<SnackServiceCapability>().Station.EntityId==stationId :
+                (string)ticket.goal["kind"]=="serve_drink" ? GetComponent<DrinkPreparationCapability>()?.IsAuthorized==true &&
                 GetComponent<DrinkPreparationCapability>().Station.Entity.EntityId==stationId :
                 GetComponent<CounterCleaningCapability>()?.IsAuthorized==true &&
                 GetComponent<CounterCleaningCapability>().Station.Entity.EntityId==stationId);
 
-        private bool AllowsEffect(string action,string target,string recipient,string drink,int condition) =>
-            stage=="executing" && LiveGuard() && target==stationId && ((string)ticket.goal["kind"]=="serve_drink" ?
+        private bool AllowsEffect(string action,string target,string recipient,string drink,int condition,string snack,string quantity) =>
+            stage=="executing" && LiveGuard() && target==stationId && ((string)ticket.goal["kind"]=="serve_snack" ?
+                action=="serve_snack" && recipient==request.context.relevant_player.player_entity_id &&
+                snack==(string)ticket.goal["snack_type"] && quantity==(string)ticket.goal["quantity"] :
+                (string)ticket.goal["kind"]=="serve_drink" ?
                 action=="prepare_drink" && recipient==request.context.relevant_player.player_entity_id && drink==(string)ticket.goal["drink_type"] :
                 action=="clean_counter" && target==ticket.execution_request.target_entity_id && condition==ticket.execution_request.condition_revision);
 
@@ -273,7 +297,7 @@ namespace EmbodiedNPC.Cognition
             ["attempt_id"]=ticket.attempt_id,["scene_instance_id"]=ticket.scene_instance_id,
             ["proposal_id"]=ticket.execution_request.proposal_id,["trace_id"]=ticket.trace_id,["actor_entity_id"]=ticket.agent_entity_id,
             ["outcome_id"]=outcome?.OutcomeId??("not_started_"+ticket.attempt_id),
-            ["goal_type"]=(string)ticket.goal["kind"]=="serve_drink"?"prepare_drink":"clean_counter",
+            ["goal_type"]=(string)ticket.goal["kind"]=="serve_snack"?"serve_snack":(string)ticket.goal["kind"]=="serve_drink"?"prepare_drink":"clean_counter",
             ["status"]=status,["effect"]=effect,["world_revision"]=outcome?.WorldRevision??world?.WorldRevision??ticket.execution_request.world_revision,
             ["failure_code"]=code,["receipt"]=receipt
         };
@@ -306,8 +330,12 @@ namespace EmbodiedNPC.Cognition
             if(clean) receipt=new JObject { ["kind"]="counter_cleaned",["receipt_id"]=c.Id,["actor_entity_id"]=outcome.ActorEntityId,
                 ["proposal_id"]=outcome.ProposalId,["trace_id"]=outcome.TraceId,["world_revision"]=c.WorldRevision,
                 ["target_entity_id"]=c.Target,["condition_revision"]=c.ConditionVersion };
+            bool snack=runner.TryGetSnackReceipt(key,out var s);
+            if(snack) receipt=new JObject { ["kind"]="snack_served",["receipt_id"]=s.Id,["actor_entity_id"]=s.Actor,["proposal_id"]=s.Proposal,
+                ["trace_id"]=s.Trace,["world_revision"]=s.WorldRevision,["player"]=JObject.FromObject(ticket.player),
+                ["player_entity_id"]=s.Player,["snack_type"]=s.SnackType,["quantity"]=s.Quantity };
             bool success=outcome.Status==PlanExecutionStatus.Succeeded;
-            if(success && !ticket.MatchesWorldReceipt(outcome,drink?(DrinkReceipt?)d:null,clean?(CounterCleaningReceipt?)c:null) ||
+            if(success && !ticket.MatchesWorldReceipt(outcome,drink?(DrinkReceipt?)d:null,clean?(CounterCleaningReceipt?)c:null,snack?(SnackServiceReceipt?)s:null) ||
                 !success && receipt!=null || outcome.Status==PlanExecutionStatus.TimedOut)
             { Unknown();return; }
             stage="settling";LastStatus="settlement_pending";

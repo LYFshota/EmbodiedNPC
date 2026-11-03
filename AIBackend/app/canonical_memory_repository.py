@@ -14,6 +14,7 @@ from .episode_repository import EpisodeRepository
 from .experience_ledger import ExperienceLedger
 from .memory_consolidation_admission import (
     MemoryConsolidationAdmission, identity_key, raw_is_owner_speech, NPC_SELF_STATEMENT_LABEL,
+    DIALOGUE_EXCHANGE_PREFIX, DIALOGUE_EXCHANGE_LABEL, raw_dialogue_exchange_subjects,
 )
 from .memory_consolidation_context import MemoryContextResolver, TrustedPersistentIdentity
 from .memory_consolidation_models import (
@@ -155,6 +156,9 @@ class CanonicalMemoryRepository:
             ).rowcount == 1
         events = self._events(connection, memory.memory_id)
         self_statement = memory.subjects == (memory.owner,) and raw_is_owner_speech(events, memory.owner)
+        dialogue_exchange = (memory.memory_type == "EPISODIC"
+            and memory.summary.startswith(DIALOGUE_EXCHANGE_PREFIX)
+            and memory.subjects == raw_dialogue_exchange_subjects(events, memory.owner))
         incoming_ids = {event_id for event_id, _ in memory.evidence}
         incoming_self = memory.subjects == (memory.owner,) and raw_is_owner_speech(
             tuple(event for event in events if event.event_id in incoming_ids), memory.owner)
@@ -163,7 +167,7 @@ class CanonicalMemoryRepository:
         connection.execute(
             "UPDATE memory_records SET occurred_start=?,occurred_end=?,provenance_label=?,provenance_set_json=?,"
             "confidence=?,importance=? WHERE memory_id=?",
-            (start, end, NPC_SELF_STATEMENT_LABEL if self_statement else
+            (start, end, DIALOGUE_EXCHANGE_LABEL if dialogue_exchange else NPC_SELF_STATEMENT_LABEL if self_statement else
              provenance[0] if len(provenance) == 1 else "MIXED", json.dumps(provenance),
              existing["confidence"] if existing and incoming_self else
              max(existing["confidence"], memory.confidence) if existing else memory.confidence,

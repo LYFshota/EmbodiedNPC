@@ -42,3 +42,10 @@ MonoBehaviour:
     objective: 低频观察周围环境。
   minimumModeSeconds: 1
   transitionCooldown: 1
+  ambientActivities:
+  - mode: 0
+    activity: 0
+  - mode: 0
+    activity: 1
+  ambientInterval: {x: 18, y: 38}
+  ambientDwell: {x: 7, y: 11}

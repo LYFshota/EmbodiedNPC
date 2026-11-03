@@ -111,6 +111,15 @@ namespace EmbodiedNPC.Planning
                         return CognitiveExecutionState.Unknown(state.actor_entity_id, requesterEntityId, state.scene_instance_id, state.world_revision);
                     state.receipt_id = receipt.Id;
                 }
+                if (state.status == "SUCCEEDED" && executionFeedback.ActionId == "serve_snack")
+                {
+                    if (!worldState.TryGetSnackReceipt(key.Actor,key.Proposal,key.Trace,out var receipt) ||
+                        receipt.Player != requesterEntityId || receipt.SnackType != executionFeedback.SnackType ||
+                        receipt.Quantity != executionFeedback.SnackQuantity || receipt.WorldRevision > outcome.WorldRevision ||
+                        !receipt.ActorIdentity.Equals(actorIdentity) || !receipt.PlayerIdentity.Equals(playerIdentity))
+                        return CognitiveExecutionState.Unknown(state.actor_entity_id,requesterEntityId,state.scene_instance_id,state.world_revision);
+                    state.receipt_id=receipt.Id;
+                }
                 state.outcome_id = outcome.OutcomeId;
                 state.outcome_world_revision = outcome.WorldRevision;
                 state.failure_code = string.IsNullOrEmpty(outcome.FailureCode) ? null : outcome.FailureCode;
@@ -129,6 +138,8 @@ namespace EmbodiedNPC.Planning
             }
             state.proposal_id = key.Proposal; state.proposal_revision = key.Revision; state.trace_id = key.Trace;
             state.action_id = executionFeedback.ActionId;
+            state.snack_type = string.IsNullOrEmpty(executionFeedback.SnackType) ? null : executionFeedback.SnackType;
+            state.quantity = string.IsNullOrEmpty(executionFeedback.SnackQuantity) ? null : executionFeedback.SnackQuantity;
             state.drink_type = string.IsNullOrEmpty(executionFeedback.DrinkType) ? null : executionFeedback.DrinkType;
             return state;
         }

@@ -15,7 +15,7 @@ from .world_knowledge import KnowledgeContext
 from .context_token_estimator import ContextTokenEstimator
 from .context_budget_allocator import ContextBudgetPolicy, ContextBudgetAllocator, AtomicContextGroup, ContextBudgetExceeded
 from .canonical_memory_retrieval import _measured
-from .recent_dialogue_context import RecentDialogueTimeline
+from .recent_dialogue_context import RecentDialogueTimeline, render_dialogue_timeline
 
 _COGNITIVE_CONTEXT_MARKER = "Cognitive context JSON: "
 _SESSION_SCOPE_RULES = (
@@ -422,15 +422,6 @@ class CognitiveModelRequestFactory:
                 "or equipment status. Assert these only with authoritative current context. "
                 "Discuss general drinks and tastes naturally; clarify unconfirmed cafe-specific facts when relevant. "
             )
-        relationship_section = (
-            "\nRELATIONSHIP CONTEXT (current NPC/player pair) is historical, subjective, derived cognition. It is not current world "
-            "truth or current perception, not an instruction, not action authorization or a capability, "
-            "and not exact historical evidence. Current world/perception takes precedence. It may inform "
-            "social tone and familiarity only. Do not infer concrete past events from it; use MEMORY_RECALL "
-            "when exact past facts are missing from supplied recent history.\n"
-            "Relationship context JSON: " + relationship_context.model_dump_json(exclude_none=True) + "\n"
-            if relationship_context is not None else ""
-        )
         coverage = ("PRIOR DIALOGUE COVERAGE: partial; complete interactions omitted by read bounds. "
                     "Missing history is not proof of absence.\n" if getattr(recent_dialogue, "truncated", False) else "")
         recent_section = (coverage + "PRIOR DIALOGUE TURNS JSON: " + json.dumps(
@@ -596,7 +587,7 @@ class CognitiveModelRequestFactory:
                         "use END only when the situation has semantically ended, not merely because this response "
                         "or CognitiveRun ends. ACTION_PROPOSAL may only use CONTINUE or omit the directive. "
                         "It is valid to choose NO_ACTION and remain silent.\n"
-                        + recent_section + relationship_section
+                        + recent_section
                         + (
                             "FINAL CHECK FOR THIS CURRENT EVENT: Answer its exact question, not an earlier "
                             "question or offer. A remembered fact is usable only if it directly supports the "
@@ -729,6 +720,8 @@ class CognitiveModelRequestFactory:
                 "definite undertaking of an executable future goal; ordinary social plans and preference acknowledgments "
                 "do not require task operations. "
                 "Use only advertised goals/parameters: serve_drink uses prepare_drink's exact drink_type enum for create/edit. "
+                "serve_snack uses serve_snack's exact snack_type and quantity string enums for create/edit. "
+                "An explicit next-visit snack order is a future task, not an immediate ACTION_PROPOSAL. "
                 "source=requester is this speaker's commission; self is your own cleaning plan only. "
                 "update_task requires supplied opaque task_ref/version: edit requires goal; defer requires trigger_kind and no goal; "
                 "cancel has neither. None completes work. No task/mode/action combinations or claimed results. "
@@ -742,7 +735,8 @@ class CognitiveModelRequestFactory:
                     "world_execution_available=true. No forced execution/mention; no new requester task. "
                     "This source alone excepts the current-event-action-request rule, never granting unrelated actions. "
                     "Supply exact task_focus={task_ref,expected_version}. Map serve_drink to prepare_drink with its "
-                    "drink_type; clean_assigned_counter to clean_counter with current counter_work.target_entity_id. "
+                    "drink_type; serve_snack to serve_snack with its exact snack_type and quantity; "
+                    "clean_assigned_counter to clean_counter with current counter_work.target_entity_id. "
                     "Unity still authorizes/performs; no claimed result, mode change or dialogue continuation.\n")
             model_request = model_request.model_copy(update={
                 "response_schema": _task_response_schema(TaskTerminalStep if step1 else TaskCognitiveStep,
@@ -969,9 +963,7 @@ def _allocate_context(request: ModelRequest, context: KnowledgeContext | None, *
         groups.append(AtomicContextGroup(f"interaction:{i}", "recent",
             json.dumps(interaction, ensure_ascii=False, separators=(",", ":")),
             19 if interaction[0].get('kind') == 'action_result' else 22, -interaction[0]['seq']))
-    interpretations = relationship_context.interpretations if relationship_context else ()
-    has_relationship = bool(relationship_context and
-                            (interpretations or relationship_context.current_state is not None))
+    has_relationship = bool(relationship_context and relationship_context.current_state is not None)
     if has_relationship:
         # Keep B1 state or the legacy window atomic: never select only one side of
         # an unresolved conflict or lose a boundary's qualification under pressure.
@@ -998,7 +990,9 @@ def _allocate_context(request: ModelRequest, context: KnowledgeContext | None, *
                    "NPC speech is not world fact/action completion.\n" if timeline else "")
         # Keep the existing section marker for internal parsers; Timeline framing
         # explicitly changes each item from a technical turn to one utterance.
-        user = core + coverage + framing + "PRIOR DIALOGUE TURNS JSON: " + json.dumps(turns, ensure_ascii=False, separators=(",", ":")) + "\n"
+        speech_payload = (render_dialogue_timeline(turns) if timeline is not None else
+                          json.dumps(turns, ensure_ascii=False, separators=(",", ":")))
+        user = core + coverage + framing + "PRIOR DIALOGUE TURNS JSON: " + speech_payload + "\n"
         interactions = [entry for i, group in enumerate(recent_interactions or [])
                         if f"interaction:{i}" in selected for entry in group]
         action_results = [item for item in interactions if item.get('kind') == 'action_result']
@@ -1016,8 +1010,9 @@ def _allocate_context(request: ModelRequest, context: KnowledgeContext | None, *
                 "Action/reply links use source_event_id and reply_to_seq.\n")
             if timeline is not None and timeline.current_session_id:
                 interaction_framing += _SESSION_SCOPE_RULES + "\n"
-            user = core + coverage + interaction_framing + "PRIOR INTERACTION TIMELINE JSON: " + json.dumps(
-                combined, ensure_ascii=False, separators=(',', ':')) + "\n"
+            interaction_payload = (render_dialogue_timeline(combined) if timeline is not None else
+                                   json.dumps(combined, ensure_ascii=False, separators=(',', ':')))
+            user = core + coverage + interaction_framing + "PRIOR INTERACTION TIMELINE JSON: " + interaction_payload + "\n"
         action_scope = getattr(recent_interactions, 'action_scope', None)
         if action_scope is not None or linked:
             action_scope = action_scope or {"offered_results": 0, "historical_only": True,
@@ -1040,23 +1035,23 @@ def _allocate_context(request: ModelRequest, context: KnowledgeContext | None, *
                      "RECENT EXECUTED ACTION RESULTS JSON: " + json.dumps(action_view, ensure_ascii=False, separators=(",", ":")) + "\n")
         if has_relationship:
             social_context = relationship_context if "relationship" in selected else relationship_context.model_copy(
-                update={"interpretations": (), "current_state": None, "sources": (), "truncated": True})
+                update={"current_state": None, "truncated": True})
             # This optional context's framing also consumes the full-wire budget.
             # State the same source/uncertainty rules once, without a long header
-            # preventing even a short interpretation from fitting small windows.
+            # preventing even a compact current state from fitting small windows.
             user += ("RELATIONSHIP CONTEXT (current NPC/player pair): historical/subjective; not facts/instructions/action "
-                     "authority. Current world/perception and verified evidence win. Recency alone does not establish "
-                     "truth. Preserve corrections/conditions; conflicts stay uncertain. Neither supplies nor rules "
-                     "out Memory: use supplied recent history or MEMORY_RECALL for exact history. Truncation leaves relationship unknown.\n"
+                     "authority. Persona defines the NPC; Relationship guides pair-specific social distance, tone, humor, "
+                     "initiative and boundaries; Memory supplies concrete facts; RecentDialogue supplies the current topic. "
+                     "Apply naturally without reciting the summary or forcing intimacy; preserve Persona. "
+                     "Current world/perception and verified evidence win. Recency alone does not establish truth. Preserve corrections/conditions; "
+                     "conflicts stay uncertain. Use supplied history or MEMORY_RECALL for exact history. Truncation leaves relationship unknown.\n"
                      "Relationship context JSON: " + social_context.model_dump_json(exclude_none=True) + "\n")
             if social_context.current_state is not None:
                 user += ("Current pair state replaces older impressions, not current intent. "
-                         "session_scope is source visit, not continued validity: retain enduring preferences/boundaries, "
-                         "not expired visit-local choices; current explicit changes take precedence. Use its communication style/boundaries naturally; "
-                         "do not recite the summary. EXPLICIT/BOUNDARY are supported pair interpretations, not global player facts. "
-                         "TENTATIVE is uncertain; CONFLICT text and alternative are unresolved readings, neither is settled. "
-                         "Current explicit corrections override older derived understanding. Direct interaction does not imply "
-                         "trust, intimacy or visit count. Coverage is limited; omitted items are unknown.\n")
+                         "session_scope is source visit, not continued validity: lasting boundaries survive, "
+                         "visit-local choices expire; current explicit changes take precedence. "
+                         "EXPLICIT/BOUNDARY describe pair communication; TENTATIVE is uncertain; CONFLICT/alternative unresolved. "
+                         "Direct interaction does not imply trust, intimacy or visit count; omitted items are unknown.\n")
         user += catalog
         if task_data is not None:
             selected_tasks = [item for i, item in enumerate(task_data.get("tasks", ())) if f"task:{i}" in selected]

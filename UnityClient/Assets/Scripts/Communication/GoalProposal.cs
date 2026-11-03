@@ -13,6 +13,8 @@ namespace EmbodiedNPC.Communication
         public string target_entity_id;
         public string destination_entity_id;
         public string drink_type;
+        public string snack_type;
+        public string quantity;
         // Local trusted request context; never selectable by the model or accepted from JSON.
         [Newtonsoft.Json.JsonIgnore] internal string RequestingPlayerId;
     }

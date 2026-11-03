@@ -12,7 +12,7 @@ namespace EmbodiedNPC.Routines
     /// <summary>One authoritative local life mode. The existing routine remains the only navigation writer.</summary>
     [DisallowMultipleComponent, DefaultExecutionOrder(90)]
     [RequireComponent(typeof(WorldEntity))]
-    public sealed class DailyBehaviorController : MonoBehaviour
+    public sealed partial class DailyBehaviorController : MonoBehaviour
     {
         [SerializeField] private DailyBehaviorProfile profile;
         [SerializeField] private Transform windowRestPoint;
@@ -77,6 +77,7 @@ namespace EmbodiedNPC.Routines
             admission = GetComponent<NpcDefaultRoutineController>(); routine = GetComponent<ReturnToHomeRoutine>();
             idleAnimator = GetComponentInChildren<Animator>();
             activityOrchestrator = GetComponent<AgentOrchestrator>(); activityTasks = GetComponent<GoalPlanRunner>();
+            InitializeAmbient();
             if (profile == null || !profile.IsValid || receiver == null ||
                 (profile.Allows(DailyBehaviorMode.Rest) && (admission == null || systemSource == null)))
             {
@@ -88,6 +89,7 @@ namespace EmbodiedNPC.Routines
         }
         private void OnEnable()
         {
+            SubscribeAmbient();
             if (receiver == null) receiver = GetComponent<AgentEventReceiver>();
             if (receiver != null) receiver.EventReceived += ReceiveSystemEvent;
         }
@@ -98,6 +100,8 @@ namespace EmbodiedNPC.Routines
             capturedContext = null;
             CurrentActivity = null; unavailableNavigation = null; activityModeRevision = -1;
             nextActivityCheck = 0; ActivityReason = "disabled";
+            StopAmbient("daily_disabled");
+            UnsubscribeAmbient();
         }
 
         private void ReceiveSystemEvent(AgentEvent value)
@@ -125,8 +129,9 @@ namespace EmbodiedNPC.Routines
             if (IsActivityBlocked || admission == null || !admission.isActiveAndEnabled ||
                 now < nextTransitionAt || now - enteredAt < profile.MinimumModeSeconds)
             { LastTransitionReason = "deferred_busy_or_cooldown"; return false; }
-            routine?.SuspendRoutine();
             CurrentMode = target; ModeRevision++;
+            RevalidateAmbient();
+            if (ambientInstance == 0) routine?.SuspendRoutine();
             enteredAt = now; nextTransitionAt = now + profile.TransitionCooldown;
             routine?.ResetNavigationRetry();
             ConsumePending("system_event_applied");
@@ -140,6 +145,7 @@ namespace EmbodiedNPC.Routines
         {
             TryApplyPendingTransition();
             TickActivitySelection();
+            TickAmbient();
         }
 
         // Cheap occupancy edges are checked immediately; candidate evaluation is bounded to 1 Hz.
@@ -150,7 +156,9 @@ namespace EmbodiedNPC.Routines
             bool changedMode = activityModeRevision != ModeRevision || activityProfile != profile;
             if (changedMode)
             {
-                routine?.SuspendRoutine(); CurrentActivity = null; unavailableNavigation = null;
+                RevalidateAmbient();
+                if (ambientInstance == 0) routine?.SuspendRoutine();
+                CurrentActivity = null; unavailableNavigation = null;
                 activityModeRevision = ModeRevision; activityProfile = profile; nextActivityCheck = 0;
             }
             bool blocked = IsActivityBlocked;
@@ -174,7 +182,8 @@ namespace EmbodiedNPC.Routines
                     { selected = binding.activity; break; }
             if (selected != CurrentActivity)
             {
-                routine?.SuspendRoutine(); CurrentActivity = selected;
+                if (ambientInstance == 0) routine?.SuspendRoutine();
+                CurrentActivity = selected;
             }
             ActivityReason = !selected.HasValue ? "safe_existing_idle" :
                 unavailableNavigation.HasValue ? "navigation_unavailable_fallback" : "profile_preference_conditions_met";
@@ -314,7 +323,9 @@ namespace EmbodiedNPC.Routines
         }
         private void FinishCognitiveCommit(DailyBehaviorMode target)
         {
-            routine?.SuspendRoutine(); routine?.ResetNavigationRetry();
+            RevalidateAmbient();
+            if (ambientInstance == 0) routine?.SuspendRoutine();
+            routine?.ResetNavigationRetry();
             systemSource?.SynchronizeCommittedMode(target);
             capturedContext = null; LastTransitionReason = "cognition_mode_applied";
         }

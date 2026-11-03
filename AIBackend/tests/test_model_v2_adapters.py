@@ -16,7 +16,7 @@ from app.model_profile_probes import contract_probe, discover_profile
 from app.cognitive_step_models import CognitiveStepResult, TerminalCognitiveStep, DialogueContinuationStep
 from app.providers import InferenceOptions, ModelRequest, ModelMessage, ProviderError
 from app.memory_consolidation_models import MemoryConsolidationResponse
-from app.relationship_reflection_model import RelationshipReflectionModelOutput, RelationshipReflectionModelResponse
+from app.relationship_reflection_model import RelationshipReflectionModelResponse
 from app.contracts import CognitiveDecision
 from tests.cognitive_test_defaults import DEFAULT_COGNITIVE_CONTEXT_LENGTH
 
@@ -79,7 +79,7 @@ def npc_contracts():
         name = 'mock'; model = 'synthetic'; context_length = 32768
         async def execute_preemptible_background(self, provider, request):
             self.request = request
-            return ModelResult(text='{"outcome":"NO_CHANGE","interpretation":null,"state_update":null}')
+            return ModelResult(text='{"outcome":"NO_CHANGE","interpretation":null,"state_updates":[]}')
     capture = Capture()
     candidate = RelationshipReflectionCandidate(TrustedPersistentIdentity('npc','Character','synthetic-npc'),
         TrustedPersistentIdentity('player','Player','synthetic-player'), 'synthetic-episode', 'a'*64, (evidence,))
@@ -90,10 +90,10 @@ def npc_contracts():
          TaskTerminalStep, {'decision_kind':'NO_ACTION'}),
         ('continuation', cognition(synthetic_request(True)), DialogueContinuationStep, {'decision_kind':'NO_ACTION'}),
         ('consolidation', consolidation_request(context, (evidence,)), MemoryConsolidationResponse,
-         {'episodic_memories':[{'summary':'A greeting','subject_handles':['participant_1'],
+         {'episodic_memories':[{'evidence_kind':'EVENT','summary':'A greeting','subject_handles':['participant_1'],
             'evidence_event_ids':['synthetic-event'],'importance':.5,'confidence':.8}], 'semantic_facts':[]}),
-        ('relationship', capture.request, RelationshipReflectionModelOutput,
-         {'outcome':'NO_CHANGE','interpretation':None,'state_update':None}),
+        ('relationship', capture.request, RelationshipReflectionModelResponse,
+         {'outcome':'NO_CHANGE','interpretation':None,'state_updates':[]}),
         ('task_failure', cognition(make_request()), CognitiveDecision,
          {'decision_kind':'DIRECT_RESPONSE','utterance':'这次没有完成。','dialogue_turn_policy':'WAIT_FOR_PLAYER'}),
     )
@@ -313,7 +313,7 @@ class AdapterTests(unittest.TestCase):
         for preset in self.official_presets():
             for name,request,validator,_ in npc_contracts():
                 invalid=({'episodic_memories':42,'semantic_facts':[]} if name=='consolidation' else
-                    {'outcome':'NO_CHANGE','interpretation':42,'state_update':None} if name=='relationship' else
+                    {'outcome':'NO_CHANGE','interpretation':42,'state_updates':[]} if name=='relationship' else
                     {'decision_kind':42})
                 config=self.official_config(preset)
                 schema=self.outbound_schema(preset,build_main_provider(config).budget_payload(request))
@@ -391,8 +391,7 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(blocked,['step0','step1'])
 
     def test_remaining_consumer_schemas_project_without_claiming_live_compatibility(self):
-        for validator in (MemoryConsolidationResponse,RelationshipReflectionModelResponse,
-                          RelationshipReflectionModelOutput,CognitiveDecision):
+        for validator in (MemoryConsolidationResponse,RelationshipReflectionModelResponse,CognitiveDecision):
             for profile in ("portable_union","openai_strict","anthropic"):
                 projected,_=project_schema(validator.model_json_schema(),profile)
                 Draft202012Validator.check_schema(projected)

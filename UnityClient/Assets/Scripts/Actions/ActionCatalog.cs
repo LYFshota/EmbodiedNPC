@@ -91,6 +91,14 @@ namespace EmbodiedNPC.Actions
                 presentationPolicy: new PrepareDrinkPresentationPolicy(),
                 executionPreparationPolicy: new PrepareDrinkPreparationPolicy()),
             new ActionRegistration(new ActionDescriptor(
+                "serve_snack", "1.0", "Provide one configured snack type and quantity through a logical Cafe service; not physical item delivery.",
+                new[] { new ActionBindingDescriptor("snack_type", ActionBindingKind.Enum, enumValues: SnackCatalog.Ids),
+                    new ActionBindingDescriptor("quantity", ActionBindingKind.Enum, enumValues: SnackCatalog.QuantityIds) },
+                new[] { "authorized_snack_service", "requesting_player" }, true, 30f,
+                ActionInterruptionPolicy.Cancel, ActionConfirmationPolicy.OnRebind),
+                new ServeSnackBinder(), new ServeSnackAdmissionPolicy(), new ServeSnackPlanFactory(),
+                presentationPolicy: new ServeSnackPresentationPolicy(), executionPreparationPolicy: new ServeSnackPreparationPolicy()),
+            new ActionRegistration(new ActionDescriptor(
                 "clean_counter", "1.0", "Wipe the single authorized spare counter surface when it needs cleaning.",
                 new[] { new ActionBindingDescriptor("target", ActionBindingKind.EntityRef) },
                 new[] { "authorized_counter", "needs_cleaning" }, true, 30f,

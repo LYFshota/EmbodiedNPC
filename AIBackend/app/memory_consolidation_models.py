@@ -19,6 +19,9 @@ UnitInterval = Annotated[float, Field(ge=0, le=1, allow_inf_nan=False)]
 class EpisodicMemoryCandidate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    evidence_kind: Literal["EVENT", "DIALOGUE_EXCHANGE"] = Field(default="EVENT", description=(
+        "EVENT describes an evidenced occurrence; DIALOGUE_EXCHANGE records a valuable conversation, "
+        "with attributed statements, not independent proof of what was narrated."))
     summary: str = Field(min_length=1, max_length=500)
     subject_handles: tuple[Handle, ...] = Field(max_length=32)
     evidence_event_ids: tuple[EvidenceId, ...] = Field(min_length=1, max_length=64)
@@ -61,7 +64,7 @@ class ConsolidationAdmissionBatch:
     context: MemoryConsolidationContext
     response: MemoryConsolidationResponse
     memories: tuple[AdmittedCanonicalMemory, ...]
-    policy_version: str = "memory-consolidation-admission/2.0"
+    policy_version: str = "memory-consolidation-admission/2.1"
     rejections: tuple[ConsolidationCandidateRejection, ...] = ()
     visible_event_ids: tuple[str, ...] = ()
 

@@ -1,4 +1,4 @@
-"""Bounded, on-read projection of pair-scoped social interpretations."""
+"""Whole current pair-state projection, bounded by the final cognitive budget."""
 
 from __future__ import annotations
 
@@ -12,19 +12,15 @@ from .memory_consolidation_context import TrustedPersistentIdentity
 from .relationship_reflection_repository import RelationshipReflectionRepository
 
 
-RELATIONSHIP_SUMMARY_POLICY_VERSION = "relationship-summary/1.0"
+RELATIONSHIP_SUMMARY_POLICY_VERSION = "relationship-summary/3.0"
 
 
 @dataclass(frozen=True)
 class RelationshipSummaryPolicy:
-    source_window: int = 20
-    max_items: int = 5
     max_chars: int = 2000
     max_tokens: int = 1200
 
     def __post_init__(self) -> None:
-        if not 1 <= self.max_items <= 16 or not self.max_items <= self.source_window <= 64:
-            raise ValueError("RELATIONSHIP_SUMMARY_WINDOW_INVALID")
         if not 1 <= self.max_chars <= 8000 or not 1 <= self.max_tokens <= 5000:
             raise ValueError("RELATIONSHIP_SUMMARY_BUDGET_INVALID")
 
@@ -46,19 +42,16 @@ class RelationshipCurrentStateContext(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     items: tuple[RelationshipStateItemContext, ...] = Field(max_length=4)
     has_direct_interaction: bool
-    coverage: Literal["SINCE_B1", "LEGACY_PARTIAL", "SOURCE_UNAVAILABLE"]
+    coverage: Literal["CURRENT", "SOURCE_UNAVAILABLE"]
     late_episode_skipped: bool
 
 
 class RelationshipSummary(BaseModel):
-    """Derived interpretations with optional lineage, never identity or world authority."""
+    """Current social understanding and read diagnostics, never world authority."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    interpretations: tuple[str, ...]
     current_state: RelationshipCurrentStateContext | None = None
-    # Read-only lineage for cognition; identities and raw event payloads stay private.
-    sources: tuple[dict[str, str | float], ...] = ()
     source_count: int
     selected_count: int
     truncated: bool
@@ -71,7 +64,7 @@ class RelationshipSummary(BaseModel):
 
 
 class RelationshipSummaryReader:
-    """Prefer validated B1 current state; otherwise retain the legacy bounded window."""
+    """Project the complete validated current pair state; never revive old impressions."""
 
     def __init__(
         self,
@@ -105,57 +98,19 @@ class RelationshipSummaryReader:
             chars, tokens = len(serialized), self.estimator.estimate_text(serialized)
             fits = defer_budget or (chars <= self.policy.max_chars and tokens <= self.policy.max_tokens)
             return RelationshipSummary(
-                interpretations=(), current_state=current if fits else None,
+                current_state=current if fits else None,
                 source_count=len(state.items) + int(state.interaction_evidence is not None),
                 # The whole snapshot (including limited-coverage metadata) is one atomic selection.
                 selected_count=1 if fits else 0, truncated=not fits,
                 char_budget_used=chars if fits else 0, token_budget_used=tokens if fits else 0,
-                policy_version="relationship-summary/2.0",
             )
-        sources = self.reflections.list_recent_interpretations(
-            observer, subject, limit=self.policy.source_window,
-        )
-        selected: list[str] = []
-        selected_sources: list[dict[str, str | float]] = []
-        seen: set[str] = set()
-        chars_used = tokens_used = 0
-        # Repository returns the newest bounded window in chronological order.
-        truncated = len(sources) == self.policy.source_window
-        for record in reversed(sources):
-            interpretation = record.interpretation
-            assert interpretation is not None  # Repository returns validated INTERPRETATION rows.
-            if interpretation in seen:
-                continue
-            seen.add(interpretation)
-            if len(selected) == self.policy.max_items:
-                truncated = True
-                break
-            item_chars = len(interpretation)
-            item_tokens = self.estimator.estimate_text(interpretation)
-            if not defer_budget and (chars_used + item_chars > self.policy.max_chars
-                    or tokens_used + item_tokens > self.policy.max_tokens):
-                truncated = True
-                break
-            selected.append(interpretation)
-            if defer_budget:
-                selected_sources.append(dict(reflection_id=record.reflection_id,
-                    generated_at=record.generated_at, policy_version=record.policy_version))
-            chars_used += item_chars
-            tokens_used += item_tokens
-        selected.reverse()
-        selected_sources.reverse()
         return RelationshipSummary(
-            interpretations=tuple(selected),
-            sources=tuple(selected_sources),
-            source_count=len(sources),
-            selected_count=len(selected),
-            truncated=truncated,
-            char_budget_used=chars_used,
-            token_budget_used=tokens_used,
+            source_count=0, selected_count=0, truncated=False,
+            char_budget_used=0, token_budget_used=0,
         )
 
     def get_for_cognition(self, observer: TrustedPersistentIdentity,
                           subject: TrustedPersistentIdentity) -> RelationshipSummary:
-        # B1 state or the bounded legacy pair window. Foreground allocation owns tokens;
+        # Foreground allocation owns whole-snapshot tokens;
         # the standalone reader retains its explicit local budgets for other callers.
         return self.get(observer, subject, defer_budget=True)

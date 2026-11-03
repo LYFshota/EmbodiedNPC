@@ -31,6 +31,7 @@ class BuiltinEmbeddingProvider:
             raise BuiltinEmbeddingError("BUILTIN_EMBEDDING_DIRECTORY_INVALID")
         self._lock = threading.RLock()
         self._session = self._tokenizer = None
+        self._warmed = False
         self.provider_status, self.error_code = "unloaded", None
 
     @property
@@ -85,6 +86,15 @@ class BuiltinEmbeddingProvider:
         self._tokenizer, self._session = tokenizer, session
         self.provider_status, self.error_code = "ready", None
 
+    def warmup(self):
+        """Initialize and exercise this same local session once, without storing a vector."""
+        with self._lock:
+            if self.provider_status == "closed":
+                raise BuiltinEmbeddingError("BUILTIN_EMBEDDING_CLOSED")
+            if not self._warmed:
+                self.embed_query("warmup")
+                self._warmed = True
+
     def embed(self, text):
         """Canonical Indexer contract: encode a document, with its document task."""
         return self._encode(text, query=False)
@@ -129,4 +139,5 @@ class BuiltinEmbeddingProvider:
     def close(self):
         with self._lock:
             self._session = self._tokenizer = None
+            self._warmed = False
             self.provider_status = "closed"

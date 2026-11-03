@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 PAIR_STATE_MAX_ITEMS = 4
+REFLECTION_MAX_UPDATES = 3
 
 
 class StateUpdate(BaseModel):
@@ -45,15 +46,15 @@ class PairStateItem(BaseModel):
 
 class PairState(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-    content_version: Literal["relationship-pair-state/1.0"] = "relationship-pair-state/1.0"
+    content_version: Literal["relationship-pair-state/2.0"] = "relationship-pair-state/2.0"
     revision: int = Field(default=0, ge=0)
     reflection_id: str | None = None
     items: tuple[PairStateItem, ...] = Field(default=(), max_length=PAIR_STATE_MAX_ITEMS)
-    # Audit-only proposal, never a fifth current item or cognition evidence.
-    # Keeping it in the immutable Episode result also deduplicates rediscovery.
-    capacity_limited: PairStateItem | None = None
+    # A capacity-limited batch is entirely unapplied, retained only for audit.
+    # Persisting the whole proposal prevents silent loss and paid rediscovery.
+    capacity_limited: tuple[PairStateItem, ...] = Field(default=(), max_length=REFLECTION_MAX_UPDATES)
     interaction_evidence: StateEvidence | None = None
-    coverage: Literal["SINCE_B1", "LEGACY_PARTIAL", "SOURCE_UNAVAILABLE"] = "SINCE_B1"
+    coverage: Literal["CURRENT", "SOURCE_UNAVAILABLE"] = "CURRENT"
     # Ledger ingestion order, not model generation time, governs late Episodes.
     late_episode_skipped: bool = False
     watermark: int = 0

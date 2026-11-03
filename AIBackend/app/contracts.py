@@ -11,12 +11,13 @@ from .cognitive_task_models import TaskRuntimeContext, CognitiveTaskReceipt, Tas
 from .task_models import TaskCondition
 from .context_capacity import CapacityStatus
 from .drink_types import DrinkType
+from .snack_catalog import SnackType, SnackQuantity
 
 
 Emotion = Literal["happy", "neutral", "fear", "curious", "thoughtful", "concerned", "surprised"]
 ExpressionIcon = Literal["none", "happy", "confused", "surprised", "thinking"]
 Gesture = Literal["none", "wave", "nod"]
-GoalType = Literal["bring_object", "move_to_entity", "open_door", "prepare_drink", "clean_counter"]
+GoalType = Literal["bring_object", "move_to_entity", "open_door", "prepare_drink", "clean_counter", "serve_snack"]
 EntityId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$")]
 CognitiveDecisionKind = Literal["DIRECT_RESPONSE", "NO_ACTION", "ACTION_PROPOSAL"]
 EpisodeDirective = Literal["CONTINUE", "END"]
@@ -309,6 +310,8 @@ class CognitiveExecutionState(BaseModel):
     stage: Literal["accepted", "action", "rediscovering", "replanning", "terminal"] | None = None
     step: str | None = Field(default=None, pattern=r"^[A-Za-z]{1,40}$")
     drink_type: DrinkType | None = None
+    snack_type: SnackType | None = None
+    quantity: SnackQuantity | None = None
     outcome_id: str | None = Field(default=None, min_length=1, max_length=240)
     outcome_world_revision: int = Field(default=0, ge=0)
     failure_code: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_]{1,120}$")
@@ -328,7 +331,7 @@ class CognitiveExecutionState(BaseModel):
         if self.allowed_controls and self.status != "IN_PROGRESS":
             raise ValueError("EXECUTION_CONTROL_REQUIRES_ACTIVE_GOAL")
         details = (self.proposal_id, self.trace_id, self.action_id, self.stage, self.step,
-                   self.drink_type, self.outcome_id, self.failure_code, self.receipt_id)
+                   self.drink_type, self.snack_type, self.quantity, self.outcome_id, self.failure_code, self.receipt_id)
         if self.status == "UNKNOWN":
             if any(x is not None for x in details) or self.proposal_revision or self.outcome_world_revision:
                 raise ValueError("EXECUTION_UNKNOWN_WITH_DETAILS")
@@ -347,6 +350,11 @@ class CognitiveExecutionState(BaseModel):
         if self.status == "SUCCEEDED" and (self.failure_code or
                 self.action_id == "prepare_drink" and (not self.receipt_id or self.drink_type is None)):
             raise ValueError("EXECUTION_DRINK_RECEIPT_REQUIRED")
+        if self.action_id == "serve_snack" and (self.snack_type is None or self.quantity is None or self.drink_type is not None or
+                self.status == "SUCCEEDED" and not self.receipt_id):
+            raise ValueError("EXECUTION_SNACK_RECEIPT_REQUIRED")
+        if self.action_id != "serve_snack" and (self.snack_type is not None or self.quantity is not None):
+            raise ValueError("EXECUTION_SNACK_FIELDS_FORBIDDEN")
         return self
 
 
@@ -780,9 +788,17 @@ class GoalProposal(BaseModel):
     target_entity_id: EntityId | None = None
     destination_entity_id: EntityId | None = None
     drink_type: DrinkType | None = None
+    snack_type: SnackType | None = None
+    quantity: SnackQuantity | None = None
 
     @model_validator(mode="after")
     def validate_goal_arguments(self) -> "GoalProposal":
+        if self.type == "serve_snack":
+            if self.snack_type is None or self.quantity is None or self.drink_type is not None or self.target_entity_id is not None or self.destination_entity_id is not None:
+                raise ValueError("SERVE_SNACK_ARGUMENTS_INVALID")
+            return self
+        if self.snack_type is not None or self.quantity is not None:
+            raise ValueError("SNACK_ARGUMENTS_FORBIDDEN")
         if self.type == "prepare_drink":
             if self.drink_type is None or self.target_entity_id is not None or self.destination_entity_id is not None:
                 raise ValueError("PREPARE_DRINK_ARGUMENTS_INVALID")

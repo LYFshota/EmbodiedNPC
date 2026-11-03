@@ -11,8 +11,8 @@ namespace EmbodiedNPC.Animation
         [SerializeField] private Transform visualBody;
         [SerializeField] private Transform actorRoot;
         [SerializeField] private GestureController gesturePlayback;
-        [SerializeField, Range(0, 60)] private float fullYaw = 30f;
-        [SerializeField, Range(1, 60)] private float maxYaw = 50f;
+        [SerializeField, Range(0, 60)] private float fullYaw = 60f;
+        [SerializeField, Range(1, 90)] private float maxYaw = 75f;
         [SerializeField, Range(0, 90)] private float combinedYawCap = 75f;
         [SerializeField, Range(0, 40)] private float downPitch = 20f;
         [SerializeField, Range(0, 40)] private float upPitch = 25f;
@@ -82,7 +82,7 @@ namespace EmbodiedNPC.Animation
             var channels = expressive == null ? null : expressive.MotionChannels;
             bool accentAllowed = !nod && dialogueAnimation != null && dialogueAnimation.isActiveAndEnabled &&
                 channels != null && channels.isActiveAndEnabled && !channels.IsTaskMotionActive &&
-                !channels.IsEmergencyMotionActive && !channels.IsCarryPresentationActive && channels.ActiveGesture != "wave";
+                !channels.IsEmergencyMotionActive && !channels.IsCarryPresentationActive && !channels.IsAmbientUsingArms && channels.ActiveGesture != "wave";
             float accentPitch = accentAllowed ? dialogueAnimation.HeadPitchAccent : 0;
             float accentTilt = accentAllowed ? dialogueAnimation.HeadTiltAccent : 0;
             bool tracking = !nod && attention != null && attention.isActiveAndEnabled && attention.HasGazePoint && !attention.IsSuppressed;

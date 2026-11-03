@@ -163,7 +163,7 @@ namespace EmbodiedNPC.Planning
                 return Fail(SkillStatus.Failed, "AGENT_NOT_ON_NAVMESH");
 
             if ((destinationEntity == context.Bindings.Destination &&
-                context.Bindings.DestinationApproachPosition.HasValue) || destinationEntity.TryGetComponent<EmbodiedNPC.Actions.CounterCleaningStation>(out _))
+                context.Bindings.DestinationApproachPosition.HasValue) || destinationEntity.TryGetComponent<EmbodiedNPC.Actions.CounterCleaningStation>(out _) || context.Action.Definition.DefinitionId == "serve_snack.walk")
             {
                 originalStoppingDistance = context.Agent.stoppingDistance;
                 context.Agent.stoppingDistance = Mathf.Min(originalStoppingDistance, 0.05f);

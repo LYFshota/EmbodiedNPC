@@ -89,8 +89,8 @@ class VisitRelationshipTests(unittest.TestCase):
     def test_missing_and_mixed_source_provenance_never_becomes_current_intent(self):
         for sources,expected in (((),'unknown'),(('session_old',),'earlier_session'),
                                  (('session_new',),'current_session'),(('session_old','session_new'),'mixed_sessions')):
-            state=RelationshipCurrentStateContext(items=(RelationshipStateItemContext(kind='CONFLICT',text='新理解',alternative='旧理解',source_sessions=sources),),has_direct_interaction=True,coverage='SINCE_B1',late_episode_skipped=False)
-            summary=RelationshipSummary(interpretations=(),current_state=state,source_count=1,selected_count=1,
+            state=RelationshipCurrentStateContext(items=(RelationshipStateItemContext(kind='CONFLICT',text='新理解',alternative='旧理解',source_sessions=sources),),has_direct_interaction=True,coverage='CURRENT',late_episode_skipped=False)
+            summary=RelationshipSummary(current_state=state,source_count=1,selected_count=1,
                 truncated=False,char_budget_used=1,token_budget_used=1)
             context=RelationshipContextResolver(Mock(get_for_cognition=Mock(return_value=summary))).resolve(self.req('session_new'))
             self.assertEqual(context.current_state.items[0].session_scope,expected)

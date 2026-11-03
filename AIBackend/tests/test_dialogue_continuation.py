@@ -96,8 +96,7 @@ class ContinuationTests(ContinuationFixture):
         await CognitiveBackendEntry(provider, PrioritizedModelExecutor(), experience_ledger=self.ledger, context_length=16384).run(
             CognitiveRequest.model_validate(followup))
         content = provider.generate.call_args.args[0].messages[-1].content
-        projection = json.loads(next(line.split(": ", 1)[1] for line in content.splitlines()
-                                     if line.startswith("PRIOR DIALOGUE TURNS JSON: ")))
+        projection = json.JSONDecoder().raw_decode(content.split("PRIOR DIALOGUE TURNS JSON: ", 1)[1])[0]
         self.assertEqual(["推理小说吧。", "最近还找到一本不错的。"],
                          [message["text"] for message in projection if message["role"] == "npc"])
         self.assertEqual(projection[1]["seq"], projection[2]["anchor_seq"])

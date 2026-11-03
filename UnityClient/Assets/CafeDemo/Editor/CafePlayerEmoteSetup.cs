@@ -20,6 +20,16 @@ public static class CafePlayerEmoteSetup
     private static readonly Color Cream = new Color32(248, 240, 213, 255);
     private static readonly Color Surface = new Color32(29, 42, 39, 232);
 
+    public static void ConfigurePlayerFace()
+    {
+        if (Application.isPlaying) throw new InvalidOperationException("Player face authoring requires Edit Mode.");
+        var scene = EditorSceneManager.OpenScene("Assets/Scenes/CafeDemoV2.unity");
+        var player = UnityEngine.Object.FindAnyObjectByType<CafeDemoPlayerController>();
+        var face = player.GetComponent<CafeVrmExpressionPresenter>() ?? player.gameObject.AddComponent<CafeVrmExpressionPresenter>();
+        face.ConfigurePlayer(player.GetComponent<PlayerEmoteController>(), player.GetComponent<PlayerEmoteController>().Animator);
+        EditorSceneManager.MarkSceneDirty(scene); EditorSceneManager.SaveScene(scene);
+    }
+
     [MenuItem("Tools/CafeDemoV2/Configure player emote panel")]
     public static void Apply()
     {

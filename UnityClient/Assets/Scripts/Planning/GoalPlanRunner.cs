@@ -31,6 +31,11 @@ namespace EmbodiedNPC.Planning
             return worldState != null && worldState.TryGetDrinkReceipt(key.Actor, key.Proposal, key.Trace, out receipt);
         }
 
+        internal bool TryGetSnackReceipt(TaskFeedbackKey key, out SnackServiceReceipt receipt)
+        {
+            receipt = default;
+            return worldState != null && worldState.TryGetSnackReceipt(key.Actor, key.Proposal, key.Trace, out receipt);
+        }
         [Header("Goal input and authority")]
         [SerializeField] private GoalValidator goalValidator;
         [SerializeField] private EntityRegistry entityRegistry;
@@ -194,7 +199,7 @@ namespace EmbodiedNPC.Planning
         public bool TrySubmitGoal(GoalProposal proposal, string traceId, string proposalId,
             int proposalRevision, int worldRevision, string initiatingPlayerEntityId = null)
         {
-            if (proposal != null && proposal.type == "prepare_drink")
+            if (proposal != null && (proposal.type == "prepare_drink" || proposal.type == "serve_snack"))
                 proposal.RequestingPlayerId = initiatingPlayerEntityId;
             string rejection = SubmitRejection(proposal, worldRevision);
             if (rejection != null)
@@ -203,6 +208,9 @@ namespace EmbodiedNPC.Planning
                 return false;
             }
 
+            // Formal work never waits for a low-priority local presentation or its path.
+            if (goalValidator != null && goalValidator.ValidateAdmission(proposal).IsApproved)
+                motionChannels?.CancelAmbient("formal_handoff");
             InvalidateProposal();
             activeProposalId = NormalizeProposalId(proposalId);
             activeProposalRevision = System.Math.Max(0, proposalRevision);
@@ -248,7 +256,7 @@ namespace EmbodiedNPC.Planning
             // Never use the admitted target's live anchor position until sensory confirmation.
             // Own hand state is proprioception, not knowledge of a hidden external position.
             if (admission.ResolvedGoal?.HasProprioceptiveTargetEvidence == true ||
-                admission.ResolvedGoal is ResolvedPrepareDrinkGoal || admission.ResolvedGoal is ResolvedCleanCounterGoal)
+                admission.ResolvedGoal is ResolvedServeSnackGoal || admission.ResolvedGoal is ResolvedPrepareDrinkGoal || admission.ResolvedGoal is ResolvedCleanCounterGoal)
                 return BeginValidatedProposal(proposal, traceId, proposalId, proposalRevision);
             if (perceptionProbe.IsKnownAndNotForgotten(proposal.target_entity_id))
                 return BeginValidatedProposal(proposal, traceId, proposalId, proposalRevision);
@@ -346,7 +354,9 @@ namespace EmbodiedNPC.Planning
             var goal = new GoalProposal { type = outcome.GoalType,
                 target_entity_id = string.IsNullOrEmpty(outcome.TargetEntityId) ? null : outcome.TargetEntityId,
                 destination_entity_id = string.IsNullOrEmpty(outcome.DestinationEntityId) ? null : outcome.DestinationEntityId,
-                drink_type = string.IsNullOrEmpty(executionFeedback?.DrinkType) ? null : executionFeedback.DrinkType };
+                drink_type = string.IsNullOrEmpty(executionFeedback?.DrinkType) ? null : executionFeedback.DrinkType,
+                snack_type = string.IsNullOrEmpty(executionFeedback?.SnackType) ? null : executionFeedback.SnackType,
+                quantity = string.IsNullOrEmpty(executionFeedback?.SnackQuantity) ? null : executionFeedback.SnackQuantity };
             var feedback = new CognitiveActionFeedback { original_request_id = parent.action_feedback?.original_request_id ?? parent.request_id,
                 original_run_id = parent.action_feedback?.original_run_id ?? parent.run.run_id,
                 outcome_id = outcome.OutcomeId, proposal_id = outcome.ProposalId, proposal_revision = outcome.ProposalRevision,
@@ -456,7 +466,7 @@ namespace EmbodiedNPC.Planning
             new TaskFeedbackKey(activeActorEntityId, activeProposalId, activeProposalRevision, activeTraceId),
             activeGoal.type, activeGoal.target_entity_id, activeGoal.destination_entity_id,
             feedbackPlayerId, worldState == null ? activeSubmittedWorldRevision : worldState.WorldRevision,
-            ++feedbackSequence, progress, CurrentTaskFeedback?.TargetDefinition ?? ResolveTargetDefinition(), activeGoal.drink_type);
+            ++feedbackSequence, progress, CurrentTaskFeedback?.TargetDefinition ?? ResolveTargetDefinition(), activeGoal.drink_type, activeGoal.snack_type, activeGoal.quantity);
 
         private string ResolveTargetDefinition() => !string.IsNullOrEmpty(activeGoal.target_entity_id) && entityRegistry != null &&
             entityRegistry.TryGetEntity(activeGoal.target_entity_id, out WorldEntity target) ? target.DefinitionId : "";
@@ -552,6 +562,7 @@ namespace EmbodiedNPC.Planning
             // A rejected proposal has not necessarily crossed binding/admission; never label its raw IDs validated.
             if (status != ActionExecutionStatus.Rejected)
             {
+                if (!string.IsNullOrEmpty(goal?.snack_type)) { bindings["snack_type"] = goal.snack_type; bindings["quantity"] = goal.quantity; }
                 if (!string.IsNullOrEmpty(goal?.drink_type)) bindings["drink_type"] = goal.drink_type;
                 if (!string.IsNullOrWhiteSpace(goal?.target_entity_id)) bindings["target"] = goal.target_entity_id;
                 if (!string.IsNullOrWhiteSpace(goal?.destination_entity_id))

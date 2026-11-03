@@ -19,6 +19,7 @@ from app.relationship_reflection_candidate import (
     RelationshipReflectionCandidateBuilder,
 )
 from app.relationship_reflection_models import RelationshipReflectionOutcome, RelationshipReflectionRecord
+from app.relationship_reflection_model import RelationshipReflectionModelResponse
 from app.relationship_reflection_repository import RelationshipReflectionRepository
 from app.relationship_reflection_scanner import RelationshipReflectionScanner
 
@@ -164,13 +165,20 @@ class RelationshipReflectionCandidateTests(unittest.TestCase):
             job, ids = self.episode((
                 self.event("dialogue_input", "player_a", ("npc_01",)),
             ), created_at=index)
-            self.reflections.insert(RelationshipReflectionRecord(
+            candidate=self.builder.build(self.resolver.resolve(job))[0]
+            response=RelationshipReflectionModelResponse(outcome=outcome.value,
+                interpretation='这次交流友善。' if outcome is RelationshipReflectionOutcome.INTERPRETATION else None,
+                state_updates=[dict(operation='ADD',target=None,kind='TENTATIVE',text='有限交流。',event='e0',
+                    quote=candidate.evidence_events[0].natural_language_payload)] if outcome is RelationshipReflectionOutcome.INTERPRETATION else [])
+            record=RelationshipReflectionRecord(
                 reflection_id=f"reflection_{index}", observer=MERCHANT, subject=PLAYER_A,
                 episode_id=job.episode_id, episode_input_hash=job.input_hash,
                 outcome=outcome,
                 interpretation="这次交流友善。" if outcome is RelationshipReflectionOutcome.INTERPRETATION else None,
                 evidence_event_ids=ids, policy_version=POLICY, generated_at=float(index),
-            ))
+            )
+            self.reflections.finalize_pair_update(record,candidate,response,
+                self.reflections.read_current_pair_state(MERCHANT,PLAYER_A))
         batch = self.scanner.scan_next_batch()
         self.assertEqual(batch.scanned_jobs, 2)
         self.assertEqual(batch.candidates, ())

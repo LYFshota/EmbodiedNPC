@@ -176,7 +176,7 @@ namespace EmbodiedNPC.Planning
             runnerSet = new PlanActionRunnerSet(new IPlanActionRunner[]
             {
                 new WalkToActionRunner(), new PickUpActionRunner(), new PutDownActionRunner(), new GiveActionRunner(),
-                new OpenActionRunner(), new PrepareDrinkActionRunner(), new CleanCounterActionRunner(),
+                new OpenActionRunner(), new ServeSnackActionRunner(), new PrepareDrinkActionRunner(), new CleanCounterActionRunner(),
             });
         }
 
@@ -265,6 +265,9 @@ namespace EmbodiedNPC.Planning
         public void Tick(float deltaTime)
         {
             if (!IsExecuting) return;
+            if (resolvedGoal is ResolvedServeSnackGoal snack &&
+                !SnackServiceCapability.ValidateRuntime(entityRegistry, snack.Actor, snack.Target, snack.Player, snack.Snack))
+            { Finish(PlanExecutionStatus.Failed, "SNACK_SERVICE_UNAVAILABLE"); return; }
             if (resolvedGoal is ResolvedPrepareDrinkGoal drink &&
                 !DrinkTypes.ValidateRuntime(entityRegistry, drink.Actor, drink.Target, drink.Player))
             { Finish(PlanExecutionStatus.Failed, "STATION_UNAVAILABLE"); return; }
@@ -344,7 +347,7 @@ namespace EmbodiedNPC.Planning
                 Finish(PlanExecutionStatus.Failed, "EXECUTION_PREPARATION_MISSING");
                 return;
             }
-            if (preparation.Bindings.TargetApproachPosition.HasValue)
+            if (preparation.Bindings.TargetApproachPosition.HasValue && resolvedGoal is not ResolvedServeSnackGoal)
             {
                 WorldEntity target = preparation.Bindings.Target;
                 if (!entityRegistry.TryGetEntity(target.EntityId, out WorldEntity currentTarget) ||
@@ -570,6 +573,8 @@ namespace EmbodiedNPC.Planning
         private bool HasCurrentTargetEvidence()
         {
             // Only this admitted action may use its configured station. Movable item perception is unchanged.
+            if (resolvedGoal is ResolvedServeSnackGoal snack)
+                return SnackServiceCapability.ValidateRuntime(entityRegistry, snack.Actor, snack.Target, snack.Player, snack.Snack);
             if (resolvedGoal is ResolvedPrepareDrinkGoal drink)
                 return DrinkTypes.ValidateRuntime(entityRegistry, drink.Actor, drink.Target, drink.Player);
             if (resolvedGoal is ResolvedCleanCounterGoal clean)

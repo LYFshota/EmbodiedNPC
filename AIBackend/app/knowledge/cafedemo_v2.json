@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "bundle_version": "cafedemo-v2/1.4",
+  "bundle_version": "cafedemo-v2/1.5",
   "entries": [
     {
       "knowledge_id": "cafe.setting",
       "name": "栖光咖啡馆与青石街",
-      "content": "栖光咖啡馆（Stilllight Café）是青石街上的温馨小店，既容得下普通交谈，也给安静的人留空间。青石街是既定的街区生活背景。",
+      "content": "栖光咖啡馆（Stilllight Café）是青石街上的温馨小店，容得下交谈，也给安静的人留空间。店内常设点心有牛角包（可颂）、马卡龙、小蛋糕和布丁，由店员林薇薇提供；菜单不代表实时库存。",
       "knowledge_type": "setting",
       "attributes": {
         "topic": "cafe",
@@ -18,8 +18,8 @@
         "世界背景"
       ],
       "source": "builtin",
-      "version": 2,
-      "updated_at": "2026-10-29T00:00:00Z",
+      "version": 3,
+      "updated_at": "2026-11-03T00:00:00Z",
       "access": {
         "mode": "public",
         "character_ids": [],
@@ -4902,6 +4902,187 @@
         "character_ids": [
           "cafe.quiet_customer"
         ],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "food.croissant",
+      "name": "牛角包与可颂：外形、口感与搭配",
+      "content": "店内展示柜里弯月形的点心是牛角包，也可称可颂。可颂这类酥皮点心常见的特点是有层次、外层酥脆，适合想吃一点烘焙点心的人；可搭配美式或拿铁，按客人是否喜欢奶味来选择。这里说明的是这类点心的常见风格，并未确定本店这一批的馅料、烘烤时间或温度，不能把它介绍成巧克力夹心或刚出炉。",
+      "knowledge_type": "food",
+      "attributes": {
+        "topic": "cafe.food",
+        "dynamic": false,
+        "snack_type": "croissant"
+      },
+      "keywords": [
+        "牛角包",
+        "可颂",
+        "croissant",
+        "酥皮",
+        "面包",
+        "烘焙点心",
+        "点心搭配"
+      ],
+      "related_ids": [
+        "coffee.americano",
+        "coffee.latte"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-03T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "food.macaron",
+      "name": "马卡龙：小份甜点与颜色",
+      "content": "店内食物架上彩色圆形夹心小点心是马卡龙。这类点心通常偏甜、份量小，外壳和夹心带来不同的口感，适合想尝一点甜味的人。可以搭配美式或不额外加糖的红茶；这只是口味建议，不表示玩家喜欢甜食。模型上的颜色只用于外观区分，没有对应已确认的水果、巧克力或其他具体口味，也没有确定本店配方。",
+      "knowledge_type": "food",
+      "attributes": {
+        "topic": "cafe.food",
+        "dynamic": false,
+        "snack_type": "macaron"
+      },
+      "keywords": [
+        "马卡龙",
+        "macaron",
+        "彩色点心",
+        "夹心",
+        "小份",
+        "甜点",
+        "甜食"
+      ],
+      "related_ids": [
+        "coffee.americano",
+        "drink.black_tea"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-03T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "food.cupcake",
+      "name": "小蛋糕：纸杯外形与点单名称",
+      "content": "店内展示柜里的纸杯装点心在菜单上称为小蛋糕，英文是 Cupcake。它适合想选一份蛋糕类点心的人，可以与拿铁或红茶一起考虑。外观和菜单没有确定具体蛋糕胚、夹心或装饰的口味；不能把这份小蛋糕当作已经供应的芝士蛋糕、提拉米苏或巧克力蛋糕。本店这一款的具体甜度、配方与过敏原未作说明。",
+      "knowledge_type": "food",
+      "attributes": {
+        "topic": "cafe.food",
+        "dynamic": false,
+        "snack_type": "cupcake"
+      },
+      "keywords": [
+        "小蛋糕",
+        "纸杯蛋糕",
+        "cupcake",
+        "蛋糕",
+        "芝士蛋糕",
+        "提拉米苏",
+        "巧克力蛋糕"
+      ],
+      "related_ids": [
+        "coffee.latte",
+        "drink.black_tea"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-03T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "food.pudding",
+      "name": "布丁：柔软口感与供应位置",
+      "content": "店内食物架上盛在小盘中的布丁状甜点在菜单上称为布丁。布丁这类甜点常见风格是柔软顺滑，可以作为偏好柔软口感时的一个选择，也可以搭配红茶。这里没有确定本店布丁的具体配方、奶味强弱、焦糖口味、冷热或含糖量；偏好温热或不太甜的客人仍需向店员确认，不能仅凭外观保证符合这些要求。",
+      "knowledge_type": "food",
+      "attributes": {
+        "topic": "cafe.food",
+        "dynamic": false,
+        "snack_type": "pudding"
+      },
+      "keywords": [
+        "布丁",
+        "pudding",
+        "柔软",
+        "顺滑",
+        "软点心",
+        "温热",
+        "不太甜"
+      ],
+      "related_ids": [
+        "drink.black_tea"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-03T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
+        "deployment_ids": [
+          "cafedemo-v2"
+        ]
+      },
+      "usage": "retrieval"
+    },
+    {
+      "knowledge_id": "food.recommendation",
+      "name": "咖啡馆点心选择与饮品搭配",
+      "content": "栖光的常设点心菜单和当前库存是不同的信息。选择点心时，可以先聊喜欢酥脆、柔软还是小份甜点，再结合公开菜单给一两个建议；拿铁与烘焙点心、美式与偏甜的小点心、红茶与柔软甜点都可作为主观搭配建议，没有唯一正确答案。店员和顾客都了解公开菜单，顾客可以表达个人偏好或建议请薇薇取餐，但不因此成为店员，也不能替她承诺已取到或已交付。具体口味、价格、实时余量、温度和过敏原未明确时仍属未知，外观不能证明配方或食品安全适用性。",
+      "knowledge_type": "food",
+      "attributes": {
+        "topic": "cafe.food",
+        "dynamic": false
+      },
+      "keywords": [
+        "点心",
+        "甜点",
+        "食物",
+        "吃的",
+        "推荐",
+        "菜单",
+        "搭配",
+        "snack",
+        "dessert",
+        "food",
+        "recommend",
+        "menu"
+      ],
+      "related_ids": [
+        "food.croissant",
+        "food.macaron",
+        "food.cupcake",
+        "food.pudding",
+        "drink.preference_guidance"
+      ],
+      "source": "builtin",
+      "version": 1,
+      "updated_at": "2026-11-03T00:00:00Z",
+      "access": {
+        "mode": "public",
+        "character_ids": [],
         "deployment_ids": [
           "cafedemo-v2"
         ]

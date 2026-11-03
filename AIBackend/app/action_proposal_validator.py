@@ -60,6 +60,11 @@ class ActionProposalValidator:
             if supported_bindings[name][0] == "enum" and entity_id not in supported_bindings[name][2]:
                 raise ActionProposalValidationError()
 
+        if proposal.action_id == "serve_snack":
+            if context.agent_entity_id != "npc_cafe_01" or context.relevant_player is None:
+                raise ActionProposalValidationError()
+            return GoalProposal(type="serve_snack", snack_type=proposal.bindings["snack_type"], quantity=proposal.bindings["quantity"])
+
         if proposal.action_id == "prepare_drink":
             if context.agent_entity_id != "npc_cafe_01" or context.relevant_player is None:
                 raise ActionProposalValidationError()

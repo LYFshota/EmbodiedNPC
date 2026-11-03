@@ -14,6 +14,8 @@ namespace EmbodiedNPC.Cognition
         public int world_revision;
         public string status = "UNKNOWN";
         public string proposal_id, trace_id, action_id, stage, step, drink_type;
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)] public string snack_type;
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)] public string quantity;
         public int proposal_revision;
         public string outcome_id, failure_code, receipt_id;
         public int outcome_world_revision;
@@ -33,7 +35,7 @@ namespace EmbodiedNPC.Cognition
             (allowed_controls == null || allowed_controls.Length == 0 ||
                 status == "IN_PROGRESS" && allowed_controls.Length == 1 && allowed_controls[0] == "cancel_active_goal") &&
             (status == "UNKNOWN" ? proposal_id == null && trace_id == null && action_id == null && stage == null &&
-                step == null && drink_type == null && outcome_id == null && failure_code == null && receipt_id == null &&
+                step == null && snack_type == null && quantity == null && drink_type == null && outcome_id == null && failure_code == null && receipt_id == null &&
                 proposal_revision == 0 && outcome_world_revision == 0 :
                 (status == "IN_PROGRESS" || status == "SUCCEEDED" || status == "FAILED" || status == "CANCELLED") &&
                 !string.IsNullOrWhiteSpace(player_entity_id) && !string.IsNullOrWhiteSpace(scene_instance_id) &&
@@ -42,7 +44,7 @@ namespace EmbodiedNPC.Cognition
                 (status == "IN_PROGRESS" ? outcome_id == null && receipt_id == null && failure_code == null &&
                     outcome_world_revision == 0 && stage != "terminal" :
                     stage == "terminal" && !string.IsNullOrWhiteSpace(outcome_id) && outcome_world_revision <= world_revision &&
-                    (status != "SUCCEEDED" || action_id != "prepare_drink" || !string.IsNullOrWhiteSpace(receipt_id))));
+                    (status != "SUCCEEDED" || (action_id != "prepare_drink" && action_id != "serve_snack") || !string.IsNullOrWhiteSpace(receipt_id))));
 
         // Time/revision/step may advance normally. A different lifecycle or owner invalidates a reply,
         // without reading its prose, retrying Cognition, or cancelling the independent world action.

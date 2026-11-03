@@ -46,12 +46,12 @@ namespace EmbodiedNPC.Planning
     public sealed class TaskFeedbackSnapshot
     {
         public TaskFeedbackSnapshot(TaskFeedbackKey key, string actionId, string target, string destination,
-            string player, int worldRevision, long sequence, PlanActionProgress progress, string targetDefinition = "", string drinkType = "")
+            string player, int worldRevision, long sequence, PlanActionProgress progress, string targetDefinition = "", string drinkType = "", string snackType = "", string snackQuantity = "")
         {
             Key = key; ActionId = actionId ?? ""; Target = target ?? ""; Destination = destination ?? "";
             Player = player ?? ""; WorldRevision = worldRevision; Sequence = sequence; Progress = progress;
             TargetDefinition = targetDefinition ?? "";
-            DrinkType = drinkType ?? "";
+            DrinkType = drinkType ?? ""; SnackType = snackType ?? ""; SnackQuantity = snackQuantity ?? "";
         }
         public TaskFeedbackKey Key { get; }
         public string ActionId { get; }
@@ -63,5 +63,7 @@ namespace EmbodiedNPC.Planning
         public PlanActionProgress Progress { get; }
         public string TargetDefinition { get; }
         public string DrinkType { get; }
+        public string SnackType { get; }
+        public string SnackQuantity { get; }
     }
 }

@@ -117,7 +117,7 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_interpretation_persists_backend_owned_metadata_and_bounded_input(self) -> None:
         worker, scanner, provider, executor = self.worker([
-            '{"outcome":"INTERPRETATION","interpretation":"这次交流比较友善，增加了熟悉感。","state_update":null}'
+            '{"outcome":"INTERPRETATION","interpretation":"玩家愿意进行日常交流。","state_updates":[{"operation":"ADD","target":null,"kind":"TENTATIVE","text":"本次玩家主动开启日常交流，熟悉程度仍有限。","event":"e0","quote":"你好，今天忙吗？"}]}'
         ])
         batch = await worker.process_batch()
         self.assertEqual((batch.persisted, batch.issues), (1, ()))
@@ -138,10 +138,9 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
         for secret in ("npc-secret-uid", "player-secret-uid", "episode_secret",
                        "secret_event_1", "secret_event_2", "participant_1", "participant_2"):
             self.assertNotIn(secret, visible)
-        self.assertEqual(set(request.response_schema["properties"]), {"outcome", "interpretation", "state_update"})
-        self.assertIn("state_update", request.response_schema["required"])
-        self.assertEqual(request.response_schema["properties"]["state_update"]["anyOf"],
-                         [{"$ref": "#/$defs/StateUpdate"}, {"type": "null"}])
+        self.assertEqual(set(request.response_schema["properties"]), {"outcome", "interpretation", "state_updates"})
+        self.assertIn("state_updates", request.response_schema["required"])
+        self.assertEqual(request.response_schema["properties"]["state_updates"]["maxItems"], 3)
         scanner.begin_new_round()
         again = await worker.process_batch()
         self.assertEqual((again.persisted, again.already_processed), (0, 1))
@@ -149,14 +148,14 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_change_persists_null_and_is_processed(self) -> None:
         worker, scanner, provider, _ = self.worker([
-            '{"outcome":"NO_CHANGE","interpretation":null,"state_update":null}'
+            '{"outcome":"NO_CHANGE","interpretation":null,"state_updates":[]}'
         ])
         self.assertEqual((await worker.process_batch()).persisted, 1)
         record = self.reflections.get(worker.reflection_id_for(self.candidate))
         self.assertEqual(record.outcome, RelationshipReflectionOutcome.NO_CHANGE)
         self.assertIsNone(record.interpretation)
         self.assertTrue(self.reflections.exists_for_episode_pair(
-            self.candidate.observer, self.candidate.subject, self.candidate.episode_id, POLICY,
+            self.candidate.observer, self.candidate.subject, self.candidate.episode_id,
         ))
         scanner.begin_new_round()
         self.assertEqual((await worker.process_batch()).already_processed, 1)
@@ -170,7 +169,7 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
             '{"outcome":"INTERPRETATION","interpretation":"x","subject":"forged"}',
             '{"outcome":"INTERPRETATION","interpretation":',
             'Here is JSON: {"outcome":"NO_CHANGE","interpretation":null}',
-            '{"outcome":"NO_CHANGE","interpretation":null,"state_update":null,"state_update":null}',
+            '{"outcome":"NO_CHANGE","interpretation":null,"state_updates":[],"state_updates":[]}',
             '{"outcome":"INTERPRETATION","interpretation":"x","state_update":{"operation":"ADD","operation":"CORRECT"}}',
         )
         for raw in invalid:
@@ -180,23 +179,23 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result.persisted, 0)
                 self.assertEqual(result.issues[0].reason, "RELATIONSHIP_OUTPUT_INVALID")
                 self.assertFalse(self.reflections.exists_for_episode_pair(
-                    self.candidate.observer, self.candidate.subject, self.candidate.episode_id, POLICY,
+                    self.candidate.observer, self.candidate.subject, self.candidate.episode_id,
                 ))
 
-    async def test_arrays_extra_plural_and_no_change_delta_are_rejected_without_selection(self) -> None:
+    async def test_invalid_batches_and_single_update_preview_shape_are_rejected(self) -> None:
         update = dict(operation="ADD", target=None, kind="EXPLICIT", text="A greeting.",
                       event="e0", quote="你好")
         base = dict(outcome="INTERPRETATION", interpretation="A local impression.")
         invalid = (
             dict(base, state_updates=[update, update]),
-            dict(base, state_updates=[update]),
+            dict(base, state_updates=[dict(update, text=str(i)) for i in range(4)]),
             dict(base, state_update=[update]),
             dict(base, state_update=[update, update]),
             dict(base, state_update=update, state_updates=[update]),
             dict(base),
-            dict(outcome="NO_CHANGE", interpretation=None, state_update=update),
-            dict(outcome="NO_CHANGE", interpretation="x", state_update=None),
-            dict(outcome="INTERPRETATION", interpretation=None, state_update=None),
+            dict(outcome="NO_CHANGE", interpretation=None, state_updates=[update]),
+            dict(outcome="NO_CHANGE", interpretation="x", state_updates=[]),
+            dict(outcome="INTERPRETATION", interpretation=None, state_updates=[]),
         )
         for payload in invalid:
             with self.subTest(payload=payload):
@@ -228,7 +227,7 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_model_cannot_smuggle_backend_identity_into_interpretation(self) -> None:
         worker, _, _, _ = self.worker([
-            '{"outcome":"INTERPRETATION","interpretation":"player-secret-uid","state_update":null}'
+            '{"outcome":"INTERPRETATION","interpretation":"player-secret-uid","state_updates":[{"operation":"ADD","target":null,"kind":"TENTATIVE","text":"有限交流。","event":"e0","quote":"你好"}]}'
         ])
         batch = await worker.process_batch()
         self.assertEqual(batch.persisted, 0)
@@ -238,7 +237,7 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
     async def test_provider_failure_leaves_candidate_for_next_round(self) -> None:
         worker, scanner, provider, _ = self.worker([
             ProviderError("OLLAMA_UNAVAILABLE"),
-            '{"outcome":"INTERPRETATION","interpretation":"这次交流友善。","state_update":null}',
+            '{"outcome":"INTERPRETATION","interpretation":"玩家愿意进行日常交流。","state_updates":[{"operation":"ADD","target":null,"kind":"TENTATIVE","text":"玩家本次主动开启日常交流。","event":"e0","quote":"你好，今天忙吗？"}]}',
         ])
         failed = await worker.process_batch()
         self.assertEqual(failed.persisted, 0)
@@ -267,7 +266,7 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_unique_race_is_treated_as_already_processed(self) -> None:
         worker, _, _, _ = self.worker([
-            '{"outcome":"NO_CHANGE","interpretation":null,"state_update":null}'
+            '{"outcome":"NO_CHANGE","interpretation":null,"state_updates":[]}'
         ])
         original_insert = self.reflections.finalize_pair_update
 
@@ -282,7 +281,7 @@ class RelationshipReflectionExecutionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_start_and_stop_run_the_bounded_background_loop(self) -> None:
         worker, _, provider, _ = self.worker([
-            '{"outcome":"NO_CHANGE","interpretation":null,"state_update":null}'
+            '{"outcome":"NO_CHANGE","interpretation":null,"state_updates":[]}'
         ])
         worker.start()
         try:

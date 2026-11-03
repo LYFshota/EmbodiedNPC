@@ -92,6 +92,9 @@ namespace EmbodiedNPC.Cognition
         public string LastStatus { get=>lastStatus; private set {if(lastStatus==value)return;lastStatus=value;ObserveStatus();} }
         public int PublishedCount { get; private set; }
         public bool HasPendingCheck => pending;
+        // A retained request to check is not an actionable reservation while its
+        // gates are closed (for example, another NPC's visible dialogue).
+        public bool HasPendingOpportunity => pendingSync != null || currentEvent != null || pending && Conditions();
         public AgentEvent CurrentEvent => currentEvent;
 
         private JObject DiagnosticContext() => new() {

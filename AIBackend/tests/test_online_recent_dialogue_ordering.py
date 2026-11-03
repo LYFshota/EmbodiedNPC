@@ -181,9 +181,7 @@ class OnlineRecentDialogueOrderingTests(unittest.IsolatedAsyncioTestCase):
 
     @staticmethod
     def prior(prompt: str) -> list[dict]:
-        line = next(line for line in prompt.splitlines()
-                    if line.startswith("PRIOR DIALOGUE TURNS JSON: "))
-        return json.loads(line.partition(": ")[2])
+        return json.JSONDecoder().raw_decode(prompt.split("PRIOR DIALOGUE TURNS JSON: ", 1)[1])[0]
 
     async def exchange(self, request: dict, text: str) -> str:
         self.socket.message(request)

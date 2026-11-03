@@ -298,3 +298,135 @@ namespace CafeDemo.Tests
         }
     }
 }
+
+namespace CafeDemo.Tests
+{
+    public sealed class AltPointerCaptureTests : PlayerPresentationFixture
+    {
+        protected override bool UsesStartupPanel => false;
+        protected override bool ClearSceneAfterTest => true;
+        private CafeDemoOrbitCamera Orbit => Object.FindAnyObjectByType<CafeDemoOrbitCamera>();
+        private Mouse mouse;
+
+        [UnitySetUp] public IEnumerator SetUpAlt()
+        {
+            foreach (var driver in Object.FindObjectsByType<EmbodiedNPC.Cognition.CognitiveRunDriver>()) driver.enabled=false;
+            foreach (var agent in Object.FindObjectsByType<EmbodiedNPC.Cognition.AgentOrchestrator>()) agent.CancelCurrentRun();
+            mouse=InputSystem.AddDevice<Mouse>("AltPointerTestMouse");
+            // The base fixture resolves startup without HTTP. Enable the panel afterward
+            // so its normal OnEnable wiring (including character/settings pages) runs.
+            Object.FindAnyObjectByType<CafeDemoDeveloperPanel>().enabled=true;
+            EditorWindow.GetWindow(typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView")).Focus();
+            yield return Wait(.1f);
+            // A hidden batch Editor has no focused Game View. Establish the foreground
+            // gameplay state explicitly; focus-loss behavior has its own test below.
+            Object.FindAnyObjectByType<CafeUiFlowController>().SendMessage("OnApplicationFocus",true);
+            Orbit.SendMessage("OnApplicationFocus",true);
+            Orbit.RestorePointerAfterUi(true);
+            yield return Wait(.1f);
+            Assert.That(Orbit.PointerCaptured,Is.True,State());
+        }
+        private string State()
+        {
+            var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+            var alt=(InputAction)typeof(CafeDemoOrbitCamera).GetField("togglePointer",flags).GetValue(Orbit);
+            var selected=UnityEngine.EventSystems.EventSystem.current?.currentSelectedGameObject;
+            return $"captured={Orbit.PointerCaptured}, suspended={Orbit.IsInputSuspended}, altEnabled={alt.enabled}, selected={selected?.name}, focused={Application.isFocused}";
+        }
+        private IEnumerator Hold(params Key[] keys)
+        {
+            InputSystem.QueueStateEvent(keyboard,new KeyboardState(keys));
+            yield return Wait(.08f);
+        }
+        private IEnumerator Tap(params Key[] keys)
+        { yield return Hold(keys);yield return Hold(); }
+        private IEnumerator MoveMouse(Vector2 delta)
+        {InputSystem.QueueStateEvent(mouse,new MouseState { delta=delta });yield return Wait(.08f);}
+        [UnityTearDown] public void RemoveMouse()
+        {if(mouse!=null&&mouse.added)InputSystem.RemoveDevice(mouse);}
+
+        [UnityTest] public IEnumerator LeftAltUsesOneEdge_RightAltDoesNothing_AndLookAndMovementRecover()
+        {
+            float yaw=Orbit.Yaw;
+            yield return Hold(Key.LeftAlt);
+            Assert.That(Orbit.PointerCaptured,Is.False);Assert.That(Cursor.visible,Is.True);
+            Assert.That(Cursor.lockState,Is.EqualTo(CursorLockMode.None));
+            yield return Wait(.2f);Assert.That(Orbit.PointerCaptured,Is.False,"Holding Alt must not toggle again.");
+            yield return Hold();yield return MoveMouse(new Vector2(120,0));
+            Assert.That(Mathf.DeltaAngle(yaw,Orbit.Yaw),Is.EqualTo(0).Within(.01f));
+            Vector3 position=player.transform.position;yield return Hold(Key.W);yield return Hold();
+            Assert.That(Vector3.ProjectOnPlane(player.transform.position-position,Vector3.up).magnitude,Is.GreaterThan(.02f));
+            yield return Tap(Key.RightAlt);Assert.That(Orbit.PointerCaptured,Is.False);
+            yield return Tap(Key.LeftAlt);Assert.That(Orbit.PointerCaptured,Is.True,State());
+            if(!Application.isBatchMode)
+            {Assert.That(Cursor.visible,Is.False);Assert.That(Cursor.lockState,Is.EqualTo(CursorLockMode.Locked));}
+            yield return MoveMouse(new Vector2(120,0));
+            Assert.That(Mathf.Abs(Mathf.DeltaAngle(yaw,Orbit.Yaw)),Is.GreaterThan(1));
+        }
+        [UnityTest] public IEnumerator SettingsAndSuspendedCharacterUiCannotBeCapturedByAlt()
+        {
+            var panel=Object.FindAnyObjectByType<CafeDemoDeveloperPanel>();
+            panel.Open();yield return Wait(.05f);Assert.That(panel.IsOpen,Is.True);
+            yield return Tap(Key.LeftAlt);Assert.That(panel.IsOpen,Is.True);
+            Assert.That(Orbit.PointerCaptured,Is.False);Assert.That(Cursor.visible,Is.True);
+            panel.Close();yield return Wait(.08f);Assert.That(Orbit.PointerCaptured,Is.True,State());
+            // Player appearance/emote UI also uses the shared input suspension contract.
+            Orbit.SetDialogueInputSuspended(true);Orbit.RestorePointerAfterUi(false);
+            yield return Wait(.05f);yield return Tap(Key.LeftAlt);
+            Assert.That(Orbit.PointerCaptured,Is.False);
+            Orbit.SetDialogueInputSuspended(false);yield return Tap(Key.LeftAlt);
+            Assert.That(Orbit.PointerCaptured,Is.True,State());
+        }
+        [UnityTest] public IEnumerator EAndDialogueFocusKeepWorking_AltDoesNotDismissOrStealFocus()
+        {
+            Place(new Vector3(-.8f,.02f,1.25f));yield return Wait(.15f);
+            player.GetComponent<EmbodiedNPC.Dialogue.Input.PlayerDialogueInteractor>().RefreshCandidate();
+            yield return Tap(Key.E);
+            var dialogue=Object.FindAnyObjectByType<EmbodiedNPC.Dialogue.DialogueController>();
+            var input=Object.FindAnyObjectByType<EmbodiedNPC.Dialogue.Input.TextUtteranceInput>();
+            Assert.That(dialogue.IsPresentationVisible,Is.True);Assert.That(input.IsInputFocused,Is.True);
+            yield return Tap(Key.LeftAlt);Assert.That(dialogue.IsPresentationVisible,Is.True);
+            Assert.That(input.IsInputFocused,Is.True);Assert.That(Orbit.PointerCaptured,Is.False);
+            yield return Tap(Key.Escape);yield return Wait(.08f);
+            Assert.That(dialogue.IsPresentationVisible,Is.False);Assert.That(Orbit.PointerCaptured,Is.True,State());
+        }
+        [UnityTest] public IEnumerator OtherSelectedTextFieldCannotLoseCursorToAlt()
+        {
+            yield return Tap(Key.LeftAlt);
+            var inputObject=new GameObject("AltPointerFocusedUi",typeof(RectTransform),typeof(InputField));
+            try
+            {
+                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(inputObject);
+                yield return Tap(Key.LeftAlt);Assert.That(Orbit.PointerCaptured,Is.False);
+                Assert.That(UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject,Is.SameAs(inputObject));
+                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+                yield return Tap(Key.LeftAlt);Assert.That(Orbit.PointerCaptured,Is.True,State());
+            }
+            finally {Object.Destroy(inputObject);}
+        }
+        [UnityTest] public IEnumerator EscapeKeepsMenuBehaviorAndPreviousCaptureState_WhenAlternatingWithAlt()
+        {
+            var flow=Object.FindAnyObjectByType<CafeUiFlowController>();
+            yield return Tap(Key.LeftAlt);Assert.That(Orbit.PointerCaptured,Is.False);
+            yield return Tap(Key.Escape);Assert.That(flow.IsMenuOpen,Is.True);
+            yield return Tap(Key.LeftAlt);Assert.That(flow.IsMenuOpen,Is.True);Assert.That(Orbit.PointerCaptured,Is.False);
+            yield return Tap(Key.Escape);Assert.That(flow.IsMenuOpen,Is.False);Assert.That(Orbit.PointerCaptured,Is.False);
+            yield return Tap(Key.LeftAlt);Assert.That(Orbit.PointerCaptured,Is.True,State());
+            yield return Tap(Key.LeftAlt,Key.Escape);Assert.That(flow.IsMenuOpen,Is.True);Assert.That(Orbit.PointerCaptured,Is.False);
+            yield return Tap(Key.Escape);Assert.That(flow.IsMenuOpen,Is.False);Assert.That(Orbit.PointerCaptured,Is.True,State());
+        }
+        [UnityTest] public IEnumerator FocusLossCancelsDeferredCapture_HeldAltDoesNotCaptureOnReturn()
+        {
+
+            Orbit.SetDialogueCursorMode(true);Orbit.SetDialogueCursorMode(false);
+            Orbit.SendMessage("OnApplicationFocus",false);
+            yield return Hold(Key.LeftAlt);Assert.That(Orbit.PointerCaptured,Is.False);
+            Orbit.SendMessage("OnApplicationFocus",true);
+            yield return Wait(.12f);Assert.That(Orbit.PointerCaptured,Is.False);
+            yield return Hold();yield return Tap(Key.LeftAlt);Assert.That(Orbit.PointerCaptured,Is.True,State());
+            Orbit.enabled=false;yield return Tap(Key.LeftAlt);Assert.That(Orbit.PointerCaptured,Is.False);
+            Orbit.enabled=true;yield return Wait(.08f);Assert.That(Orbit.PointerCaptured,Is.True,State());
+            yield return Tap(Key.LeftAlt);Assert.That(Orbit.PointerCaptured,Is.False);
+        }
+    }
+}

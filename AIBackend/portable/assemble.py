@@ -14,6 +14,8 @@ def assemble(destination, python_runtime, models, player):
     source = Path(__file__).resolve().parents[1]
     for path in (python_runtime / "python.exe", player / "EmbodiedNPC.exe"):
         if not path.is_file(): raise ValueError("Required input resource missing: " + path.name)
+    snack_catalog = source.parent / "UnityClient/Assets/Resources/CafeSnackCatalog.json"
+    if not snack_catalog.is_file(): raise ValueError("Shared snack catalog input missing")
     spec = json.loads((source / "app/builtin_embedding_resources.json").read_text(encoding="utf-8"))
     if any(not (models / name).is_file() for name in spec["files"]): raise ValueError("Embedding resource input incomplete")
     if destination.is_relative_to(source.parent): raise ValueError("Build outside the source workspace")
@@ -25,6 +27,9 @@ def assemble(destination, python_runtime, models, player):
             target = backend / "app" / path.relative_to(source / "app")
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, target)
+    # Keep the authored menu identical to the Unity resource; never ship a second definition.
+    (backend / "app/knowledge").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(snack_catalog, backend / "app/knowledge/cafe_snacks.json")
     shutil.copytree(python_runtime, backend / "python", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     for name in (*spec["files"], "README.md", "LICENSE"):
         path = models / name

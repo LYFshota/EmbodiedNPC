@@ -1,4 +1,6 @@
 """E1: real temporary ledger and scripted cognition, never production services."""
+
+from tests.relationship_test_context import social_context
 import json
 import tempfile
 import unittest
@@ -345,8 +347,7 @@ class CrossConversationRecentDialogueTests(unittest.IsolatedAsyncioTestCase):
         self.pair(1, conversation='old')
         provider = ScriptedProvider([recall,dict(decision_kind='DIRECT_RESPONSE',utterance='收到。')])
         adapter = CognitiveMemoryRecall(RecallSubjectCatalogBuilder(KnownSubjects()),CanonicalMemoryRetrieval(MinimalRows()))
-        social = RelationshipContext(interpretations=('过去交流友善，但不代表当前授权。',),
-            sources=({'reflection_id':'e1_relation','generated_at':1.0},),truncated=False,policy_version='fixture')
+        social = social_context(*('过去交流友善，但不代表当前授权。',))
         knowledge = KnowledgeContext(status='OK',items=({'knowledge_id':'fixture',
             'content':'这是制作教程，不是已执行结果。','version':1},))
         social_resolver = Mock(resolve=Mock(return_value=social))
@@ -360,7 +361,7 @@ class CrossConversationRecentDialogueTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(req.context,CognitiveModelRequestFactory.context_from(request))
             self.assertEqual(['已展示回复'], [m['text'] for m in self.prompt_turns(request)
                                             if m['role'] == 'npc'])
-            self.assertIn(social.interpretations[0],request.messages[-1].content)
+            self.assertIn(social.current_state.items[0].text,request.messages[-1].content)
             self.assertIn(knowledge.items[0]['content'],request.messages[-1].content)
         self.assertIn('玩家最喜欢的颜色是蓝色。',provider.requests[1].messages[-1].content)
         self.assertEqual(1,social_resolver.resolve.call_count)

@@ -18,6 +18,7 @@ from app.contracts import CognitiveRequest
 from app.local_model_scheduler import PrioritizedModelExecutor
 from app.relationship_context import RelationshipContextResolver
 from app.relationship_summary_reader import RelationshipSummary
+from tests.relationship_test_context import social_context
 from tests.test_action_proposal_validation import _decision
 from tests.test_memory_d2_cognitive_steps import (
     OWNER, PLAYER, ScriptedProvider, cognitive_request,
@@ -65,7 +66,8 @@ def request_with(*, source="player_01", event_type="player.utterance",
 
 def summary(*items):
     return RelationshipSummary(
-        interpretations=items, source_count=len(items), selected_count=len(items),
+        current_state=social_context(*items).current_state if items else None,
+        source_count=len(items), selected_count=1 if items else 0,
         truncated=False, char_budget_used=sum(map(len, items)), token_budget_used=10,
     )
 
@@ -76,7 +78,7 @@ class Reader:
         self.error = error
         self.calls = []
 
-    def get(self, observer, subject):
+    def get_for_cognition(self, observer, subject):
         self.calls.append((observer, subject))
         if self.error is not None:
             raise self.error
@@ -96,15 +98,14 @@ class RelationshipCognitiveContextTests(unittest.IsolatedAsyncioTestCase):
         from tests.test_relationship_summary_reader import RelationshipSummaryReaderTests
         fixture = RelationshipSummaryReaderTests(); fixture.setUp()
         self.addCleanup(fixture.doCleanups)
-        values = ("较早的明确边界。" * 60, "后来明确澄清的边界。" * 50,
-                  "最近的主观推测仍未确认，不能覆盖明确边界。" * 20)
+        values = ("较早的明确边界。" * 8, "另一项独立交流方式。" * 8,
+                  "最近的主观推测仍未确认。" * 8)
         for value in values:
             fixture.add(value, observer=OWNER, subject=PLAYER)
         resolver = RelationshipContextResolver(fixture.reader)
         projected = resolver.resolve(request_with())
-        self.assertEqual(projected.interpretations, values)
-        self.assertEqual([source["generated_at"] for source in projected.sources], [1, 2, 3])
-        self.assertEqual(projected.sources[-1]["reflection_id"], "reflection_3")
+        self.assertEqual(tuple(i.text for i in projected.current_state.items), values)
+        self.assertNotIn('sources', projected.model_dump())
         self.assertNotIn(PLAYER.persistent_id, projected.model_dump_json())
         other = request_with(source="player_02", relevant="player_02",
             subjects=[identity("player_02", "player", PLAYER_B)])
@@ -215,7 +216,7 @@ class RelationshipCognitiveContextTests(unittest.IsolatedAsyncioTestCase):
         sections = [self.prompt(provider, index).split("Relationship context JSON: ")[1].splitlines()[0]
                     for index in (0, 1)]
         self.assertEqual(sections[0], sections[1])
-        self.assertEqual(json.loads(sections[0])["interpretations"], ["较早友善。", "最近不愉快。"])
+        self.assertEqual([i['text'] for i in json.loads(sections[0])["current_state"]["items"]], ["较早友善。", "最近不愉快。"])
         self.assertIn("HISTORICAL MEMORY EVIDENCE", self.prompt(provider, 1))
 
     async def test_relationship_cannot_authorize_absent_action(self):

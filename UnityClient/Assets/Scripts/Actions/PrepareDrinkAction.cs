@@ -60,7 +60,7 @@ namespace EmbodiedNPC.Actions
     {
         public ActionBindingResult Bind(GoalProposal proposal, ActionDescriptor descriptor, ActionAdmissionContext context)
         {
-            if (!DrinkTypes.IsValid(proposal.drink_type) || !string.IsNullOrEmpty(proposal.target_entity_id) ||
+            if (!string.IsNullOrEmpty(proposal.snack_type) || !string.IsNullOrEmpty(proposal.quantity) || !DrinkTypes.IsValid(proposal.drink_type) || !string.IsNullOrEmpty(proposal.target_entity_id) ||
                 !string.IsNullOrEmpty(proposal.destination_entity_id) || context.Actor == null ||
                 !context.Actor.TryGetComponent(out DrinkPreparationCapability capability) || !capability.IsAuthorized ||
                 string.IsNullOrEmpty(proposal.RequestingPlayerId) || context.EntityRegistry == null ||

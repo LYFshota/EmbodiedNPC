@@ -72,8 +72,8 @@ class RelationshipB2Tests(unittest.IsolatedAsyncioTestCase):
             self.fixture.commit(self.fixture.candidate('Hello.'), self.fixture.response())
         _, models = await self.run_cognition()
         context = projected(models[0])
-        self.assertEqual(context['interpretations'], [])
-        self.assertEqual(context['sources'], [])
+        self.assertNotIn('interpretations', context)
+        self.assertNotIn('sources', context)
         self.assertEqual(context['current_state']['items'], [dict(kind='BOUNDARY', text='Use Alex.')])
         self.assertTrue(context['current_state']['has_direct_interaction'])
         self.assertNotIn('A local social impression.', models[0].messages[-1].content)
@@ -126,7 +126,7 @@ class RelationshipB2Tests(unittest.IsolatedAsyncioTestCase):
         _, models = await self.run_cognition()
         item = projected(models[0])['current_state']['items'][0]
         self.assertEqual(item, dict(kind='CONFLICT', text='Avoid Alex at work; scope unclear.', alternative='Use Alex.'))
-        self.assertIn('neither is settled', models[0].messages[-1].content)
+        self.assertIn('CONFLICT/alternative unresolved', models[0].messages[-1].content)
 
     async def test_tentative_does_not_become_certain_or_intimate(self):
         self.add('May prefer concise conversation.', kind='TENTATIVE')
@@ -194,24 +194,13 @@ class RelationshipB2Tests(unittest.IsolatedAsyncioTestCase):
         _, models = await self.run_cognition()
         self.assertIsNone(projected(models[0]))
 
-    async def test_no_b1_revision_retains_legacy_behavior_without_reinference(self):
-        candidate = self.fixture.candidate()
-        response = self.fixture.response('Legacy only.')
-        record = self.fixture.record(candidate, response).model_copy(update={
-            'policy_version': 'relationship-reflection/1.0', 'interpretation': 'Legacy only.'})
-        self.fixture.repo.insert(record)
-        _, models = await self.run_cognition()
-        context = projected(models[0])
-        self.assertEqual(context['interpretations'], ['Legacy only.'])
-        self.assertNotIn('current_state', context)
-        self.assertEqual(self.fixture.repo.read_current_pair_state(b1.NPC, b1.PLAYER).revision, 0)
 
     def test_reader_budget_drops_complete_b1_state_without_legacy_fallback(self):
         self.add()
         reader = RelationshipSummaryReader(self.fixture.repo, RelationshipSummaryPolicy(max_tokens=1))
         standalone = reader.get(b1.NPC, b1.PLAYER)
         self.assertIsNone(standalone.current_state)
-        self.assertEqual(standalone.interpretations, ())
+        self.assertEqual(standalone.selected_count, 0)
         self.assertTrue(standalone.truncated)
         self.assertIsNotNone(reader.get_for_cognition(b1.NPC, b1.PLAYER).current_state)
 
@@ -230,14 +219,6 @@ class RelationshipB2Tests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(json.loads(lines[0])['current_state']['items'][0]['text'], 'Use Alex.')
         self.assertEqual(lines[1], '0')
 
-    def test_v19_database_migrates_and_retains_legacy_reader(self):
-        path = self.fixture.path.parent / 'v19.sqlite3'
-        with patch('app.sqlite_database.migrate_relationship_state'), patch('app.sqlite_database.LATEST_SCHEMA_VERSION', 19):
-            SQLiteDatabase(path)
-        db = SQLiteDatabase(path)
-        reader = RelationshipSummaryReader(RelationshipReflectionRepository(db.connect))
-        self.assertEqual(reader.get(b1.NPC, b1.PLAYER).selected_count, 0)
-        self.assertIsNone(reader.get(b1.NPC, b1.PLAYER).current_state)
 
     async def test_canonical_recall_and_current_relationship_share_both_steps(self):
         from tests import test_memory_c2a as c2a
@@ -291,7 +272,7 @@ class RelationshipB2Tests(unittest.IsolatedAsyncioTestCase):
             else:
                 self.assertIn('relationship', allocation['dropped_components'])
                 self.assertNotIn('current_state', context)
-                self.assertEqual(context['interpretations'], [])
+                self.assertNotIn('interpretations', context)
                 self.assertTrue(context['truncated'])
                 self.assertEqual(allocation['drop_reasons']['relationship'], 'global_input_cap')
             records.append((capacity, allocation['component_costs']['relationship'],

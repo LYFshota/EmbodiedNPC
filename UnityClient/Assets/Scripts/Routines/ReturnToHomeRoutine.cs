@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using EmbodiedNPC.Animation;
 
 namespace EmbodiedNPC.Routines
 {
@@ -20,6 +21,23 @@ namespace EmbodiedNPC.Routines
         private bool ownsPath, warned;
         private double retryAt;
         private DailyBehaviorController dailyBehavior;
+        private Transform ambientDestination, idleWorkPoint;
+        private MotionChannelCoordinator ambientMotion;
+        private MonoBehaviour ambientOwner;
+        private long ambientLease;
+        public bool BeginAmbientDestination(Transform destination, MonoBehaviour owner, long lease)
+        {
+            if (destination == null || !destination.gameObject.activeInHierarchy || ambientMotion == null ||
+                !ambientMotion.OwnsAmbient(owner, lease)) return false;
+            SuspendRoutine(); ambientDestination = destination; ambientOwner = owner; ambientLease = lease;
+            ResetNavigationRetry(); return true;
+        }
+        public void EndAmbientDestination(long lease, bool arrived)
+        {
+            if (lease == 0 || lease != ambientLease) return;
+            if (arrived && ambientDestination != null) idleWorkPoint = ambientDestination;
+            SuspendRoutine(); ambientDestination = null; ambientOwner = null; ambientLease = 0;
+        }
         public bool IsRunning { get; private set; }
         public Vector3 HomePosition => homePosition;
         public Quaternion HomeRotation => homeRotation;
@@ -35,11 +53,19 @@ namespace EmbodiedNPC.Routines
         private bool TrySelectDailyDestination(out Vector3 position, out Quaternion rotation)
         {
             position = homePosition; rotation = homeRotation;
+            if (ambientMotion != null && ambientMotion.IsAmbientNavigationPaused) return false;
+            if (ambientDestination != null && ambientMotion != null && ambientMotion.OwnsAmbient(ambientOwner, ambientLease))
+            { position = ambientDestination.position; rotation = ambientDestination.rotation; return true; }
             if (dailyBehavior == null) return true;
             if (!dailyBehavior.isActiveAndEnabled || dailyBehavior.IsActivitySuspended || dailyBehavior.Profile == null ||
                 !dailyBehavior.CurrentActivity.HasValue ||
                 !dailyBehavior.Profile.AllowsActivity(dailyBehavior.CurrentMode, dailyBehavior.CurrentActivity.Value)) return false;
-            if (dailyBehavior.CurrentActivity == DailyBehaviorActivity.HomeIdle) return true;
+            if (dailyBehavior.CurrentActivity == DailyBehaviorActivity.HomeIdle)
+            {
+                if (idleWorkPoint != null && idleWorkPoint.gameObject.activeInHierarchy)
+                { position = idleWorkPoint.position; rotation = idleWorkPoint.rotation; }
+                return true;
+            }
             return dailyBehavior.CurrentActivity == DailyBehaviorActivity.WindowIdle &&
                 dailyBehavior.TryGetRestDestination(out position, out rotation);
         }
@@ -51,6 +77,7 @@ namespace EmbodiedNPC.Routines
         {
             path = new NavMeshPath();
             dailyBehavior = GetComponent<DailyBehaviorController>();
+            ambientMotion = GetComponent<MotionChannelCoordinator>();
             if (actorRoot == null || agent == null)
             {
                 Debug.LogWarning("[ReturnHome] Actor root and NavMeshAgent are required; execution disabled.", this);

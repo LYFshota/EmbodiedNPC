@@ -229,7 +229,8 @@ namespace CafeDemo.Tests
             Assert.That(merchant.GetComponent<AgentEventReceiver>().Receive(ev), Is.True);
             var request = merchant.GetComponent<CognitiveContextComposer>().LastRequest;
             driver.enabled = true; Assert.That(driver.TryOwnRequest(request), Is.True);
-            var response = new CognitiveResponse { message_type = "cognitive_response", schema_version = "1.0", request_id = request.request_id,
+            var response = new CognitiveResponse { message_type = "cognitive_response", schema_version = request.schema_version,
+                task_result = request.schema_version == "1.1" ? "none" : null, request_id = request.request_id,
                 trace_id = request.trace_id, run_id = request.run.run_id, agent_entity_id = merchant.EntityId,
                 decision = new CognitiveDecision { decision_kind = CognitiveDecisionKinds.ActionProposal, utterance = "我去拿杯子。",
                     emotion = "neutral", gesture = "none", action_proposal = new CognitiveActionProposal { action_id = "bring_object",

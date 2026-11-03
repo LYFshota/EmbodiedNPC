@@ -15,6 +15,7 @@ from .canonical_memory_ranking import CanonicalMemoryRanker
 from .experience_ledger import ExperienceLedger
 from .memory_consolidation_admission import (
     NPC_SELF_STATEMENT_LABEL, NPC_SELF_STATEMENT_PREFIX, raw_is_owner_speech,
+    DIALOGUE_EXCHANGE_PREFIX, DIALOGUE_EXCHANGE_LABEL, raw_dialogue_exchange_subjects,
 )
 
 
@@ -100,7 +101,7 @@ class CanonicalMemoryReadRepository:
                                     if expected_player_uid is not None else None)
 
     def _source_certificate(self, db, memory_id, observer):
-        kind = db.execute('SELECT memory_type FROM memory_records WHERE memory_id=?',(memory_id,)).fetchone()
+        kind = db.execute('SELECT memory_type,summary FROM memory_records WHERE memory_id=?',(memory_id,)).fetchone()
         if kind and kind[0]=='DERIVED_INSIGHT':
             return 'DERIVED_INSIGHT' if self._insight_metadata(db,memory_id,observer) is not None else None
         subjects = tuple(TrustedPersistentIdentity(*row) for row in db.execute(
@@ -116,6 +117,10 @@ class CanonicalMemoryReadRepository:
         if uid is not None and (not complete or any(mentions_player(s) and not player_identity_allowed(s, uid)
             for s in subjects) or any(not event_player_scope_allowed(e, uid) for e in events)):
             return None
+        if kind and kind['summary'].startswith(DIALOGUE_EXCHANGE_PREFIX):
+            # Losing a source cannot turn an attributed exchange into a world fact.
+            return (DIALOGUE_EXCHANGE_LABEL if complete and kind['memory_type'] == 'EPISODIC'
+                and tuple(sorted(subjects)) == raw_dialogue_exchange_subjects(events, observer) else None)
         self_speech = raw_is_owner_speech(events, observer)
         if self_speech and subjects != (observer,) and all(e.event_type == "dialogue_response" for e in events):
             return None  # Old NPC-only claims cannot be upgraded to Player/shared history.

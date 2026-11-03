@@ -20,7 +20,8 @@ from app.experience_models import ExperienceDraft, ExperienceAppendRequest
 from app.local_access import LocalBackendSession, LocalBackendAccessMiddleware
 from app.relationship_reflection_models import RelationshipReflectionRecord
 from app.relationship_reflection_repository import RelationshipReflectionRepository
-from app.memory_consolidation_context import TrustedPersistentIdentity
+from app.relationship_reflection_candidate import RelationshipReflectionCandidateBuilder, RELATIONSHIP_REFLECTION_POLICY_VERSION
+from app.relationship_reflection_model import RelationshipReflectionModelResponse
 from app.task_models import TaskIdentity, TaskScope
 from app.task_repository import TaskRepository
 from app.task_service import TaskService
@@ -45,23 +46,28 @@ class ExperienceExportTests(unittest.TestCase):
                 [json.loads(line) for line in z.read(name).decode().splitlines()] if name.endswith(".jsonl") else z.read(name).decode()) for name in z.namelist()}
         return data
 
+    def seed_relationship(self,reflection_id,context,text):
+        candidate=RelationshipReflectionCandidateBuilder().build(context)[0]
+        response=RelationshipReflectionModelResponse(outcome='INTERPRETATION',interpretation=text,
+            state_updates=[dict(operation='ADD',target=None,kind='TENTATIVE',text=text,event='e0',
+                quote=candidate.evidence_events[0].natural_language_payload)])
+        record=RelationshipReflectionRecord(reflection_id=reflection_id,observer=candidate.observer,
+            subject=candidate.subject,episode_id=candidate.episode_id,episode_input_hash=candidate.episode_input_hash,
+            outcome=response.outcome,interpretation=response.interpretation,evidence_event_ids=candidate.evidence_event_ids,
+            policy_version=RELATIONSHIP_REFLECTION_POLICY_VERSION,generated_at=time.time())
+        repository=RelationshipReflectionRepository(self.db.connect)
+        repository.finalize_pair_update(record,candidate,response,
+            repository.read_current_pair_state(candidate.observer,candidate.subject))
+
     def seed(self):
         f = self.fixture
         job, context = f.work(text="我喜欢拿铁，也希望下次喝摩卡。")
         f.finalize(job, context, f.response(context, episodic=True, summary="玩家表达了拿铁偏好和未来饮品意愿。"))
         self.own_event = context.evidence_events[0].event_id
-        RelationshipReflectionRepository(self.db.connect).insert(RelationshipReflectionRecord(
-            reflection_id="relationship-own", observer=TrustedPersistentIdentity("npc","Character","merchant.001"),
-            subject=TrustedPersistentIdentity("player","Player","U10001"), episode_id=context.episode_id,
-            episode_input_hash=context.input_hash, outcome="INTERPRETATION", interpretation="玩家愿意在下次来时继续交流。",
-            evidence_event_ids=(self.own_event,), policy_version="test", generated_at=time.time()))
+        self.seed_relationship('relationship-own',context,'玩家愿意在下次来时继续交流。')
         job, context = f.work(uid="FOREIGN_PLAYER", text="FOREIGN_PRIVATE_TEXT")
         f.finalize(job, context, f.response(context, episodic=True, summary="FOREIGN_MEMORY"))
-        RelationshipReflectionRepository(self.db.connect).insert(RelationshipReflectionRecord(
-            reflection_id="relationship-foreign", observer=TrustedPersistentIdentity("npc","Character","merchant.001"),
-            subject=TrustedPersistentIdentity("player","Player","FOREIGN_PLAYER"), episode_id=context.episode_id,
-            episode_input_hash=context.input_hash, outcome="INTERPRETATION", interpretation="FOREIGN_RELATIONSHIP",
-            evidence_event_ids=(context.evidence_events[0].event_id,), policy_version="test", generated_at=time.time()))
+        self.seed_relationship('relationship-foreign',context,'FOREIGN_RELATIONSHIP')
         participants=[dict(entity_id="player_01",identity_namespace="player",identity_type="Player",persistent_id="U10001"),
             dict(entity_id="npc_01",identity_namespace="npc",identity_type="Character",persistent_id="merchant.001")]
         for i in range(125):

@@ -1,6 +1,6 @@
 # Early Prototype release scope
 
-> Current preview: [v0.1.4-preview](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.4-preview). Dated/versioned sections below retain their original validation scope; earlier NOT_RUN or capacity limits are not a statement of current implementation. Current module behavior is documented in [Architecture](ARCHITECTURE.md).
+> Current preview: [v0.1.5-preview](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview). Dated/versioned sections below retain their original validation scope; earlier NOT_RUN or capacity limits are not a statement of current implementation. Current module behavior is documented in [Architecture](ARCHITECTURE.md).
 
 The public source keeps TitleScene → CafeDemoV2, the café, four NPCs and Xingmang,
 AIBackend, Contracts and project dependencies. Private Git history, InternalDocs,
@@ -67,3 +67,14 @@ Cloud model defaults are 6/6/2 and Ollama defaults to 1/1/1. Config changes use 
 Related Backend coverage: 514 tests, 496 passing, 8 assertion failures and 10 errors. The matched previous public tag ran 450 tests with 28 non-passing cases; every candidate non-passing test ID also fails on that baseline. This is not a green full-suite claim. New concurrency, dialogue-linked outcome and everyday-knowledge cases pass. Prior measured real DeepSeek concurrency evidence is reused rather than rerunning paid load tests. Release-specific Unity, Windows package and extracted-startup results are provided with the Release validation notes.
 
 Existing player knowledge catalogs are not automatically overwritten or extended. Back up/export custom knowledge before explicitly restoring defaults to adopt the 156-entry catalog. Historical outcome association requires the original source dialogue to remain within the existing recent window and does not prove current item possession or location.
+
+
+## v0.1.5-preview
+
+The public-history candidate selectively integrates reviewed development source through 9751dc56587afd307260d8deb384733aceed9b44, retaining public resource, license and first-import overlays. Private history, InternalDocs, validation data and unrelated WIP are excluded. Application and first-party assembly versions are 0.1.5-preview / 0.1.5.0; the Backend API version is independent.
+
+Includes local revocable Ambient presentations, mode/admission coordination, Vivi counter activity, Wen/Jiang drinking, player base/action expressions, catalogued logical snack service and deferred snack tasks, Left Alt capture, attributed shared-exchange memory, bounded atomic relationship updates, source-clock recent dialogue and built-in embedding warmup. Default knowledge contains 161 entries. Existing saved knowledge is not silently replaced: back up/export before explicitly restoring defaults.
+
+Portable assembly copies the byte-identical Unity snack resource. This preview targets fresh UserData in a new extraction directory. Cross-preview save compatibility and migration are outside this release; do not copy old UserData into the new package.
+
+Main LLM weights and API credentials are not bundled. Exact targeted regression, build, extracted-ZIP runtime results and unverified real-model paths are recorded on the versioned Release page. Mock/scripted validation must not be interpreted as real-provider dialogue or complete gameplay acceptance.

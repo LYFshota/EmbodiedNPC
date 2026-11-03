@@ -87,7 +87,7 @@ namespace EmbodiedNPC.Actions
             if (!hasTarget)
                 throw new InvalidOperationException($"ACTION_TARGET_BINDING_MISSING:{descriptor.ActionId}");
 
-            if (!string.IsNullOrEmpty(proposal.drink_type) || !ActionContractRules.IsEntityId(proposal.target_entity_id) ||
+            if (!string.IsNullOrEmpty(proposal.snack_type) || !string.IsNullOrEmpty(proposal.quantity) || !string.IsNullOrEmpty(proposal.drink_type) || !ActionContractRules.IsEntityId(proposal.target_entity_id) ||
                 requiresDestination && !ActionContractRules.IsEntityId(proposal.destination_entity_id) ||
                 !hasDestination && !string.IsNullOrEmpty(proposal.destination_entity_id) ||
                 hasDestination && !string.IsNullOrEmpty(proposal.destination_entity_id) &&

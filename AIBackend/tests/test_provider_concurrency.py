@@ -73,7 +73,7 @@ class Meter:
             elif "insights" in props: text='{"insights":[]}'
             elif "episodic_memories" in props: text=c2b.EMPTY
             elif "interpretation" in props:
-                text='{"outcome":"NO_CHANGE","interpretation":null,"state_update":null}'
+                text='{"outcome":"NO_CHANGE","interpretation":null,"state_updates":[]}'
             else: text='{"decision_kind":"NO_ACTION"}'
             return ModelResult(text=text)
         except asyncio.CancelledError:

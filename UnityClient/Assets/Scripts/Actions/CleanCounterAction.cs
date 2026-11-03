@@ -32,7 +32,7 @@ namespace EmbodiedNPC.Actions
         {
             if (context.Actor == null || !context.Actor.TryGetComponent(out CounterCleaningCapability cap) || !cap.IsAuthorized ||
                 proposal.target_entity_id != cap.Station.Entity.EntityId || !string.IsNullOrEmpty(proposal.destination_entity_id) ||
-                !string.IsNullOrEmpty(proposal.drink_type) || cap.Station.World != context.WorldState ||
+                !string.IsNullOrEmpty(proposal.snack_type) || !string.IsNullOrEmpty(proposal.quantity) || !string.IsNullOrEmpty(proposal.drink_type) || cap.Station.World != context.WorldState ||
                 !CleanCounterRules.ValidateRuntime(context.EntityRegistry, context.Actor, cap.Station.Entity,
                     context.WorldState.GetCounterConditionRevision(proposal.target_entity_id)))
                 return ActionBindingResult.Rejected(GoalValidationFailureCode.TargetActionUnavailable, "清洁目标、能力或需求已失效。");

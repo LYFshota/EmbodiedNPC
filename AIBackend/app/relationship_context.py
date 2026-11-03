@@ -20,9 +20,7 @@ class RelationshipContext(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    interpretations: tuple[str, ...]
     current_state: RelationshipCurrentStateContext | None = None
-    sources: tuple[dict[str, str | float], ...] = ()
     truncated: bool
     policy_version: str
     not_current_world_state: Literal[True] = True
@@ -78,8 +76,7 @@ class RelationshipContextResolver:
             return None
 
         try:
-            read = getattr(self.reader, "get_for_cognition", self.reader.get)
-            summary = read(observer, subject)
+            summary = self.reader.get_for_cognition(observer, subject)
         except Exception:
             # A derived read failure cannot interrupt current cognition. Never log IDs or row text.
             logger.warning("relationship_context_load_failed")
@@ -103,9 +100,7 @@ class RelationshipContextResolver:
                 return item.model_copy(update={"session_scope": relation})
             state = state.model_copy(update={"items": tuple(scoped(item) for item in state.items)})
         return RelationshipContext(
-            interpretations=summary.interpretations,
             current_state=state,
-            sources=summary.sources,
             truncated=summary.truncated,
             policy_version=summary.policy_version,
         )

@@ -36,10 +36,14 @@ namespace CafeDemo.Tests
         protected virtual bool UsesStartupPanel => true;
         protected virtual bool DisableDailyDemo => true;
         protected virtual bool ClearSceneAfterTest => false;
-        protected const string Evidence = "C:/Users/95265/AppData/Local/Temp/embodiednpc-player-p1";
+        protected virtual bool EnableAmbient => false;
+        protected static readonly string Evidence = Path.Combine(Path.GetTempPath(), "embodiednpc-player-p1");
         [UnitySetUp] public IEnumerator SetUp()
         {
             EditorSceneManager.OpenScene("Assets/Scenes/CafeDemoV2.unity");
+            if (!EnableAmbient)
+                foreach (var daily in Object.FindObjectsByType<EmbodiedNPC.Routines.DailyBehaviorController>(FindObjectsSortMode.None))
+                    daily.AmbientEnabled = false;
             // Scene demo timers are opt-in within deterministic fixtures; no asset changes are saved.
             if (DisableDailyDemo)
                 foreach (var trigger in Object.FindObjectsByType<EmbodiedNPC.Routines.DailyBehaviorDemoTrigger>(FindObjectsSortMode.None))

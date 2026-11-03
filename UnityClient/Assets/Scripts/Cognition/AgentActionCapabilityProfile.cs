@@ -31,6 +31,7 @@ namespace EmbodiedNPC.Cognition
             var actions = new List<CognitiveActionCapabilityDto>(allowedActionIds.Length);
             foreach (string actionId in allowedActionIds)
             {
+                if (actionId == "serve_snack" && (!TryGetComponent(out SnackServiceCapability snack) || !snack.IsAuthorized)) continue;
                 if (actionId == "clean_counter" && (!TryGetComponent(out CounterCleaningCapability cleaning) || !cleaning.IsAuthorized)) continue;
                 if (actionId == "prepare_drink" && (!TryGetComponent(out EmbodiedNPC.World.WorldEntity actor) ||
                     actor.EntityId != "npc_cafe_01" || !TryGetComponent(out EmbodiedNPC.Actions.DrinkPreparationCapability drink) ||

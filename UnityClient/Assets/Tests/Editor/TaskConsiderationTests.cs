@@ -139,6 +139,7 @@ namespace EmbodiedNPC.Tests.Editor
             f.Visible(true); f.Tick();
             Assert.That(dialogue.HasActiveSession, Is.True);
             Assert.That(f.Backend.SyncCount, Is.EqualTo(visible ? 0 : 1));
+            Assert.That(f.Source.HasPendingOpportunity, Is.EqualTo(!visible), "A blocked check must not reserve ambient resources.");
             Assert.That(f.Backend.SendCount, Is.Zero, "A retained session never creates or executes work by itself.");
         }
         [Test] public void BusyNpcRetainsOnePendingThenRechecksVisibility()

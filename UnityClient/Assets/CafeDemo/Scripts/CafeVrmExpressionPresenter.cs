@@ -16,6 +16,14 @@ namespace CafeDemo
         [SerializeField, Range(0, 1)] private float expressionStrength = 1f;
         [SerializeField, Min(1f)] private float minimumBlinkInterval = 3f;
         [SerializeField, Min(1f)] private float maximumBlinkInterval = 6f;
+        [Header("Player expressions (X: happy, Y: relaxed)")]
+        [SerializeField] private PlayerEmoteController playerEmotes;
+        [SerializeField] private Vector2 playerBaseExpression = new(.07f, .015f);
+        [SerializeField] private Vector2 playerWaveExpression = new(.22f, .02f);
+        [SerializeField] private Vector2 playerCheerExpression = new(.45f, .04f);
+        [SerializeField] private Vector2 playerProudExpression = new(.18f, .10f);
+        [SerializeField, Min(.01f)] private float playerActionFadeSeconds = .18f;
+        [SerializeField, Min(.01f)] private float playerRecoverySeconds = .3f;
         private Vrm10Instance model;
         private Vrm10RuntimeExpression mixer;
         private OwnedWeight blink, happy, relaxed, sad, surprised;
@@ -35,6 +43,8 @@ namespace CafeDemo
         public float SurprisedWeight => surprised == null ? 0 : surprised.Value;
 
         public void RebindAnimator(Animator character) => Configure(expressive, character);
+        public void ConfigurePlayer(PlayerEmoteController emotes, Animator character)
+        { playerEmotes = emotes; Configure(null, character); }
 
         public void Configure(ExpressiveController presentation, Animator character)
         {
@@ -114,6 +124,21 @@ namespace CafeDemo
                 }
             }
             blink?.Write(blinkTarget);
+            if (playerEmotes != null)
+            {
+                // One writer selects either Base or Action, never adds both together.
+                // Reading accepted action state also covers completion, rejection, cancel,
+                // panel-disable/focus cancellation and the existing visual rebind boundary.
+                Vector2 target = playerEmotes.isActiveAndEnabled && playerEmotes.IsActive ? playerEmotes.ActiveEmote switch {
+                    "wave" => playerWaveExpression, "cheer" => playerCheerExpression,
+                    "proud" or "flex" => playerProudExpression, _ => playerBaseExpression } : playerBaseExpression;
+                float fade = Mathf.Max(.01f, playerEmotes.isActiveAndEnabled && playerEmotes.IsActive ? playerActionFadeSeconds : playerRecoverySeconds);
+                float playerStrength = Mathf.Clamp01(expressionStrength);
+                happy?.Blend(Mathf.Clamp01(target.x) * playerStrength, deltaTime, fade);
+                relaxed?.Blend(Mathf.Clamp01(target.y) * playerStrength, deltaTime, fade);
+                sad?.Blend(0, deltaTime, fade); surprised?.Blend(0, deltaTime, fade);
+                return;
+            }
             var channels = expressive == null ? null : expressive.MotionChannels;
             bool allowed = expressive != null && expressive.isActiveAndEnabled && channels != null &&
                 channels.isActiveAndEnabled && !channels.IsEmergencyMotionActive && !channels.IsTaskMotionActive;

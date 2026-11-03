@@ -24,3 +24,8 @@ MonoBehaviour:
     objective: 保持坐姿并低频观察周围环境。
   minimumModeSeconds: 1
   transitionCooldown: 1
+  ambientActivities:
+  - mode: 2
+    activity: 2
+  ambientInterval: {x: 32, y: 65}
+  ambientDwell: {x: 4, y: 9}

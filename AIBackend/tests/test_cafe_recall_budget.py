@@ -1,4 +1,6 @@
 """Frozen full Cafe request at the final provider boundary, not a semantic model stub."""
+
+from tests.relationship_test_context import social_context
 import copy
 from datetime import datetime, timedelta, timezone
 import json
@@ -85,9 +87,7 @@ class CafeRecallBudgetTests(unittest.TestCase):
     def test_recommended_32k_full_cafe_step0_step1_official_payload(self):
         provider = DeepSeekOfficialResponsesProvider(base_url='https://unused.invalid',
             api_key='offline', model='deepseek-flash')
-        relationship = RelationshipContext(interpretations=('历史主观解释，不是事实或行动许可。' * 20,),
-            sources=({'reflection_id': 'synthetic-32k', 'generated_at': 1.0},),
-            truncated=False, policy_version='synthetic-32k')
+        relationship = social_context(*('历史主观解释，不是事实或行动许可。' * 5,))
         knowledge = KnowledgeContext(status='OK', items=tuple(dict(knowledge_id=f'k{i}',
             content=f'参考{i}：' + '仅供一般饮品讨论，不代表实时菜单或库存。' * 20,
             version=1) for i in range(3)))
@@ -101,7 +101,7 @@ class CafeRecallBudgetTests(unittest.TestCase):
                     recall_outcome=self.kwargs['recall_outcome'] if step else None)
                 self.assertEqual(self.request.context.character,
                                  CognitiveModelRequestFactory.context_from(model).character)
-                self.assertIn(relationship.interpretations[0], model.messages[-1].content)
+                self.assertIn(relationship.current_state.items[0].text, model.messages[-1].content)
                 for item in knowledge.items:
                     self.assertIn(item['content'], model.messages[-1].content)
                 self.assertEqual([], allocation['dropped_components'])

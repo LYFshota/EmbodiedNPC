@@ -14,7 +14,7 @@ from .memory_consolidation_context import (
 )
 from .relationship_reflection_models import RelationshipReflectionRecord
 
-from .relationship_pair_state import PAIR_STATE_MAX_ITEMS, PairState, PairStateItem, StateEvidence
+from .relationship_pair_state import PAIR_STATE_MAX_ITEMS, REFLECTION_MAX_UPDATES, PairState, PairStateItem, StateEvidence
 from .experience_ledger import ExperienceLedger
 from .episode_repository import EpisodeRepository
 from .relationship_reflection_candidate import (
@@ -57,29 +57,6 @@ class RelationshipReflectionRepository:
             policy_version=row["policy_version"], generated_at=row["generated_at"],
         )
 
-    def insert(self, record: RelationshipReflectionRecord) -> None:
-        observer = identity_parts(record.observer)
-        subject = identity_parts(record.subject)
-        with closing(self._connection_factory()) as connection:
-            with connection:
-                connection.execute(
-                    """
-                    INSERT INTO relationship_reflections (
-                        reflection_id,
-                        observer_identity_namespace, observer_identity_type, observer_persistent_id,
-                        subject_identity_namespace, subject_identity_type, subject_persistent_id,
-                        episode_id, episode_input_hash, outcome, interpretation,
-                        evidence_event_ids_json, policy_version, generated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        record.reflection_id, *observer, *subject, record.episode_id,
-                        record.episode_input_hash, record.outcome.value, record.interpretation,
-                        json.dumps(record.evidence_event_ids, ensure_ascii=False, separators=(",", ":")),
-                        record.policy_version, record.generated_at,
-                    ),
-                )
-
     def source_sessions(self, evidence: tuple[StateEvidence, ...]) -> tuple[str, ...]:
         """Read clocks of already pair-validated immutable anchors, without deriving intent."""
         sessions = set()
@@ -102,9 +79,10 @@ class RelationshipReflectionRepository:
 
     def exists_for_episode_pair(
         self, observer: TrustedPersistentIdentity, subject: TrustedPersistentIdentity,
-        episode_id: str, policy_version: str,
+        episode_id: str,
     ) -> bool:
-        # A policy upgrade must not re-infer already processed legacy Episodes.
+        # An Episode/pair is processed once, including NO_CHANGE and capacity results.
+        # A prompt-version change is not permission for paid historical backfill.
         with closing(self._connection_factory()) as connection:
             row = connection.execute(
                 """
@@ -112,32 +90,11 @@ class RelationshipReflectionRepository:
                 WHERE observer_identity_namespace=? AND observer_identity_type=?
                   AND observer_persistent_id=? AND subject_identity_namespace=?
                   AND subject_identity_type=? AND subject_persistent_id=?
-                  AND episode_id=? AND (policy_version=? OR policy_version='relationship-reflection/1.0') LIMIT 1
+                  AND episode_id=? LIMIT 1
                 """,
-                (*identity_parts(observer), *identity_parts(subject), episode_id, policy_version),
+                (*identity_parts(observer), *identity_parts(subject), episode_id),
             ).fetchone()
         return row is not None
-
-    def list_recent_interpretations(
-        self, observer: TrustedPersistentIdentity, subject: TrustedPersistentIdentity,
-        *, limit: int = 5,
-    ) -> tuple[RelationshipReflectionRecord, ...]:
-        if not 1 <= limit <= 64:
-            raise ValueError("RELATIONSHIP_READ_LIMIT_OUT_OF_RANGE")
-        with closing(self._connection_factory()) as connection:
-            rows = connection.execute(
-                """
-                SELECT * FROM relationship_reflections
-                WHERE observer_identity_namespace=? AND observer_identity_type=?
-                  AND observer_persistent_id=? AND subject_identity_namespace=?
-                  AND subject_identity_type=? AND subject_persistent_id=?
-                  AND outcome='INTERPRETATION'
-                ORDER BY generated_at DESC, reflection_id DESC LIMIT ?
-                """,
-                (*identity_parts(observer), *identity_parts(subject), limit),
-            ).fetchall()
-        # The bounded newest set is returned in source chronology for a future Summary reader.
-        return tuple(self._record(row) for row in reversed(rows))
 
     @staticmethod
     def _pair(observer, subject):
@@ -174,27 +131,7 @@ class RelationshipReflectionRepository:
         row = connection.execute("SELECT * FROM relationship_reflections WHERE " + _PAIR +
             " AND state_revision IS NOT NULL ORDER BY state_revision DESC LIMIT 1", pair).fetchone()
         if row is None:
-            legacy = connection.execute("SELECT * FROM relationship_reflections WHERE " + _PAIR +
-                " ORDER BY generated_at DESC,reflection_id DESC LIMIT 1", pair).fetchone()
-            interaction = None
-            if legacy:
-                # Preserve validated historical interaction without promoting old impressions
-                # to a complete current state or scheduling paid history reprocessing.
-                for event_id in reversed(json.loads(legacy["evidence_event_ids_json"])):
-                    source = connection.execute("SELECT * FROM experience_events WHERE event_id=?",
-                                                (event_id,)).fetchone()
-                    if source is None:
-                        continue
-                    text = json.loads(source["payload_json"]).get("natural_language_payload")
-                    if not text or not text.strip() or len(text) > 1000:
-                        continue
-                    ref = StateEvidence(event_id=event_id, episode_id=legacy["episode_id"],
-                                        payload_hash=source["payload_hash"], quote=text)
-                    if self._valid_source(connection, ref, observer, subject):
-                        interaction = ref
-                        break
-            return PairState(coverage="LEGACY_PARTIAL" if legacy else "SINCE_B1",
-                             interaction_evidence=interaction)
+            return PairState()
         state = PairState.model_validate_json(row["pair_state_json"])
         items = tuple(item for item in state.items if all(
             self._valid_source(connection, ref, observer, subject) for ref in item.evidence))
@@ -261,14 +198,20 @@ class RelationshipReflectionRepository:
                     raise PairUpdateRejected("RELATIONSHIP_CANDIDATE_SOURCE_CHANGED")
                 order = max(row["ledger_order"] for row in rows)
                 items = list(current.items)
-                capacity_limited = None
+                proposed = []
                 updates = response.state_updates
+                if len(updates) > REFLECTION_MAX_UPDATES:
+                    raise PairUpdateRejected("RELATIONSHIP_UPDATE_LIMIT_EXCEEDED")
                 if response.outcome == "NO_CHANGE" and updates:
                     raise PairUpdateRejected("NO_CHANGE_STATE_UPDATE_FORBIDDEN")
                 if order <= current.watermark:
                     updates = ()  # Mark late work processed, never roll current state back.
                 targets = set()
+                texts = set()
                 for number, update in enumerate(updates):
+                    if update.text.strip() in texts:
+                        raise PairUpdateRejected("RELATIONSHIP_DUPLICATE_UPDATE")
+                    texts.add(update.text.strip())
                     event = next((e for i, e in enumerate(candidate.evidence_events)
                                   if update.event == f"e{i}"), None)
                     if event is None:
@@ -300,12 +243,15 @@ class RelationshipReflectionRepository:
                     if old:
                         items[items.index(old)] = item
                     elif not any(v.kind == item.kind and v.text == item.text for v in items):
-                        if len(items) >= PAIR_STATE_MAX_ITEMS:
-                            # Source checks and CAS have already succeeded. Retain the exact
-                            # proposal as an unapplied diagnostic, not a NO_CHANGE rewrite.
-                            capacity_limited = item
-                        else:
-                            items.append(item)
+                        items.append(item)
+                    else:
+                        continue
+                    proposed.append(item)
+                # All updates were authenticated before any commit. A valid oversized
+                # batch records its complete unapplied proposal, never partial changes.
+                capacity_limited = tuple(proposed) if len(items) > PAIR_STATE_MAX_ITEMS else ()
+                if capacity_limited:
+                    items = list(current.items)
                 # The newest real Player input proves interaction, never a visit count or intimacy.
                 interaction = current.interaction_evidence
                 if order > current.watermark:

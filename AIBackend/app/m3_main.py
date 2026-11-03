@@ -50,6 +50,7 @@ from .episode_models import EpisodeBoundaryPolicy, MemoryJobPolicy
 from .episode_processing import EpisodeProcessingLoop, EpisodeStorageGuard
 from .episode_repository import EpisodeRepository
 from .memory_job_repository import MemoryJobRepository
+from .builtin_embedding_provider import BuiltinEmbeddingProvider, BuiltinEmbeddingError
 from .worker_runtime import store_call
 from .local_model_scheduler import PrioritizedModelExecutor
 from .memory_pipeline import SEMANTIC_MEMORY_CONSOLIDATOR_VERSION
@@ -216,6 +217,21 @@ async def lifespan(_: FastAPI):
 
     try:
         try:
+            adapter = getattr(canonical_embedding_provider, "provider", canonical_embedding_provider)
+            if (isinstance(adapter, BuiltinEmbeddingProvider)
+                    and getattr(canonical_embedding_provider, "mode", "running") == "running"):
+                # ASGI startup completes only after the selected shared local session
+                # is warm. No requests or index workers race the first initialization.
+                started = time.perf_counter()
+                logger.info("LOCAL_EMBEDDING_WARMUP_STARTED")
+                try:
+                    await store_call(adapter.warmup)
+                except Exception as error:
+                    code = error.code if isinstance(error, BuiltinEmbeddingError) else "LOCAL_EMBEDDING_WARMUP_FAILED"
+                    logger.error("LOCAL_EMBEDDING_WARMUP_FAILED code=%s", code)
+                    raise RuntimeError(code) from None
+                logger.info("LOCAL_EMBEDDING_WARMUP_READY elapsed_ms=%.1f",
+                            (time.perf_counter() - started) * 1000)
             try:
                 await store_call(knowledge_resolver.store.initialize)
             except (OSError, ValueError) as error:

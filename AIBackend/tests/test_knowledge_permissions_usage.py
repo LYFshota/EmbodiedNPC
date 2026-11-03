@@ -145,5 +145,5 @@ class PermissionsUsageTests(unittest.TestCase):
         self.addCleanup(social.doCleanups)
         social.add("instance A", observer=owner_a)
         social.add("instance B", observer=owner_b)
-        self.assertEqual(social.reader.get(owner_a, relationships.PLAYER_A).interpretations, ("instance A",))
-        self.assertEqual(social.reader.get(owner_b, relationships.PLAYER_A).interpretations, ("instance B",))
+        self.assertEqual(tuple(i.text for i in social.reader.get(owner_a, relationships.PLAYER_A).current_state.items), ("instance A",))
+        self.assertEqual(tuple(i.text for i in social.reader.get(owner_b, relationships.PLAYER_A).current_state.items), ("instance B",))

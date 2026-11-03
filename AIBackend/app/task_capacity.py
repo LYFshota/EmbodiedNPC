@@ -17,7 +17,7 @@ def task_policy(provider, task, configured=None):
                 (configured, getattr(provider, 'context_length', None)))
     if task == 'consolidation' and (not known or capacity == 8192):
         return ContextBudgetPolicy.consolidation()
-    target = {'consolidation': 4096, 'maintenance': 1600, 'relationship': 256}[task]
+    target = {'consolidation': 4096, 'maintenance': 1600, 'relationship': 1024}[task]
     output = min(target, max(1, capacity // 4))
     margin = min(512, max(1, capacity // 8))
     return ContextBudgetPolicy(name=task, max_context_tokens=capacity,

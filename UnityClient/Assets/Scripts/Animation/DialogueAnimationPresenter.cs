@@ -44,7 +44,7 @@ namespace EmbodiedNPC.Animation
             if (speaking) elapsed += deltaTime;
             bool allowed = speaking && motionChannels != null && motionChannels.isActiveAndEnabled &&
                 !motionChannels.IsTaskMotionActive && !motionChannels.IsEmergencyMotionActive &&
-                !motionChannels.IsCarryPresentationActive && motionChannels.ActiveGesture != "wave";
+                !motionChannels.IsCarryPresentationActive && !motionChannels.IsAmbientUsingArms && motionChannels.ActiveGesture != "wave";
             ActivationWeight = Mathf.MoveTowards(ActivationWeight, allowed ? 1 : 0,
                 deltaTime / Mathf.Max(.01f, allowed ? blendIn : blendOut));
             string tone = expressive == null ? "neutral" : expressive.ExpressionHint;
@@ -56,6 +56,8 @@ namespace EmbodiedNPC.Animation
             float beat = phase < active ? Mathf.Sin(Mathf.PI * phase / active) : 0;
             float target = allowed ? Mathf.Clamp(gestureStrength * energy * beat, 0, .5f) : 0;
             CurrentWeight = Mathf.MoveTowards(CurrentWeight, target, deltaTime / Mathf.Max(.01f, allowed ? blendIn : blendOut));
+            // An acquired arms action owns the overlap immediately, including the outgoing Talk fade.
+            if (motionChannels != null && motionChannels.IsAmbientUsingArms) CurrentWeight = ActivationWeight = 0;
             animator.SetLayerWeight(layer, CurrentWeight);
             float accent = allowed ? headAccentDegrees * ActivationWeight : 0;
             float pitch = accent * (tone == "thoughtful" || tone == "concerned" ? -.6f : .35f) * beat;

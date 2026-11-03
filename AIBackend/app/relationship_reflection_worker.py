@@ -145,8 +145,7 @@ class RelationshipReflectionWorker:
     async def _execute_candidate(self, candidate):
         persisted = already_processed = capacity_limited = 0
         issues = []
-        pair = (candidate.observer, candidate.subject, candidate.episode_id,
-                RELATIONSHIP_REFLECTION_POLICY_VERSION)
+        pair = (candidate.observer, candidate.subject, candidate.episode_id)
         if await store_call(self.reflections.exists_for_episode_pair, *pair):
             already_processed += 1
             return 0, 1, (), 0
@@ -174,7 +173,7 @@ class RelationshipReflectionWorker:
                     raise
                 already_processed += 1
             else:
-                if state.capacity_limited is not None:
+                if state.capacity_limited:
                     capacity_limited += 1
                     issues.append(RelationshipExecutionIssue(candidate.episode_id,
                         "RELATIONSHIP_STATE_CAPACITY_LIMITED"))

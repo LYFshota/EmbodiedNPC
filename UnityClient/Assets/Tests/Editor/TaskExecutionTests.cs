@@ -460,6 +460,49 @@ namespace EmbodiedNPC.Tests.Editor
             Assert.That(f.Backend.ExecutionControls.Count,Is.EqualTo(1));Assert.That(runner.HasActiveTask,Is.False);
         }
 
+        [TestCase("croissant","1")][TestCase("macaron","2")]
+        [TestCase("cupcake","3")][TestCase("pudding","4")]
+        public void SnackTaskKeepsExactGoalAndWorldReceipt(string snack,string quantity)
+        {
+            using var f=new TaskConsiderationFixture();Offer(f);var response=Proposal(f);
+            response.decision.action_proposal=new CognitiveActionProposal { action_id="serve_snack",
+                bindings=new Dictionary<string,string> { ["snack_type"]=snack,["quantity"]=quantity } };
+            response.validated_goal=new GoalProposal {type="serve_snack",snack_type=snack,quantity=quantity};
+            var ticket=response.task_execution;var e=ticket.execution_request;
+            ticket.goal=new JObject { ["kind"]="serve_snack",["snack_type"]=snack,["quantity"]=quantity };
+            Assert.That(ticket.IsValid,Is.True);
+            Assert.That(ticket.Matches(f.Backend.Sent,response),Is.True);
+            Assert.That(CognitiveResponseValidator.TryParse(CognitiveRequest.SerializeFields(response),out _,out var error),Is.True,error);
+            var outcome=new GoalOutcome("synthetic_snack_outcome",e.proposal_id,0,e.trace_id,"serve_snack",
+                e.actor_entity_id,"snack_station",null,PlanExecutionStatus.Succeeded,"",e.world_revision+1,0);
+            foreach(string mismatch in new[]{"none","actor","proposal","trace","player","snack","quantity","old_revision","future_revision"})
+            {
+                var receipt=new SnackServiceReceipt("synthetic_snack",mismatch=="actor"?"other_actor":e.actor_entity_id,
+                    mismatch=="proposal"?"other_proposal":e.proposal_id,mismatch=="trace"?"other_trace":e.trace_id,
+                    mismatch=="player"?"other_player":e.player_entity_id,
+                    mismatch=="snack"?(snack=="pudding"?"croissant":"pudding"):snack,
+                    mismatch=="quantity"?(quantity=="1"?"2":"1"):quantity,
+                    e.world_revision+(mismatch=="old_revision"?0:mismatch=="future_revision"?2:1),default,default);
+                Assert.That(ticket.MatchesWorldReceipt(outcome,null,null,receipt),Is.EqualTo(mismatch=="none"),mismatch);
+            }
+            response.decision.action_proposal.bindings["quantity"]=quantity=="1"?"2":"1";
+            Assert.That(ticket.Matches(f.Backend.Sent,response),Is.False);
+        }
+        [Test] public void SnackTicketRejectsCoercedQuantityAndAcceptsRuntimeStatusKind()
+        {
+            using var f=new TaskConsiderationFixture();Offer(f);var response=Proposal(f);
+            response.decision.action_proposal=new CognitiveActionProposal {action_id="serve_snack",
+                bindings=new Dictionary<string,string> { ["snack_type"]="croissant",["quantity"]="1" } };
+            response.validated_goal=new GoalProposal {type="serve_snack",snack_type="croissant",quantity="1"};
+            response.task_execution.goal=new JObject { ["kind"]="serve_snack",["snack_type"]="croissant",["quantity"]="1" };
+            var wire=JObject.Parse(CognitiveRequest.SerializeFields(response));wire["task_execution"]["goal"]["quantity"]=1;
+            Assert.That(CognitiveResponseValidator.TryParse(wire.ToString(),out _,out _),Is.False);
+            response.task_execution.goal["snack_type"]="cheesecake";
+            Assert.That(response.task_execution.IsValid,Is.False);
+            var row=new JObject { ["task_id"]="snack_task",["version"]=1,["status"]="waiting",["source"]="player_request",
+                ["goal_kind"]="serve_snack",["attempt_id"]=null,["phase"]=null,["cancel_requested"]=false,["diagnostic"]=null,["condition"]=null };
+            Assert.That(TaskStatusDto.Valid(row),Is.True);
+        }
         [TestCase("latte")][TestCase("cappuccino")][TestCase("americano")]
         [TestCase("espresso")][TestCase("flat_white")][TestCase("mocha")]
         [TestCase("caramel_macchiato")][TestCase("hot_chocolate")][TestCase("matcha_latte")][TestCase("black_tea")]

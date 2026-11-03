@@ -122,6 +122,8 @@ namespace EmbodiedNPC.Planning
                 PlannerActionType.Open => ValidateOpen(context),
                 PlannerActionType.CleanCounter => CleanCounterActionRunner.Validate(context.Bindings, entityRegistry, context.Action)
                     ? RuntimeActionValidationResult.Ready() : Stale("清洁条件失效。"),
+                PlannerActionType.ServeSnack => ServeSnackActionRunner.Validate(context.Bindings, entityRegistry,
+                    context.Action) ? RuntimeActionValidationResult.Ready() : Stale("点心服务参数、能力或交互距离无效。"),
                 PlannerActionType.PrepareDrink => PrepareDrinkActionRunner.Validate(context.Bindings, entityRegistry,
                     context.Action) ? RuntimeActionValidationResult.Ready() : Stale("制作绑定、能力或交互距离无效。"),
                 _ => RuntimeActionValidationResult.Abort("ACTION_BINDING_STALE", "当前阶段没有该 Action 的运行时契约。"),
