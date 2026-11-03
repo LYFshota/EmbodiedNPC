@@ -14,26 +14,6 @@ At its core is a working loop: **perception → cognition → memory / action �
   <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC café gameplay" width="760">
 </p>
 
-## 🎮 Download and play
-
-**[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [v0.1.5-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
-
-1. Extract the ZIP and run `Start.cmd`. Unity Editor and a separate Python installation are not required.
-2. Configure your own Main LLM in Settings, using a compatible cloud API or local model service.
-3. Enter the café to talk with NPCs, request services, or observe their everyday activities.
-
-The preview includes **EmbeddingGemma-300M Q4 ONNX** for local memory embeddings. Bring your own chat model and API key if your provider requires one.
-
-| Action | Key |
-| --- | --- |
-| Move / look around | WASD / Mouse |
-| Interact | E |
-| Player actions | G |
-| Release / capture cursor | Left Alt |
-| Menu / back | ESC |
-
-Settings and memories are stored in `UserData` within the extracted folder. Extract new previews to a separate folder and keep a backup of existing data.
-
 ## ✨ Features
 
 - **Character-driven conversations:** Four NPCs with distinct backgrounds, personalities and speaking styles. Conversations support Chinese and English and can pick up on recent context.
@@ -49,6 +29,16 @@ Settings and memories are stored in `UserData` within the extracted folder. Extr
 This update adds **everyday NPC activities, snack service, player expression blending, and Left Alt cursor control**, alongside memory, relationship and interaction refinements.
 
 Snack choices include croissants, macarons, cupcakes and pudding. Vivi approaches the appropriate display point for a short pickup animation and presents the service result. See [Releases](https://github.com/LYFshota/EmbodiedNPC/releases) for version details and validation records.
+
+## 🎮 Download and play
+
+**[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [v0.1.5-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
+
+1. Extract the ZIP and run `Start.cmd`. Unity Editor and a separate Python installation are not required.
+2. Configure your own Main LLM in Settings, using a compatible cloud API or local model service.
+3. Enter the café to talk with NPCs, request services, or observe their everyday activities.
+
+The preview includes **EmbeddingGemma-300M Q4 ONNX** for local memory embeddings. Bring your own chat model and API key if your provider requires one.
 
 ## 🧩 Architecture
 
