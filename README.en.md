@@ -2,182 +2,124 @@
 
 # ☕ EmbodiedNPC
 
-**Connecting game NPC dialogue to perception, memory and actions in the world.**
+**Game NPCs that do more than respond — they remember players, perceive their surroundings, and take action.**
 
-🚧 Early Prototype · Under active development
+Unity 6 · Python / FastAPI · AI Agents · Long-term Memory · Local / Cloud LLMs
 
-Unity 6 · Python / FastAPI · Long-term memory · Local / remote LLMs
+EmbodiedNPC is an open-source exploration of **persistent NPC interactions and autonomous behavior in games**. Its current single-player café demo features four characters — Vivi, Shen Zhiyi, Wen Yu'an, and Jiang Yizhou — with distinct personalities. Talk with them, revisit shared experiences, ask the barista to prepare drinks or serve snacks, and watch the characters go about their day.
 
-EmbodiedNPC is an experimental multi-NPC cognition and interaction project for game scenes. The current **single-player café demo** has four NPCs with distinct personas. They can talk to the player; characters with the appropriate capabilities can deliver items, prepare drinks or clean counters.
-
-The project explores a working loop: **perception → cognition → memory and action → world feedback → future interactions**. The model uses character experiences and local surroundings to propose replies or actions. Unity validates and executes them, and actual results become evidence for later interactions. NPC autonomy and available actions are limited; this is an early prototype, not a complete general-purpose Agent framework.
+At its core is a working loop: **perception → cognition → memory / action → world feedback → the next interaction**.
 
 <p align="center">
-  <img src="Docs/Images/cafe-panorama.jpg" alt="In-game panorama of the EmbodiedNPC café" width="640">
+  <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC café gameplay" width="760">
 </p>
 
-## Download and try
+## 🎮 Download and play
 
-[Download the Windows x64 preview ZIP](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip) · [Pre-release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
+**[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [v0.1.5-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
 
-1. Extract the complete archive and run `Start.cmd`. No Unity Editor or separate Python installation is needed.
-2. **Configure your own Main LLM** for dialogue and decisions. The ZIP bundles EmbeddingGemma-300M Q4 ONNX for memory vectors, so no extra Embedding download or API setup is normally needed. External Embedding and disabled-vector options remain available.
-3. Personal settings and memories persist in the package-local `UserData`. Shut down normally and back it up before updating.
+1. Extract the ZIP and run `Start.cmd`. Unity Editor and a separate Python installation are not required.
+2. Configure your own Main LLM in Settings, using a compatible cloud API or local model service.
+3. Enter the café to talk with NPCs, request services, or observe their everyday activities.
 
-## What works today
+The preview includes **EmbeddingGemma-300M Q4 ONNX** for local memory embeddings. Bring your own chat model and API key if your provider requires one.
 
-- **Distinct character conversations:** Four NPCs have separate personas, personalities and dialogue styles, support Chinese and English, and use recent dialogue to continue topics.
-- **Long-term memory and experience processing:** Actual conversations and action experiences are recorded, processed in the background and recalled on demand. Processing and recall can still fail.
-- **World knowledge management:** Includes 161 entries covering coffee, characters and the neighborhood. Players can search, edit, add, import and export entries, and configure which NPCs know them and how they are used.
-- **Local perception and overhearing:** NPCs perceive nearby surroundings and can record nearby text speech when range and occlusion permit. Overhearing does not automatically trigger an interruption.
-- **Scene actions and feedback:** Characters with the appropriate capabilities can deliver items, prepare ten hot drinks and clean counters. The game validates and executes actions, then feeds actual results back into cognition and memory.
-- **Persistent tasks and meeting arrangements:** Limited future requests can be saved for consideration at the next meeting or another suitable opportunity, deferred or cancelled. A saved arrangement is not proof of completion.
-- **Expressions and dialogue motion:** Dialogue motions, expressions and conversational rhythms can vary by character, with occasional happy, confused, surprised and thinking icons.
-- **Separate model configuration:** The main model and vector-retrieval model are configured independently, using local or remote services.
-- **Experience data export:** Export retained conversations, memories, personas, knowledge, relationships, tasks and other data from Settings for personal records or feedback. Exports may contain personal information: review before sharing. The game does not upload them automatically.
-
-### v0.1.5-preview changes
-
-- **Local ambient activity**: Vivi moves, pauses and wipes behind the counter. Wen and Jiang share a seated drinking flow with independent timing. These Unity-local presentations do not repeatedly call an LLM or commit formal cleaning facts.
-- **Revocable presentation ownership**: formal work takes priority; conversation can finish a cup return or pause counter travel. Mode changes, cancellation and disable clean up owned presentation state.
-- **Player expressions**: a subtle idle smile and blended wave/cheer/proud expressions return to the base expression while preserving blinking.
-- **Snack service**: croissant, macaron, cupcake and pudding; one type and 1–4 portions per request. Vivi visits the configured display point, performs a short reach and reports only confirmed success. Existing deferred tasks are supported. This is logical service, without physical food handover, inventory or stock simulation.
-- **Left Alt**: release/recapture the cursor, respecting settings and dialogue input focus and the existing ESC flow.
-- **Memory and social understanding**: attributed shared conversations remain distinct from verified world events. Episode interpretation and persistent relationship deltas are separate, with atomic bounded updates. Recent dialogue includes source-clock distances; built-in embeddings warm up before Backend readiness.
-- **Release fixes**: portable assembly includes the same authored snack catalog. Public first-import model recovery is retained.
-
-This preview targets fresh playtest data; old Preview saves are not supported. Extract to a new folder without copying old UserData. Configure your own Main LLM/API key or local model service. See the Release notes for the exact Windows validation scope and any unverified real-model paths; scripted/Mock checks are not real-model end-to-end validation.
-
-### New in v0.1.4-preview
-
-- **Everyday conversation:** 12 additional private backgrounds per NPC, bringing the default catalog to 156 entries. Guidance favors useful follow-ups over repeated stories, mechanical questions or unrelated sales pitches; actual wording still depends on the model.
-- **Segmented replies:** Overhead bubbles and chat history share explicit paragraph boundaries, with at most three bubbles. The first overhead segment is immediate, later segments are two seconds apart, with a 20-second lifetime. History shows all segments immediately; storage retains one reply per turn.
-- **Trusted historical outcomes:** While the original order remains in recent dialogue, its validated terminal outcome can accompany that dialogue. Historical completion remains separate from current task state; the general 900-second recent-results window is unchanged.
-- **Bounded concurrency:** Cloud defaults to **6 total / 6 foreground / 2 background**; Ollama defaults to **1/1/1**. Use Settings > Developer tools > **Concurrency settings**, save/apply and restart. Independent NPC inference and background Episode, relationship and memory jobs can overlap while preserving required pair/scope ordering and shutdown safety.
-
-Existing player-authored knowledge catalogs are not overwritten by new defaults. To adopt the expanded defaults, export a backup first, then explicitly restore system defaults in World knowledge; this replaces the current catalog.
-
-## System architecture
-
-<p align="center">
-  <img src="Docs/Images/architecture-overview.en.svg" alt="Architecture: Unity world, bounded cognition, action feedback and long-term memory" width="960">
-</p>
-
-[Simplified Mermaid flow](Docs/Images/architecture-overview.en.mmd)
-
-This is an overview of ordinary interaction. Replies, no action and action proposals are distinct outcomes; only action proposals enter action admission and execution. Background memory processing does not require every dialogue turn to wait for it.
-
-- **Unity world authority:** Unity owns current world state, local perception, character capabilities and action outcomes. The model proposes behavior; its words cannot rewrite the world.
-- **Bounded two-step cognition:** In ordinary dialogue, the first step can reply, take no action, propose an action or request one context-read batch. If more information is needed, the second step must produce a terminal decision, with no further tool loop.
-- **Hybrid context reads:** Authorized background and relevant world knowledge are loaded automatically, followed by optional batched reads of knowledge, historical memory or tasks. Recent dialogue and relationship summaries provide conversational context. Identity, access scope and context budgets bound reads; the entire memory store is not placed in the prompt.
-- **Long-term memory and asynchronous reflection:** Actual experiences retain their sources before background processing produces episodic memories, semantic facts or tentative insights across experiences. Separate relationship reflection handles social impressions. History and interpretations cannot replace current world facts.
-- **Action permissions:** The Backend checks proposal structure and available capabilities; Unity independently checks event provenance, eligibility and current conditions. Persona or knowledge text grants no extra action permissions. Passing validation does not mean execution succeeded.
-- **Outcome feedback:** Actually presented dialogue and Unity-reported success, failure, cancellation and other outcomes enter experience records for later interactions. Promises, plans and unpresented replies do not count as completed actions or delivered conversation.
-
-See the [detailed architecture](Docs/ARCHITECTURE.md) for implementation flow, special event paths and precise boundaries.
-
-## Technical documentation
-
-| What you want to understand | Start here |
+| Action | Key |
 | --- | --- |
-| Runtime flow and module responsibilities | [Architecture and authority boundaries](Docs/ARCHITECTURE.md) |
-| How experiences become memories and are recalled | [Memory system](Docs/MEMORY.md) |
-| World knowledge and persistent tasks | [World knowledge](AIBackend/WORLD_KNOWLEDGE.md) · [Task system](Docs/NPC_TASK_SYSTEM.md) |
-| Installation, model configuration and operations | [Source setup](Docs/SOURCE_SETUP.md) · [Operations](Docs/OPERATIONS.md) |
-| Extension and integration | [Backend](AIBackend/README.md) · [Communication contracts](Contracts/README.md) · [Contributing](CONTRIBUTING.md) |
-| Release scope and what has been validated | [Release scope and validation limits](Docs/RELEASE_STATUS.md) |
+| Move / look around | WASD / Mouse |
+| Interact | E |
+| Player actions | G |
+| Release / capture cursor | Left Alt |
+| Menu / back | ESC |
 
-See the [documentation index](Docs/README.md) for more. Some detailed developer documents are currently in Chinese.
+Settings and memories are stored in `UserData` within the extracted folder. Extract new previews to a separate folder and keep a backup of existing data.
 
-## Current limitations
+## ✨ Features
 
-- Implementation is closely tied to a fixed single-player café demo with four NPCs. Autonomy and available actions are limited. Multi-party interaction, large NPC populations and a general-purpose framework remain research directions.
-- Models may misunderstand, repeat questions or generate unsupported replies. Memory processing, recall and reflection can also fail; accurate recall of every conversation is not guaranteed.
-- Expression capabilities and visual results vary between VRM models. Text bubbles and procedural motion do not imply speech recognition, speech synthesis or general lip sync.
-- Architecture and interaction design are still evolving. Existing checks apply to specific versions and scenarios, not every model, interaction or clean machine. See [release scope](Docs/RELEASE_STATUS.md).
+- **Character-driven conversations:** Four NPCs with distinct backgrounds, personalities and speaking styles. Conversations support Chinese and English and can pick up on recent context.
+- **Long-term memory and relationships:** Conversations and actual actions become experiences that feed background Episode processing, long-term memory, and evolving character relationships.
+- **World knowledge:** 161 built-in entries about the café, characters and neighborhood. Knowledge can be scoped per NPC, searched, edited, imported and exported.
+- **Perception and world actions:** NPCs use local context and their abilities to propose actions. Unity validates and performs drink preparation, counter cleaning, item delivery, and snack service, then reports the outcome.
+- **Persistent tasks:** Some future requests and arrangements can be remembered, revisited, rescheduled or cancelled.
+- **Everyday animation:** Vivi moves, pauses and wipes behind the counter. Wen and Jiang occasionally pick up their cups. The player has a subtle idle smile and expressions tied to actions.
+- **Concurrency and model choices:** Bounded concurrent foreground and background work across NPCs, with separate configuration for the Main LLM, embeddings and runtime settings.
 
-## Run from source
+### Latest release: v0.1.5-preview
 
-The currently supported development path is Windows with **Unity 6000.5.10f1**,
-**Python 3.12 x64**, Git and a Main model service that you configure yourself.
-Main model weights are not included. Built-in Embedding weights are also not
-included: prepare them as documented, select external Embedding, or disable it
-before saving the first model configuration.
+This update adds **everyday NPC activities, snack service, player expression blending, and Left Alt cursor control**, alongside memory, relationship and interaction refinements.
 
-1. From the repository root, install dependencies and start the Backend:
+Snack choices include croissants, macarons, cupcakes and pudding. Vivi approaches the appropriate display point for a short pickup animation and presents the service result. See [Releases](https://github.com/LYFshota/EmbodiedNPC/releases) for version details and validation records.
+
+## 🧩 Architecture
+
+<p align="center">
+  <img src="Docs/Images/architecture-overview.en.svg" alt="Perception, cognition, memory, action, and feedback" width="960">
+</p>
+
+**Unity owns the world. The Python Backend handles cognition. Memory and action outcomes connect successive interactions.**
+
+- **Perception and events:** Unity captures relevant events from the scene, player interactions, and nearby characters.
+- **Cognition and context:** The Backend combines persona, recent dialogue, world knowledge, memory and relationship information to produce responses or action proposals, with optional additional context reads.
+- **Action and feedback:** Unity validates and executes formal actions, returning outcomes for cognition and experience records. Everyday animations are driven locally by Unity's behavior layer.
+- **Long-term memory:** Episodes are consolidated and recalled asynchronously; relationship reflections are maintained separately to support interactions across sessions.
+- **Concurrent work:** Model calls for different NPCs and background jobs can run in parallel while preserving per-character and data-scope constraints.
+
+For implementation details, see [Architecture](Docs/ARCHITECTURE.md), [Memory](Docs/MEMORY.md), and [Communication Contracts](Contracts/README.md).
+
+## 🛠️ Run from source
+
+Development environment: **Unity 6000.5.10f1, Python 3.12 x64, Git, Windows**.
+
+1. Clone the repository. From the `AIBackend` directory, create a Python environment, install dependencies and start the service:
 
    ```powershell
-   cd .\AIBackend
+   cd AIBackend
    py -3.12 -m venv .venv
    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
    .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers
    ```
 
-2. Open `UnityClient` in Unity Hub. Let packages, scripts and shaders finish importing,
-   then run `Assets/Scenes/TitleScene.unity` and enter the café from the title screen.
-   The Editor automatically checks the six included VRM/GLB models and recovers incomplete
-   imports once prerequisites are ready; no manual model Reimport or scene generation is required.
-   See [source setup](Docs/SOURCE_SETUP.md) for readiness logs, failure diagnostics and validation limits.
-3. Configure Main and Embedding, save/apply, and restart this checkout's Backend when prompted.
+2. Open `UnityClient` in Unity Hub. After importing assets, run `Assets/Scenes/TitleScene.unity`.
+3. Configure Main LLM and Embedding in game, save, and restart the Backend when prompted.
 
-See [source setup](Docs/SOURCE_SETUP.md) for dependency/model preparation and
-[architecture](Docs/ARCHITECTURE.md) for the main boundaries. Some detailed developer documents are currently in Chinese.
+**Note:** Embedding weights are not stored in the source repository. Follow [Source Setup](Docs/SOURCE_SETUP.md) to prepare them, configure an external embedding provider, or disable vector search. The Windows preview already includes the local embedding resources.
 
-## 🤖 Recommended models and performance comparison
+## 📊 Model experiments
 
-Different language models can behave differently in NPC dialogue, memory use, and action decisions. The following results from 100 fixed NPC scenarios in this project may help you choose a model.
+The project evaluated models against **100 fixed NPC scenarios** covering dialogue, memory and action decisions. These are project-specific results, not a general model benchmark.
 
-| Model | Test score | Suggested use |
-| --- | ---: | --- |
-| GLM-5.3 Flash | **89/100** | ⭐ Recommended cloud option |
-| Gemini 3.8 Flash | **88/100** | ⭐ Recommended cloud option |
-| DeepSeek V4.1 Flash | **87/100** | ⭐ Recommended cloud option |
-| Qwen3.8 Flash | 82/100 | Alternative cloud option |
-| Qwen3.8-27B W8A8 | 78/100 | Local deployment with substantial compute |
-| Nemotron 3.5 BF16 | 66/100 | Deployment and model experiments |
-| Qwen3.5-9B | 56/100 | Small-model experiments |
-| Qwen3.5-4B | 39/100 | Lightweight-model research |
+| Model | Score |
+| --- | ---: |
+| GLM-5.3 Flash | **89 / 100** |
+| Gemini 3.8 Flash | **88 / 100** |
+| DeepSeek V4.1 Flash | **87 / 100** |
+| Qwen3.8 Flash | 82 / 100 |
+| Qwen3.8-27B W8A8 | 78 / 100 |
+| Nemotron 3.5 BF16 | 66 / 100 |
+| Qwen3.5-9B | 56 / 100 |
+| Qwen3.5-4B | 39 / 100 |
 
-## Directions to explore
+## 📚 Documentation
 
-- **More natural multi-party conversations:** players and NPCs sharing a scene,
-  proactive speech and responses, and overlapping participation.
-- **More persistent cognition and social relationships:** social memory,
-  relationships and longer-term goals shaped by experience and context.
-- **Richer autonomous world interactions:** additional actions, ongoing tasks
-  and cooperation that can affect the world and create emergent stories.
-- **A more extensible development foundation:** less dependence on the café,
-  easier character creation, cognition/memory configuration, actions and new Unity scenes.
-- **Model and runtime efficiency:** model compatibility, inference cost and
-  concurrent NPC processing on limited hardware.
+| Topic | Docs |
+| --- | --- |
+| Architecture and data flow | [ARCHITECTURE](Docs/ARCHITECTURE.md) |
+| Long-term memory | [MEMORY](Docs/MEMORY.md) |
+| World knowledge and future tasks | [WORLD_KNOWLEDGE](AIBackend/WORLD_KNOWLEDGE.md) · [NPC_TASK_SYSTEM](Docs/NPC_TASK_SYSTEM.md) |
+| Source setup and operations | [SOURCE_SETUP](Docs/SOURCE_SETUP.md) · [OPERATIONS](Docs/OPERATIONS.md) |
+| Backend and Unity protocol | [Backend](AIBackend/README.md) · [Contracts](Contracts/README.md) |
+| Contributing | [CONTRIBUTING](CONTRIBUTING.md) |
 
-These are research directions, not committed features or a release schedule.
+See the [documentation index](Docs/README.md) for more. Some technical documents are primarily in Chinese.
 
-## Feedback and contributions
+## 🌱 What's next
 
-If setup or gameplay fails, you find a bug, or you have suggestions about the
-architecture, features or future directions, please use
-[GitHub Issues](https://github.com/LYFshota/EmbodiedNPC/issues), submit a Pull Request,
-or email [952650555@qq.com](mailto:952650555@qq.com).
+The focus is on **more natural conversations, relationships that develop over time, expressive nonverbal behavior, and richer interactions with the game world**, while making characters and scenes easier to configure and reuse.
 
-Small fixes, documentation and reproducible bug reports are welcome. Read the
-[contribution guide](CONTRIBUTING.md), describe what you actually validated, and
-share only redacted logs. Do not upload API keys, private conversations or save databases.
+Feedback, ideas and Pull Requests are welcome via [Issues](https://github.com/LYFshota/EmbodiedNPC/issues). You can also reach out at [952650555@qq.com](mailto:952650555@qq.com).
 
-## Code and asset licenses
+## 📄 License
 
-Original code, documentation and configuration templates use **Apache-2.0**.
-Project-owned art expressly listed in the [asset schedule](ThirdPartyNotices/Project_Art.md)
-uses CC0 1.0. Third-party code, characters, models, animations, fonts and audio
-retain their own licenses; the complete default demo is not unrestricted commercial content.
+Original project code and documentation are licensed under **Apache-2.0**. Third-party models, art, animation, fonts and other assets retain their own licenses. The player character **Xingmang** has a separate project-scoped non-commercial license.
 
-Xingmang uses an adopted [project-scoped non-commercial license](UnityClient/Assets/VRMCompatibilityTest/Xingmang.LICENSE.md):
-non-commercial use, modification and redistribution with EmbodiedNPC/forks and
-their builds are permitted. Commercial use requires separate authorization;
-standalone sale and asset-pack distribution are not granted. Preserve the creator
-credit and existing use restrictions. This asset license does not limit commercial
-use of the Apache-2.0 original code.
-
-See the [Xingmang asset schedule](ThirdPartyNotices/Xingmang_Assets.md) for asset and metadata details.
-
-See [LICENSE](LICENSE), [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md).
+See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md), and the [Xingmang license](UnityClient/Assets/VRMCompatibilityTest/Xingmang.LICENSE.md).
