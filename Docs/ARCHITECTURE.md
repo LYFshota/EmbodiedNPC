@@ -1,6 +1,8 @@
 # EmbodiedNPC Architecture
 
-The current v0.1.3-preview source uses TitleScene → CafeDemoV2. This page describes production module responsibilities and authority boundaries; it is not a claim that every provider or gameplay path has been tested. See [release scope](RELEASE_STATUS.md) for the retained source and validation limits, and [source setup](SOURCE_SETUP.md) to run the project.
+This document follows the runtime path from **perception and events** to **cognition, action, world feedback, and long-term memory**. Unity owns live world state and execution; the Python Backend handles model inference, knowledge, and memory. The demo starts at TitleScene and runs in CafeDemoV2.
+
+For gameplay highlights and downloads, start with the [README](../README.en.md). Release-specific checks are kept in [Release Status](RELEASE_STATUS.md).
 
 ## Reading the diagrams
 
