@@ -4,7 +4,7 @@
 
 项目使用 **Unity 6000.5.10f1** 和 **Python 3.12 x64**，Windows 开发环境可按照 [源码运行说明](SOURCE_SETUP.md)配置。
 
-## Python Backend
+## Python 后端
 
 依赖以 [requirements.txt](../AIBackend/requirements.txt) 为准，在独立虚拟环境中安装：
 

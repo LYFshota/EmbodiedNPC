@@ -25,11 +25,10 @@ Unity AgentEvent → CognitiveRun → CognitiveRequest (/ws)
 cd AIBackend
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-$env:EMBODIEDNPC_PROVIDER = 'mock'
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 ```
 
-实际游戏和模型的完整配置见 [源码运行指南](../Docs/SOURCE_SETUP.md)。Windows 试玩包使用自带启动器，不需要按上面的开发命令启动。
+实际游戏和模型的完整配置见 [源码运行指南](../Docs/SOURCE_SETUP.md)；Mock 调试及多工作区的数据隔离见 [运行说明](../Docs/OPERATIONS.md)。Windows 试玩包使用自带启动器。
 
 ## 模型配置
 

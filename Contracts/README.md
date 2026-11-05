@@ -28,7 +28,7 @@ HTTP 包括 `/live`、`/health`、模型配置、运行状态、世界知识管�
 
 `ExperienceAppendRequest/Result 1.0` 表示经历写入账本的确认。Episode 分段及长期记忆整理在后台独立进行。
 
-## Backend-internal context reads
+## Backend 内部上下文读取
 
 普通对话先自动预取有权限访问的世界知识，再进入 Step 0。模型可以直接给出最终结果，也可以请求一次内部上下文读取：
 
@@ -63,7 +63,7 @@ Backend 为各读取来源返回状态和有限证据，统一分配最终上下
 
 行动失败反馈保留原 Trace 与行动结果关联，可在受限条件下请求一次新的语义判断或恢复选择；Unity 仍核验当前世界和原执行归属。详见 [持久任务](../Docs/NPC_TASK_SYSTEM.md)。
 
-## Presentation metadata and management HTTP
+## 对话表现字段与管理接口
 
 普通回复可附带 `emotion`、`gesture`、`look_at` 和 `expression_icon`，用于 Unity 的对话与表情表现。它们不改变动作或记忆的真实状态。
 

@@ -102,7 +102,7 @@ The project evaluated models against **100 fixed NPC scenarios** covering dialog
 | Backend and Unity protocol | [Backend](AIBackend/README.en.md) · [Contracts](Contracts/README.en.md) |
 | Contributing | [CONTRIBUTING](CONTRIBUTING.en.md) |
 
-See the [documentation index](Docs/README.en.md) for more. Some technical documents are primarily in Chinese.
+See the [documentation index](Docs/README.en.md) for more guides in both languages.
 
 ## 🌱 What's next
 

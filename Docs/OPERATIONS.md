@@ -35,9 +35,13 @@ $env:EMBODIEDNPC_PROVIDER = 'mock'
 
 ## 贡献时的验证
 
-按实际变更选择定向测试，分别说明静态检查、Mock、真实模型、Unity Editor 和 Player 的结果。不要在有价值的玩家数据上测试或迁移。首次部署已知的六项 Reimport 见 [SOURCE_SETUP](SOURCE_SETUP.md#首次-unity-导入与模型就绪)。
+按实际变更选择定向测试，分别说明静态检查、Mock、真实模型、Unity Editor 和 Player 的结果。不要在有价值的玩家数据上测试或迁移。首次部署已知的六项 Reimport 见 [源码运行指南](SOURCE_SETUP.md#首次-unity-导入与模型就绪)。
 
 
-## Model concurrency
+## 模型调用并发
 
-Settings → Developer tools → Concurrency settings exposes total, foreground and background model limits (integers 1–32, each class no greater than total). Cloud defaults: 6/6/2; Ollama: 1/1/1. Save & Apply includes any pending AI configuration edits and requires the existing Backend restart flow. The scheduler is shared by cognition and all three background workers; class caps do not reserve fixed slots. Existing timeouts, bounded waiting and local priority remain in effect.
+在「设置 → 开发者工具 → 并发设置」中，可以调整模型调用的总量、前台和后台上限。取值范围为 1～32，前台和后台的上限均不能超过总量。
+
+云端模型默认 `6/6/2`，Ollama 默认 `1/1/1`，依次为「总量 / 前台 / 后台」。NPC 对话与后台记忆任务共享调度器，优先响应前台请求，同时兼顾后台任务；各类上限并不代表预留固定执行槽位。
+
+点击「保存并应用」时，待应用的 AI 配置修改也会一起保存，按页面提示重启 Backend 即可生效。

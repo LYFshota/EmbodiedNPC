@@ -25,11 +25,10 @@ Prepare Python 3.12 x64, then run from the repository root:
 cd AIBackend
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-$env:EMBODIEDNPC_PROVIDER = 'mock'
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 ```
 
-See [Source Setup](../Docs/SOURCE_SETUP.en.md) for the full Unity and model workflow. Windows preview packages have their own launcher.
+See [Source Setup](../Docs/SOURCE_SETUP.en.md) for the full Unity and model workflow, and [Operations](../Docs/OPERATIONS.en.md) for isolated Mock testing. Windows preview packages have their own launcher.
 
 ## Model configuration
 
