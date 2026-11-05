@@ -27,4 +27,4 @@ Unity restores the pinned project dependencies when first opened.
 
 Windows preview packages include default Embedding assets. Source installations prepare these separately following [Embedding setup](SOURCE_SETUP.en.md#bundled-embedding-resources). The Main LLM is configured by the user.
 
-For third-party component terms and attribution, see [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md).
+For third-party component terms and attribution, see [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.en.md).
