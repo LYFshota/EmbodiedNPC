@@ -44,6 +44,7 @@ def assemble(destination, python_runtime, models, player):
         shutil.copy2(source / "portable/root" / name, destination / name)
     shutil.copy2(source / "portable/README.md", backend / "PORTABLE-START.txt")
     shutil.copy2(source / "portable/root/README-试玩说明.txt", destination / "README-试玩说明.txt")
+    shutil.copy2(source / "portable/root/使用说明.html", destination / "使用说明.html")
     return destination
 
 
