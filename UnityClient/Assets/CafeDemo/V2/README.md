@@ -1,3 +1,5 @@
+[简体中文](README.md) | [English](README.en.md)
+
 # CafeDemoV2
 
 `Assets/Scenes/CafeDemoV2.unity` 是当前咖啡馆演示场景，正式启动入口为 `Assets/Scenes/TitleScene.unity`。
