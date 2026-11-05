@@ -1,24 +1,20 @@
 # AIBackend
 
-> **当前修复范围**：S01 本机 HTTP/WS 准入、S02 Episode 可靠性、S03 失败解释异步调度及配套 Unity S05 生命周期修复已纳入源码。版本与验收范围见 [发布状态](../Docs/RELEASE_STATUS.md)；不据此宣称 Windows Player 或完整回归通过。
+Python 后端负责 NPC 的认知决策、世界知识检索、长期记忆、关系反思和持久任务。Unity 负责世界状态与动作执行，双方通过 HTTP / WebSocket 协作。
 
-> **2026-10-19 当前入口**：本页保留 Backend 启动、接口和协议边界。当前产品还有受限行为模式、咖啡动作、第三方旁听、世界知识、独立双语输出合同和 Portable/Standalone 相关代码；整体状态、Candidate 与验证限制请见 [CURRENT_STATUS](../Docs/RELEASE_STATUS.md)。测试/项目阶段日期不能代替当前运行时配置。
-
-Backend 提供 Runtime v2 认知、Experience/Episode、canonical Memory、Relationship reflection 和任务失败回复。Unity 保持世界状态与动作执行权威。
-
-## 当前生产认知链
+## 认知运行流程
 
 ```text
 AgentEvent → CognitiveRun → CognitiveRequest (/ws)
-→ CognitiveBackendEntry → CognitiveDecision
-→ automatic knowledge retrieval + optional CONTEXT_READ / MEMORY_RECALL / TASK_READ
-→ at most one final Step 1 / Relationship Context
-→ ActionProposalValidator → Unity admission / presentation
+→ 上下文装配、授权知识预检索
+→ Step 0（直接决策 / 请求 CONTEXT_READ）
+→ 按需读取知识、记忆或任务 → 可选 Step 1 最终决策
+→ 结构化结果 → Backend 校验 → Unity 呈现或行动准入
 ```
 
-`AgentRequest → AgentResponseService` 已在 R2-B5 退休。HTTP `/v1/agent-response`、`/v1/mock/agent-response` 与 WS `agent_request` 不再受支持。仓库无法判断是否存在外部旧客户端；这是主动结束的旧外部契约，不提供桥接。
+单次普通认知最多两次模型推理。不同 NPC 的前台请求和后台记忆任务使用共享的有界并发调度器。
 
-启动时若存在 `data/model_api_configs.json`，Backend 从其中构造 Mock、Ollama、DeepSeek Official Responses、OpenAI-compatible、Gemini Native 或 Anthropic Native Main Provider，以及独立的 Embedding Provider；同一个 Main 对象供 cognition、TaskFailure、canonical consolidation 与 Relationship reflection 共享。接入类型不代表每个云端模型均已真实验收。无文件时沿用 `EMBODIEDNPC_PROVIDER` 环境 bootstrap。`/health` 只检查当前 Provider，不证明后台 worker 或 Unity 连接。
+Backend 使用 `data/model_api_configs.json` 中的 Main / Embedding 配置；未创建配置文件时可从环境变量初始化。支持 Mock、Ollama、DeepSeek Official、OpenAI-compatible、Gemini Native 和 Anthropic Native 等适配器。具体协议见 [Contracts](../Contracts/README.md)，版本验收记录见 [发布状态](../Docs/RELEASE_STATUS.md)。
 
 ## 启动
 
@@ -53,7 +49,7 @@ Unity Editor 默认从相对 `Application.dataPath` 的 `../../AIBackend/data/kn
 ## 接口与数据
 
 - HTTP：`GET /live`、受保护 `/health`、runtime-status、Model Config v2 与兼容 v1、settings、dialogue-history、task-failure-response，以及知识/索引/上下文策略接口；完整端点以路由定义为准。
-- 原生 WS `/ws`：`cognitive_request`、`cognitive_cancel`、`task_failure_report`、`experience_append_request`、`task_runtime_sync`、`task_control`、ping/pong。版本及相关性见 [Contracts](../Contracts/README.md)。认知与失败解释使用连接所属任务及原发送锁；失败解释最多 1 项处理、3 项等待，超额/30 秒超时按原合同安全澄清，不更改任务状态。共享模型资源仍遵循原串行优先级。
+- 原生 WS `/ws`：`cognitive_request`、`cognitive_cancel`、`task_failure_report`、`experience_append_request`、`task_runtime_sync`、`task_control`、ping/pong。版本及相关性见 [Contracts](../Contracts/README.md)。认知与失败解释使用连接所属任务及原发送锁；失败解释最多 1 项处理、3 项等待，超额/30 秒超时按原合同安全澄清，不更改任务状态。共享模型执行器按前台优先和后台公平策略调度。
 - 新长期记忆只经 Experience → Episode → 当前 `memory-consolidator/3.0` → canonical Memory 产生；`memory-consolidator/2.0` 仅作为历史 job 版本常量保留。Migration 15 已退休旧 episodic、memory_v1、数值 Relationship 和 shadow 物理表；旧 job 行仍可留在共享 `memory_jobs` 中，但不会被 v2 worker 领取。
 
 定向测试使用 `.venv\Scripts\python.exe -B -m unittest -q tests.test_cognitive_request tests.test_cognitive_websocket`，并按变更范围加入 canonical Memory、Relationship、Action、TaskFailure 和 Experience 测试。测试使用隔离 `EMBODIEDNPC_MEMORY_DB`。
@@ -90,14 +86,16 @@ Backend 默认固定 Player UID 为 `cafe-local-player-001`；隔离部署可在
 
 能力、当前验证与 NOT_RUN 见[公开摘要](../Docs/RELEASE_STATUS.md)。
 
-## Persona 与验证边界
+## Persona
 
-CognitiveCharacterContext 七字段为 character_id/display_name/role_summary/backstory/personality/speaking_style/boundaries，上限 120/80/240/600/600/480/600，非空白，extra=forbid、frozen=True。Unity authoring/本机 override 经唯一 Resolver 构成新 Run snapshot；Backend 只把 profile 当作现有请求 JSON 中的低权限数据，不授予 action/capability、EntityRef 或世界/历史事实 authority，不增加模型调用。
+角色人设包含 character_id、display_name、role_summary、backstory、personality、speaking_style 和 boundaries。Unity 的默认配置与玩家修改由 CharacterProfileResolver 合成新的认知快照。人设负责角色表达与个性，玩家经历和真实行动结果则由各自的证据与世界系统管理。
 
-Persona 与 Memory 的 profile facts 不同；玩家偏好、共同经历必须来自真实 Dialogue/Memory evidence。运行验证已有 targeted contract/action 21/21 与 10-call DeepSeek persona/action smoke；既有 Unity Cafe E2E 和 post-Persona NOT_RUN 项见 [CURRENT_TEST_MATRIX](../Docs/RELEASE_STATUS.md)，不要把 Backend validator acceptance 写成 Unity execution success。本次文档更新未执行 Backend 或模型测试。
+字段格式和上限见 [Contracts](../Contracts/README.md)，定向验收记录见 [发布状态](../Docs/RELEASE_STATUS.md)。
 
-## World Knowledge K0 / K1 / K1.5 与 Cognitive Budget
+## 世界知识与上下文预算
 
-Backend 结构化世界知识、独立 Hybrid RAG、受保护的本机管理 API、Unity 第六页编辑闭环及 Cognitive Budget P0/P1 已完成，阶段结论为 PASS WITH LIMITATIONS。16K、关闭 thinking 的云端路径已通过定向真实验收；该次历史验收配置为 revision 17/8K，不能据此推定当前用户配置；容量变更须显式保存激活并重启。小容量/未知容量安全降级及模型语义限制见 [WORLD_KNOWLEDGE](WORLD_KNOWLEDGE.md)。
+世界知识由 Backend 管理，支持角色权限、常驻内容、混合检索与 Unity 内编辑。普通认知先自动预取相关背景，必要时再通过一次联合读取补查知识、记忆或任务。
 
-Model Config v2 新建 Main（含本地、云端及自定义 API）默认 32K（32768），可手动调整；已有保存容量不自动迁移。新建默认值是请求预算，不是所有 Provider 的真实容量保证。
+新建 Main 配置默认使用 32K 上下文预算，也可按模型实际容量调整。现有保存的配置保持不变；输入内容、输出预留和安全余量由统一预算分配器协调。
+
+实现与配置说明见 [世界知识](WORLD_KNOWLEDGE.md) 和 [上下文容量反馈](../Docs/CONTEXT_CAPACITY_FEEDBACK.md)。
