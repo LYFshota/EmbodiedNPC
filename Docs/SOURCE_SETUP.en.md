@@ -33,7 +33,7 @@ Backend listens locally on `127.0.0.1:8000` by default. For testing in several c
 4. Save and apply. Restart your development Backend if the settings page indicates a restart is needed.
 5. Enter the café and interact with the NPCs.
 
-New Main profiles use a 32K request budget by default. Match the value to the model's actual context capacity.
+New Main profiles use a **32K-token request budget** by default; adjust it to your model's actual context window. The default built-in Embedding needs the resources described below. Alternatively, configure an external Embedding provider or turn off vector retrieval.
 
 ## First Unity import
 
@@ -60,10 +60,29 @@ Place the eight manifest-listed files in `AIBackend/models/embeddinggemma-300m-q
 - `tokenizer.json`, `tokenizer_config.json`, `special_tokens_map.json`, `tokenizer.model`
 - `config.json`, `README.md`
 
-You can also set `EMBODIEDNPC_BUILTIN_EMBEDDING_DIR` to an absolute model directory, use a separate Embedding provider, or disable vector retrieval in settings. Review the model's [Gemma terms](https://ai.google.dev/gemma/terms) before using or redistributing its assets.
+Set `EMBODIEDNPC_BUILTIN_EMBEDDING_DIR` to an absolute model directory if you keep the files elsewhere. The model is covered by its own [Gemma terms](https://ai.google.dev/gemma/terms), separately from this project's Apache-2.0 license.
+
+Verify the eight SHA256 hashes from the `AIBackend` directory:
+
+```powershell
+@'
+import hashlib, json, os
+from pathlib import Path
+spec = json.loads(Path('app/builtin_embedding_resources.json').read_text(encoding='utf-8'))
+root = Path(os.environ.get('EMBODIEDNPC_BUILTIN_EMBEDDING_DIR', 'models/' + spec['model']))
+for name, expected in spec['files'].items():
+    with (root / name).open('rb') as source:
+        actual = hashlib.file_digest(source, 'sha256').hexdigest()
+    if actual != expected:
+        raise SystemExit('SHA256 mismatch: ' + name)
+print('PASS: all 8 resource hashes match; inference NOT_RUN')
+'@ | .\.venv\Scripts\python.exe -B -
+```
+
+Missing files or hash mismatches will be reported immediately. Windows preview packages already include these assets.
 
 ## Local sessions and configuration
 
-The Backend creates local authorization credentials for protected HTTP/WS operations. The paired Editor reads its session from the same checkout. Keep API keys, local session data and player saves private.
+The Backend generates local session credentials for protected HTTP and WebSocket operations. Unity Editor reads `AIBackend/data/knowledge_admin_session.json` from the same checkout; the portable launcher manages a separate UserData directory. With multiple checkouts or a custom port, match the Backend URL, session path and data directory to the same instance. Keep API keys and session data on your machine.
 
-For model settings, troubleshooting, and more complex checkouts, use [Backend](../AIBackend/README.en.md) and [Operations](OPERATIONS.en.md).
+`/live` checks process liveness; `/health` and runtime-status check readiness. An existing model profile takes precedence over `EMBODIEDNPC_PROVIDER=mock`, so use [Operations](OPERATIONS.en.md) for isolated Mock tests. See [Backend](../AIBackend/README.en.md) for API details.

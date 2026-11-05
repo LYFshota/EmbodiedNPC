@@ -2,7 +2,7 @@
 
 # 从源码运行（Windows / Unity Editor）
 
-这份指南适用于在 Windows 上使用 Unity Editor 和 Python 后端运行源码。只想体验游戏，可以直接使用 [Windows 试玩包](../README.md)，按照包内「使用说明.html」配置模型。
+这份指南介绍如何在 Windows 上通过 Unity Editor 和 Python 后端运行项目。只想试玩，可以下载 [Windows 试玩包](../README.md)，按包内「使用说明.html」配置模型。
 
 源码环境与版本清单见 [依赖说明](DEPENDENCIES.md)，本地多工作区和测试隔离见 [运行说明](OPERATIONS.md)。
 
@@ -22,11 +22,11 @@
    .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers
    ```
 
-   不使用多 worker、反向代理或公开监听。导入应用会初始化数据路径；若要隔离测试，必须在启动 Python/导入应用**之前**配置所有数据、模型配置、知识索引及私有会话路径，详见 [OPERATIONS](OPERATIONS.md)。不要在正式存档上运行测试。
-3. 在 Editor 打开 `Assets/Scenes/TitleScene.unity` 并运行；可按开发测试需要直接运行 `CafeDemoV2.unity`，仍需通过原配置准入。当前 Build Settings 正式入口是 TitleScene → CafeDemoV2，旧 CafeDemo 为早期场景。
-4. 首次为 Main 模型配置有效 Provider、模型和必要 Key，保存并应用，按提示重启 Backend。源码 Editor 模式通过本机开发重启脚本/人工停止再启动 Backend 生效；Portable 的“重启并应用”由 `Start.cmd` 的现有监督进程处理，不能混用两个入口。
+   上述命令以单 worker 在本机启动。多工作区或测试环境请先按 [运行与数据隔离](OPERATIONS.md) 设置独立的配置、索引和会话目录。
+3. 在 Editor 打开 `Assets/Scenes/TitleScene.unity` 并运行；可按开发测试需要直接运行 `CafeDemoV2.unity`，仍需通过原配置准入。当前 Build Settings 正式入口是 TitleScene → CafeDemoV2。
+4. 首次为 Main 模型配置有效 Provider、模型和必要 Key，保存并应用，按提示重启 Backend。在 Editor 模式下手动重启 Backend；Windows 试玩包由启动器处理重启。
 
-新建 Main 草稿默认 32768 上下文，已有值不自动迁移。该值是请求预算配置，不证明 Provider 实际容量。首次 Main 保存会一并启用默认预选的内置 Embedding；**需先准备下面的资源**，或在保存前明确选择已有外部 Embedding / 关闭 Embedding 的路径。关闭向量能力仍有 lexical/structured fallback，不等于启用向量检索。
+新建 Main 配置的上下文预算默认是 **32768 token**，可按模型实际容量调整。首次使用默认内置 Embedding 前，请按下文准备模型资源；也可选择外部 Embedding，或在设置中关闭向量检索（此时仍可使用关键词和结构化检索）。
 
 ### 首次 Unity 导入与模型就绪
 
@@ -53,10 +53,10 @@ PUBLIC_SOURCE_MODEL_IMPORT_READY: repaired=6; no source assets saved
 
 - 上游：[`onnx-community/embeddinggemma-300m-ONNX`](https://huggingface.co/onnx-community/embeddinggemma-300m-ONNX/tree/5090578d9565bb06545b4552f76e6bc2c93e4a66)。固定 revision `5090578d9565bb06545b4552f76e6bc2c93e4a66`，本项目标识 `embeddinggemma-300m-q4`。
 - 默认目标目录：`AIBackend/models/embeddinggemma-300m-q4/`。若需放在别处，启动 Backend 前设置 `EMBODIEDNPC_BUILTIN_EMBEDDING_DIR` 为该资源目录的绝对路径；不要修改规范或已保存配置来绕过资源校验。
-- 按固定 revision 合法取得以下 **8 个文件**，保留 `onnx/` 子目录：`onnx/model_q4.onnx`、`onnx/model_q4.onnx_data`、`tokenizer.json`、`tokenizer_config.json`、`special_tokens_map.json`、`tokenizer.model`、`config.json`、`README.md`。不要下载另一量化版本、混用 tokenizer、保存网页/LFS 指针代替权重，或编辑受哈希约束的模型卡。
-- 取得资源前阅读该 revision 的模型卡、基础模型及转换资源的适用许可；如平台要求接受条款，按其流程取得。Google 的 [Gemma Terms](https://ai.google.dev/gemma/terms) 包含使用限制及分发义务；模型不随第一方源码改为 Apache-2.0。发布带权重的包前另行核对并附所需条款、Notice 和上游声明。当前规范的 8 文件清单只用于运行身份校验，不是完整的授权文件清单。
+- 按固定 revision 合法取得以下 **8 个文件**，保留 `onnx/` 子目录：`onnx/model_q4.onnx`、`onnx/model_q4.onnx_data`、`tokenizer.json`、`tokenizer_config.json`、`special_tokens_map.json`、`tokenizer.model`、`config.json`、`README.md`。文件版本、目录结构及哈希以资源规范为准，模型权重和 tokenizer 应来自同一固定 revision。
+- 下载或分发模型资源时，请遵循上游模型卡及 [Gemma Terms](https://ai.google.dev/gemma/terms)。Embedding 模型使用其独立许可，不适用本项目原创代码的 Apache-2.0 许可。
 
-以下命令从 `AIBackend` 目录执行，只校验文件，不导入应用、不加载模型、不访问玩家数据：
+准备好资源后，在 `AIBackend` 目录运行以下命令校验 8 个文件的 SHA256：
 
 ```powershell
 @'
@@ -73,10 +73,10 @@ print('PASS: all 8 resource hashes match; inference NOT_RUN')
 '@ | .\.venv\Scripts\python.exe -B -
 ```
 
-`builtin_resources_present` 仅表示文件存在，不能代替哈希或真实加载验证。缺失/哈希不匹配会明确失败，不自动联网补下载。Portable 则由组包流程在 `Backend/models` 预置并绑定资源，不复制开发机数据或会话凭据。
+缺失文件或哈希不匹配会直接报错。Windows 试玩包已在 `Backend/models` 中预置所需资源。
 
 ## 本机会话与配置边界
 
-Backend 启动创建私有会话文件；Editor 默认从同一 checkout 的 `AIBackend/data/knowledge_admin_session.json` 读取，Portable 使用启动器传入的 UserData 路径。敏感 HTTP 与原生 WS 共用该凭据，每次连接重新读取，重启轮换；无需手输 Token。非默认端口或多个 checkout 必须让客户端 URL、会话 URL/文件和各数据根一致。不要将 Token 放入 URL、普通日志或手工提交的配置。
+Backend 启动时生成本机会话文件。Editor 从当前工作区的 `AIBackend/data/knowledge_admin_session.json` 读取，试玩包则由启动器管理 UserData。Unity 会自动读取会话凭据，无需手动填写 Token。使用多个工作区或非默认端口时，应确保 Backend 地址、会话文件和数据目录对应同一个实例；API Key 和会话凭据保留在本机。
 
-`/live` 只证明进程存活，不访问 Provider；受保护 `/health`、runtime-status 才进行就绪探测，特定配置可能生成一次。Mock 环境变量不能覆盖已有 Model Config，因此不要把在个人 checkout 设置 `EMBODIEDNPC_PROVIDER=mock` 当成测试隔离。完整 API 与旧 v1 边界见 [Backend](../AIBackend/README.md)。
+`/live` 用于检查进程是否存活，`/health` 和 runtime-status 用于检查模型与服务就绪情况。已有模型配置会优先于 `EMBODIEDNPC_PROVIDER=mock` 环境变量；Mock 测试请按 [数据隔离说明](OPERATIONS.md) 准备独立目录。完整 API 见 [Backend 文档](../AIBackend/README.md)。
