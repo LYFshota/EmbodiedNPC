@@ -24,7 +24,7 @@ At its core is a working loop: **perception → cognition → memory / action �
 - **Everyday animation:** Vivi moves, pauses and wipes behind the counter. Wen and Jiang occasionally pick up their cups. The player has a subtle idle smile and expressions tied to actions.
 - **Concurrency and model choices:** Bounded concurrent foreground and background work across NPCs, with separate configuration for the Main LLM, embeddings and runtime settings.
 
-### Next release: v0.1.6-preview (in preparation)
+### Latest preview: v0.1.6-preview
 
 This release focuses on **first-time AI setup, API compatibility and failure feedback, portable startup, and natural player head gaze during conversation**.
 
@@ -37,10 +37,10 @@ The official DeepSeek API has targeted live-test evidence. Other official endpoi
 
 ## 🎮 Download and play
 
-**[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [published v0.1.5-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
+**[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.6-preview/EmbodiedNPC-v0.1.6-preview-Windows-x64.zip)** · [published v0.1.6-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.6-preview)
 
-1. The current public download is v0.1.5-preview: extract it completely and run `Start.cmd`. No Unity Editor or separate Python installation is required. The next release adds a Chinese launch entry.
-2. Configure your own chat model, API key and service URL in Settings.
+1. Extract the package completely and run `启动游戏.cmd` (`Start.cmd` also works). No Unity Editor or separate Python installation is required.
+2. Open Settings → AI Configuration, enter your model, API key and service URL, then save and restart as prompted. The package includes an illustrated Chinese guide, `使用说明.html`.
 3. Enter the café to talk with NPCs, request services, or observe their everyday activities.
 
 The preview includes **EmbeddingGemma-300M Q4 ONNX** for local memory embeddings. Bring your own chat model and API key if your provider requires one.

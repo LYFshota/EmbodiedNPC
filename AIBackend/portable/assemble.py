@@ -15,6 +15,8 @@ def assemble(destination, python_runtime, models, player):
     source = Path(__file__).resolve().parents[1]
     for path in (python_runtime / "python.exe", player / "EmbodiedNPC.exe"):
         if not path.is_file(): raise ValueError("Required input resource missing: " + path.name)
+    catalog = source.parent / "UnityClient/Assets/Resources/CafeSnackCatalog.json"
+    if not catalog.is_file(): raise ValueError("Shared snack catalog input missing")
     spec = json.loads((source / "app/builtin_embedding_resources.json").read_text(encoding="utf-8"))
     if any(not (models / name).is_file() for name in spec["files"]): raise ValueError("Embedding resource input incomplete")
     if destination.is_relative_to(source.parent): raise ValueError("Build outside the source workspace")
@@ -28,7 +30,8 @@ def assemble(destination, python_runtime, models, player):
             shutil.copy2(path, target)
     # The Backend already supports this bundled resource location. Copy the one
     # authored menu used by Unity; do not introduce a second catalog.
-    shutil.copy2(source.parent / "UnityClient/Assets/Resources/CafeSnackCatalog.json", backend / "app/knowledge/cafe_snacks.json")
+    (backend / "app/knowledge").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(catalog, backend / "app/knowledge/cafe_snacks.json")
     shutil.copytree(python_runtime, backend / "python", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     for name in (*spec["files"], "README.md", "LICENSE", "Gemma-Terms.html", "Gemma-Prohibited-Use-Policy.html", "Notice", "CONVERSION_AND_SOURCE.md"):
         path = models / name

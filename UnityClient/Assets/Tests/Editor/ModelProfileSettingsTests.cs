@@ -464,6 +464,10 @@ namespace EmbodiedNPC.Tests
             Invoke("EnsureProfileControls"); Invoke("ChooseInitial", false); Invoke("ChooseInitial", true);
             // Existing contract cases explicitly choose their synthetic provider; product first-run remains blank.
             Invoke("LoadSupplierOptions", false, 0, "deepseek"); Invoke("LoadEditingProfile", false); Set("initialMainPresetId", "deepseek");
+            // Legacy cloud-specific contracts choose their fixture explicitly; first-run keeps built-in memory lookup.
+            Invoke("LoadSupplierOptions", true, 0, "aliyun"); Invoke("LoadEditingProfile", true);
+            ((Toggle)Get("embeddingEnabled")).SetIsOnWithoutNotify(false);
+            Set("initialEmbeddingPresetId", "aliyun"); Set("embeddingBaseline", Invoke("DraftSignature", true));
         }
         private ModelPresetView Preset(string id, string protocol, string endpoint) => new ModelPresetView { preset_id = id, name = id,
             source = "cloud", protocol = protocol, base_url = endpoint, schema_profile = "raw", thinking_parameter = "none", token_parameter = "max_tokens", send_temperature = true };
@@ -955,7 +959,7 @@ namespace EmbodiedNPC.Tests
                 ((TMP_InputField)Get("embeddingApiKey")).text = "synthetic-draft-key";
                 string mainDraft = (string)Invoke("DraftSignature", false), embedDraft = (string)Invoke("DraftSignature", true);
                 var button = (Button)Get("restoreDefaultsButton");
-                Assert.That(button.GetComponentInChildren<TMP_Text>(true).text, Does.Contain(english ? "Restore Defaults" : "恢复默认"));
+                Assert.That(button.GetComponentInChildren<TMP_Text>(true).text, Does.Contain(english ? "Reset main model" : "重置主模型配置"));
                 button.onClick.Invoke();
                 var modal = (GameObject)Get("profileModal"); Assert.IsNotNull(modal);
                 modal.GetComponentsInChildren<Button>(true)[1].onClick.Invoke();
@@ -972,7 +976,7 @@ namespace EmbodiedNPC.Tests
                 Assert.That(Invoke("BuildMainResetCommand").ToString(), Does.Contain("\"key_action\": \"clear\""));
                 Assert.That(Invoke("BuildMainResetCommand").ToString(), Does.Contain("main-deepseek"));
                 Assert.AreEqual("",((TMP_InputField)Get("mainModel")).text);Assert.AreEqual(-1,((TMP_Dropdown)Get("mainSupplier")).value);
-                Assert.AreEqual(1, view.revision); Assert.That(((TMP_Text)Get("statusText")).text, Does.Contain(english ? "not" : "尚未删除"));
+                Assert.AreEqual(1, view.revision); Assert.IsTrue((bool)Get("defaultsRestored"));
                 var routine=(IEnumerator)Invoke("ProbeCurrentProfile",false,"discover");Assert.IsFalse(routine.MoveNext());
                 Assert.IsFalse(((Transform)Get("mainConnectionGroup")).GetComponent<CanvasGroup>().interactable);
                 Invoke("ApplyProfiles",view);Assert.IsTrue((bool)Get("defaultsRestored"));
@@ -988,14 +992,15 @@ namespace EmbodiedNPC.Tests
                     builtin_embedding_defaults=view.builtin_embedding_defaults,active_runtime=active};
                 Assert.IsTrue((bool)Invoke("ApplyMainResetResult",cleared,null));
                 Assert.IsFalse((bool)Get("defaultsRestored"));Assert.IsFalse((bool)Invoke("HasUnsavedSettings"));
-                Assert.AreEqual(-1,((TMP_Dropdown)Get("mainSupplier")).value);Assert.IsFalse((bool)Get("mainKeyPresent"));
+                Assert.AreEqual("qwen", ((ModelPresetView[])Get("mainChoices"))[((TMP_Dropdown)Get("mainSupplier")).value].preset_id);Assert.IsTrue((bool)Get("mainKeyPresent"));
                 Assert.IsTrue(form.SavedAIRequiresRestart);Assert.IsFalse(ModelConfigClient.StartupReady(cleared,null));
                 Assert.AreSame(active,cleared.active_runtime);Assert.IsTrue(cleared.active_runtime.main_model.key_present);
                 Assert.IsTrue(((Transform)Get("mainConnectionGroup")).GetComponent<CanvasGroup>().interactable);
-                // A fresh startup keeps Main blank despite unrelated saved profiles; explicit reconfiguration remains available.
+                // Reset removes only its target profile; another saved profile may be shown but remains unactivated.
                 cleared.active_runtime=null;cleared.restart_required=false;Invoke("ApplyProfiles",cleared);Invoke("ChooseInitial",false);
                 Assert.IsFalse(form.SavedAIRequiresRestart);Assert.IsFalse(ModelConfigClient.StartupReady(cleared,null));
-                Assert.AreEqual(-1,((TMP_Dropdown)Get("mainSupplier")).value);
+                Assert.AreEqual("other",((TMP_InputField)Get("mainModel")).text);
+                Assert.AreEqual("qwen", ((ModelPresetView[])Get("mainChoices"))[((TMP_Dropdown)Get("mainSupplier")).value].preset_id);
                 Invoke("RequestSupplierSwitch",false,0);Assert.AreEqual(0,((TMP_Dropdown)Get("mainSupplier")).value);
                 Assert.That(((Button)Get("saveButton")).GetComponentInChildren<TMP_Text>(true).text, Does.Contain(english ? "Save & Apply" : "保存并应用配置"));
             }
@@ -1061,7 +1066,7 @@ namespace EmbodiedNPC.Tests
                 control_allowed = true, counts_known = true, model = "actual-qwen", model_key = "space-qwen",
                 total = 100, completed = 44, pending = 56, progress = 61 });
             Invoke("RefreshIndexState");
-            Assert.IsFalse(((GameObject)Get("memoryIndexSection")).transform.IsChildOf(((GameObject)Get("advancedSettings")).transform));
+            Assert.IsTrue(((GameObject)Get("memoryIndexSection")).transform.IsChildOf(((GameObject)Get("advancedSettings")).transform));
             Assert.That(((TMP_Text)Get("indexState")).text, Does.Contain("actual-qwen"));
             Assert.That(((TMP_Text)Get("indexState")).text, Does.Not.Contain("Gemma"));
             Assert.AreEqual(61, ((Slider)Get("indexProgress")).value);
@@ -1118,7 +1123,7 @@ namespace EmbodiedNPC.Tests
                 Assert.IsTrue(((Button)Get("contractTest")).transform.IsChildOf(((GameObject)Get("contractContent")).transform));
                 Assert.IsTrue(((Button)Get("indexAction")).transform.IsChildOf(((GameObject)Get("memoryIndexSection")).transform));
                 Assert.IsFalse(((Button)Get("indexAction")).gameObject.activeInHierarchy, "Maintenance is behind the developer entry.");
-                Assert.IsFalse(((TMP_Text)Get("indexState")).transform.IsChildOf(group.transform));
+                Assert.IsTrue(((TMP_Text)Get("indexState")).transform.IsChildOf(group.transform));
                 Assert.IsFalse(((Button)Get("mainSave")).transform.parent.gameObject.activeSelf);
                 Assert.IsFalse(((Button)Get("embeddingApply")).transform.parent.gameObject.activeSelf);
                 string mainDraft = (string)Invoke("DraftSignature", false);
@@ -1190,6 +1195,8 @@ namespace EmbodiedNPC.Tests
                     new ModelContractResult { @case = "step0", status = "PASS" },
                     new ModelContractResult { @case = "step1", status = "FAIL", error_code = "MODEL_CONTRACT_RESPONSE_INVALID" },
                     new ModelContractResult { @case = "continuation", status = "NOT_RUN" } } };
+                Invoke("EnsureCompactLayout");
+                Set("lastProbeOperation", "contracts"); Set("lastProbeSignature", Invoke("ProbeSignature", false));
                 Invoke("ApplyProbeResult", result, null);
                 foreach (bool english in new[] { false, true })
                 {
@@ -1200,11 +1207,11 @@ namespace EmbodiedNPC.Tests
                     Assert.AreEqual(TextWrappingModes.Normal, summary.textWrappingMode);
                     Assert.GreaterOrEqual(summary.fontSizeMin, 20);
                     Assert.That(summary.text, Does.Contain(english ? "Test failed" : "测试失败"));
-                    Assert.That(details.text, Does.Contain("step0: PASS"));
-                    Assert.That(details.text, Does.Contain("step1: FAIL (MODEL_CONTRACT_RESPONSE_INVALID)"));
-                    Assert.That(details.text, Does.Contain("continuation: NOT_RUN"));
+                    Assert.That(details.text, Does.Contain("step0 · PASS"));
+                    Assert.That(details.text, Does.Contain("step1 · FAIL · MODEL_CONTRACT_RESPONSE_INVALID"));
+                    Assert.That(details.text, Does.Contain("continuation · NOT_RUN"));
                     Assert.That(details.text, Does.Contain(english ? "world execution" : "世界执行"));
-                    Assert.AreEqual(main, details.transform.parent);
+                    Assert.AreEqual(((GameObject)Get("contractContent")).transform, details.transform.parent);
                     Assert.AreEqual(-1, details.GetComponent<LayoutElement>().preferredHeight);
                     Assert.IsTrue(details.gameObject.activeSelf);
                 }
