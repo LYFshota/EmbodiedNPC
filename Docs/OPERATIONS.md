@@ -35,7 +35,7 @@ $env:EMBODIEDNPC_PROVIDER = 'mock'
 
 ## 贡献时的验证
 
-按实际变更选择定向测试，分别说明静态检查、Mock、真实模型、Unity Editor 和 Player 的结果。不要在有价值的玩家数据上测试或迁移。首次部署已知的六项 Reimport 见 [SOURCE_SETUP](SOURCE_SETUP.md#首次-unity-导入后的-vrm--glb-核对)。
+按实际变更选择定向测试，分别说明静态检查、Mock、真实模型、Unity Editor 和 Player 的结果。不要在有价值的玩家数据上测试或迁移。首次部署已知的六项 Reimport 见 [SOURCE_SETUP](SOURCE_SETUP.md#首次-unity-导入与模型就绪)。
 
 
 ## Model concurrency
