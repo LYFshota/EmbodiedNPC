@@ -1,3 +1,5 @@
+[简体中文](THIRD_PARTY_NOTICES.md) | [English](THIRD_PARTY_NOTICES.en.md)
+
 # 许可范围与第三方资源
 
 Copyright 2026 LYFshota
