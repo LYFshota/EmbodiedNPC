@@ -1,3 +1,5 @@
+[简体中文](OPERATIONS.md) | [English](OPERATIONS.en.md)
+
 # 本地开发与数据隔离
 
 默认在本机运行单 worker Backend：从 `AIBackend` 按 [源码运行说明](SOURCE_SETUP.md) 启动，监听 `127.0.0.1:8000`。默认运行数据位于该 checkout 的 `AIBackend/data`，不随源码提供。不要混用其他 checkout 的数据库、模型配置或会话凭据。
