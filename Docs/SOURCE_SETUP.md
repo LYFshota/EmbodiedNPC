@@ -1,3 +1,5 @@
+[简体中文](SOURCE_SETUP.md) | [English](SOURCE_SETUP.en.md)
+
 # 从源码运行（Windows / Unity Editor）
 
 这份指南适用于在 Windows 上使用 Unity Editor 和 Python 后端运行源码。只想体验游戏，可以直接使用 [Windows 试玩包](../README.md)，按照包内「使用说明.html」配置模型。
