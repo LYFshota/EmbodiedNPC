@@ -56,7 +56,7 @@ The preview includes **EmbeddingGemma-300M Q4 ONNX** for local memory embeddings
 - **Long-term memory:** Episodes are consolidated and recalled asynchronously; relationship reflections are maintained separately to support interactions across sessions.
 - **Concurrent work:** Model calls for different NPCs and background jobs can run in parallel while preserving per-character and data-scope constraints.
 
-For implementation details, see [Architecture](Docs/ARCHITECTURE.md), [Memory](Docs/MEMORY.md), and [Communication Contracts](Contracts/README.md).
+For implementation details, see [Architecture](Docs/ARCHITECTURE.en.md), [Memory](Docs/MEMORY.en.md), and [Communication Contracts](Contracts/README.en.md).
 
 ## 🛠️ Run from source
 
@@ -74,7 +74,7 @@ Development environment: **Unity 6000.5.10f1, Python 3.12 x64, Git, Windows**.
 2. Open `UnityClient` in Unity Hub. After importing assets, run `Assets/Scenes/TitleScene.unity`.
 3. Configure Main LLM and Embedding in game, save, and restart the Backend when prompted.
 
-**Note:** Embedding weights are not stored in the source repository. Follow [Source Setup](Docs/SOURCE_SETUP.md) to prepare them, configure an external embedding provider, or disable vector search. The Windows preview already includes the local embedding resources.
+**Note:** Embedding weights are not stored in the source repository. Follow [Source Setup](Docs/SOURCE_SETUP.en.md) to prepare them, configure an external embedding provider, or disable vector search. The Windows preview already includes the local embedding resources.
 
 ## 📊 Model experiments
 
@@ -95,14 +95,14 @@ The project evaluated models against **100 fixed NPC scenarios** covering dialog
 
 | Topic | Docs |
 | --- | --- |
-| Architecture and data flow | [ARCHITECTURE](Docs/ARCHITECTURE.md) |
-| Long-term memory | [MEMORY](Docs/MEMORY.md) |
-| World knowledge and future tasks | [WORLD_KNOWLEDGE](AIBackend/WORLD_KNOWLEDGE.md) · [NPC_TASK_SYSTEM](Docs/NPC_TASK_SYSTEM.md) |
-| Source setup and operations | [SOURCE_SETUP](Docs/SOURCE_SETUP.md) · [OPERATIONS](Docs/OPERATIONS.md) |
-| Backend and Unity protocol | [Backend](AIBackend/README.md) · [Contracts](Contracts/README.md) |
-| Contributing | [CONTRIBUTING](CONTRIBUTING.md) |
+| Architecture and data flow | [ARCHITECTURE](Docs/ARCHITECTURE.en.md) |
+| Long-term memory | [MEMORY](Docs/MEMORY.en.md) |
+| World knowledge and future tasks | [WORLD_KNOWLEDGE](AIBackend/WORLD_KNOWLEDGE.en.md) · [NPC_TASK_SYSTEM](Docs/NPC_TASK_SYSTEM.en.md) |
+| Source setup and operations | [SOURCE_SETUP](Docs/SOURCE_SETUP.en.md) · [OPERATIONS](Docs/OPERATIONS.en.md) |
+| Backend and Unity protocol | [Backend](AIBackend/README.en.md) · [Contracts](Contracts/README.en.md) |
+| Contributing | [CONTRIBUTING](CONTRIBUTING.en.md) |
 
-See the [documentation index](Docs/README.md) for more. Some technical documents are primarily in Chinese.
+See the [documentation index](Docs/README.en.md) for more. Some technical documents are primarily in Chinese.
 
 ## 🌱 What's next
 
@@ -114,4 +114,4 @@ Feedback, ideas and Pull Requests are welcome via [Issues](https://github.com/LY
 
 Original project code and documentation are licensed under **Apache-2.0**. Third-party models, art, animation, fonts and other assets retain their own licenses. The player character **Xingmang** has a separate project-scoped non-commercial license.
 
-See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md), and the [Xingmang license](UnityClient/Assets/VRMCompatibilityTest/Xingmang.LICENSE.md).
+See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.en.md), and the [Xingmang license](UnityClient/Assets/VRMCompatibilityTest/Xingmang.LICENSE.md).
