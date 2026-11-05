@@ -1,52 +1,53 @@
-# EmbodiedNPC wire contracts
+[简体中文](README.md) | [English](README.en.md)
 
-当前运行协议包括普通认知 1.0 与任务扩展 1.1。以下列出字段、关联要求与后端内部读取流程；运行示例见 [Backend](../AIBackend/README.md)。
+# EmbodiedNPC 通信协议
 
-当前认知 envelope 支持 `CognitiveRequest/Response 1.0` 和任务扩展 **1.1**。1.0 不携带 task_runtime；1.1 必须携带合法运行关联，回复保留原 request/trace/run/agent 与版本。Backend 严格模型定义在 `AIBackend/app/contracts.py`，Unity DTO 与 validator 位于 `UnityClient/Assets/Scripts/Cognition/`。本目录保留的 JSON schema/示例对应 Experience 的 1.0 合同；认知及任务扩展以实际 DTO、严格校验和[任务系统文档](../Docs/NPC_TASK_SYSTEM.md)为准，不能拿其他消息的 schema 验证认知 envelope。
+Unity 与 Python Backend 通过本机 HTTP 和 WebSocket 交换认知请求、经历与任务信息。协议强调**请求关联、结构化决策和真实世界回执**。字段的最终定义位于 [Backend contracts.py](../AIBackend/app/contracts.py) 及 Unity `Cognition/` DTO。
 
-普通 CognitiveDecision 为 DIRECT_RESPONSE、NO_ACTION、ACTION_PROPOSAL；response.decision union 另有受限系统事件的 DAILY_MODE_INTENT、AUTONOMOUS_ACTION_INTENT。内部 CONTEXT_READ、兼容 MEMORY_RECALL/TASK_READ 及任务变更步骤不是新增的通用 Unity Tool。动作意图只是提案，需 Backend 校验及独立 Unity 准入、当前世界验证和真实 Outcome，不代表动作已完成。
+## 认知消息
 
-CognitiveRequest.context.character 当前固定七项：character_id/display_name/role_summary/backstory/personality/speaking_style/boundaries，字符上限 120/80/240/600/600/480/600，拒绝空白/超限/extra fields。Character 是低权限角色数据，不授权 Capability 或覆盖世界/感知/Memory/Relationship；只读 CharacterId 与本机 override migration 属 Unity 设置层，不是新的 wire message。
+认知请求/响应支持版本 **1.0**，持久任务扩展使用 **1.1**。每次响应关联原 `request_id`、`trace_id`、`run_id`、NPC 身份与协议版本。
 
-共享协议还包括 `ExperienceAppendRequest/Result 1.0`。WS `/ws` 承载 `cognitive_request`、`cognitive_cancel`、`experience_append_request`、`task_runtime_sync`、`task_control` 和 ping/pong；相应结果按原关联检查分发，不要求不同业务全局完成有序。
+`CognitiveRequest` 包含本轮事件、角色、局部感知、相关玩家、行为模式、可用能力与当前执行状态。角色人设包含 `character_id`、`display_name`、`role_summary`、`backstory`、`personality`、`speaking_style`、`boundaries`。
 
-行动失败反馈以 `CognitiveRequest.action_feedback` 携带原 Request/Run、Proposal/revision、Trace、
-真实 Outcome、已完成步骤与 Unity 给出的候选。它使用新 Request/Run，保留原 Trace；
-Backend 只做一次统一认知，返回 DIRECT_RESPONSE/WAIT_FOR_PLAYER 与可空的
-`recovery_alternative_id`。选择仅在原权限与有限修订预算内有效，Unity 再检查身份、场景、
-当前 Outcome、候选可用性和准入；取消不能恢复。普通聊天不能使用该选择字段。
-持久 Task 的可信回执继续使用原 1.1 流程，反馈不写 Task、不 Recall、不自主续话。
+普通 `CognitiveDecision` 的三种最终结果：
 
-`task_runtime_sync` 返回 snapshot/opportunity，生命周期对账可能写入 lost-world/stale-condition 状态；不是纯只读查询，也不执行模型或重放 begin_execution。`task_control` 包含原请求恢复 query、cancel_task 和 begin_execution/not_started/settle_execution/mark_execution_unknown。Task status、attempt phase、Unity 本地握手 stage 不能混用；重连时只能恢复原关联及证据，不能据此获得新的执行权。
+| 类型 | 含义 |
+| --- | --- |
+| `DIRECT_RESPONSE` | 向玩家回复 |
+| `NO_ACTION` | 本轮不采取行动 |
+| `ACTION_PROPOSAL` | 提出带动作 ID 与参数绑定的行动请求 |
 
-失败解释只生成语言，不修改任务或结算。WS 每连接最多保留 4 项（1 处理、3 等待），等待与生成设 30 秒超时；超额/异常返回已有安全 clarify 合同，不调用额外模型。Experience ACK 表示 Ledger 接受/去重，不保证 Episode 已关闭或长期 Memory 已形成。
+系统事件还有经过事件类型与资格校验的 `DAILY_MODE_INTENT`、`AUTONOMOUS_ACTION_INTENT` 等受限分支。行动提案经 Backend 验证后由 Unity 独立准入，实际执行结果通过 `GoalOutcome` 和世界回执确认。
 
-HTTP 还包括纯常量 `/live`、受保护 `/health`、dialogue-history、Model Config 等。敏感 HTTP 与原生 WS 统一使用 S01 本机私有会话准入；Token 仅放 Authorization header，不放 URL。协议版本不是安全准入凭据，模型 API Key 也不能代替本机会话。范围及 v1/v2 配置兼容见 [Backend](../AIBackend/README.md#本地原生调用方准入)。
+## WebSocket 与 HTTP
 
-旧 `AgentRequest / AgentResponse`、HTTP agent-response 与 WS agent_request 均已退休，不提供旧认知协议桥接。早期 proactive schema 已从 active repo 删除，不属于当前生产 wire。当前认知只使用下述 CognitiveRequest / CognitiveDecision 合同。
+WebSocket `/ws` 传输 `cognitive_request`、`cognitive_cancel`、`experience_append_request`、`task_runtime_sync`、`task_control` 及响应和心跳消息。
+
+HTTP 包括 `/live`、`/health`、模型配置、运行状态、世界知识管理、上下文策略和玩家体验导出等接口。本机受保护接口使用 Backend 会话授权；模型 API Key 则用于对接外部模型服务。
+
+`ExperienceAppendRequest/Result 1.0` 表示经历写入账本的确认。Episode 分段及长期记忆整理在后台独立进行。
 
 ## Backend-internal context reads
 
-这组协议是 Main Provider 的结构化模型输出与 Backend 之间的内部步骤，定义在 [cognitive_step_models.py](../AIBackend/app/cognitive_step_models.py)，由 [cognitive_entry.py](../AIBackend/app/cognitive_entry.py) 执行；它不是新的 WebSocket 消息、Unity action_id 或可自由调用的 Tool。Unity 最终仍收到原 CognitiveResponse/decision 以及经验证的任务回执/执行票据。
+普通对话先自动预取有权限访问的世界知识，再进入 Step 0。模型可以直接给出最终结果，也可以请求一次内部上下文读取：
 
-普通对话先自动预检索世界知识并装配有权读取的常驻背景。Step 0 可以直接终结，或选择一次读取批次：
-
-| 内部决策 | 字段与范围 |
+| 内部决策 | 作用 |
 | --- | --- |
-| `CONTEXT_READ` | 可选 `knowledge_plan`、`memory_plan`，task-aware 变体还允许 `task_plan`；至少一项非空。 |
-| `MEMORY_RECALL`（兼容） | `recall_plan`，沿用 MemoryRecallPlan。 |
-| `TASK_READ`（兼容） | `task_query`，仅对应任务 Schema，沿用 TaskReadPlan。 |
+| `CONTEXT_READ` | 按需组合 `knowledge_plan`、`memory_plan` 和任务协议允许的 `task_plan` |
+| `MEMORY_RECALL` | 兼容的单一记忆读取形式 |
+| `TASK_READ` | 兼容的受限任务读取形式 |
 
-`knowledge_plan` 只接受非空 `semantic_query`（最长 512 字符），不接受 CharacterId、权限、Top-K 或预算。`memory_plan` 使用同样长度的语义查询、可选 `subject_role`（requester/observer/shared/catalog）、受信目录 `subject_ref` 和 Memory 类型过滤；`catalog` 必须有 ref，其他角色/ref 组合也要经过身份一致性校验。`shared` 不是扩大权限，而是对原候选做当前 NPC/玩家的原始证据核验。`task_plan` 使用 [TaskReadPlan](../AIBackend/app/cognitive_task_models.py) 的受限状态、分页和不透明引用；`limit` 为 1–5，不等于世界知识 Top-K。所有模型均拒绝额外字段。
+这组步骤在 Backend 内执行，不是向 Unity 发送的任意工具调用。至少一个读取计划需要非空；知识和记忆通过语义查询指定目标，主体权限与持久身份由 Backend 解析。
 
-例如，task-aware Step 0 可输出（没有任务读取需要时可以省略 task_plan）：
+示例（任务协议下的 Step 0 读取计划）：
 
 ```json
 {
   "decision_kind": "CONTEXT_READ",
-  "knowledge_plan": {"semantic_query": "馥芮白与拿铁的区别"},
+  "knowledge_plan": {"semantic_query": "馥芮白与拿铁有什么区别"},
   "memory_plan": {
-    "semantic_query": "当前玩家此前实际表达的饮品偏好",
+    "semantic_query": "当前玩家此前明确表达的饮品偏好",
     "subject_role": "requester",
     "memory_type": "SEMANTIC_FACT"
   },
@@ -54,12 +55,20 @@ HTTP 还包括纯常量 `/live`、受保护 `/health`、dialogue-history、Model
 }
 ```
 
-Backend 显式维护 Step 0/1；各读取分支独立只读并保留 OK/no-match/unavailable/预算等状态，不能用「是否有 Memory 返回值」推断当前步骤。知识复用同一目录快照，自动预检索和补查总共最多三个不同检索 ID，常驻条目单独去重并计入预算；读取期间/推理期间快照失效会安全拒绝旧证据结果。共享 Embedding 的并发门控不因分支并发等待而放宽。
+Backend 为各读取来源返回状态和有限证据，统一分配最终上下文预算。Step 1 接收结果后必须输出最终决策。普通认知运行最多包含两次模型推理。
 
-Step 1 使用终态 Schema 和校验，不能返回 CONTEXT_READ、MEMORY_RECALL 或 TASK_READ。整个普通 Run 最多两次推理，不重试读链或添加第三次模型调用。固定模式、受限行动反馈恢复、续话与系统任务事件仍保留自己的准入及 Schema，不能从此合同推导出新行动、持久身份或权限。真实任务写入、ticket、begin_execution、世界 receipt 和完成结算仍遵循[任务系统](../Docs/NPC_TASK_SYSTEM.md)。
+## 任务与结果关联
+
+任务系统使用版本 1.1 的运行上下文、保存回执、考虑机会和执行票据。执行请求按玩家、NPC、Visit、任务版本与 attempt 关联；取消、延期与结算继续调用 TaskService。
+
+行动失败反馈保留原 Trace 与行动结果关联，可在受限条件下请求一次新的语义判断或恢复选择；Unity 仍核验当前世界和原执行归属。详见 [持久任务](../Docs/NPC_TASK_SYSTEM.md)。
 
 ## Presentation metadata and management HTTP
 
-现有 `emotion`、`gesture`、`look_at` 加上可选 `expression_icon` 仅用于表现。图标严格取 `none`/`happy`/`confused`/`surprised`/`thinking`；缺失或 null 兼容旧响应，none/null 在序列化时省略，非空图标只能出现在 DIRECT_RESPONSE/ACTION_PROPOSAL。Unity 还检查真实 Speech 生命周期、NPC/会话归属和冷却。图标不授权动作，不是情绪持久状态或记忆事件。
+普通回复可附带 `emotion`、`gesture`、`look_at` 和 `expression_icon`，用于 Unity 的对话与表情表现。它们不改变动作或记忆的真实状态。
 
-世界知识管理使用既有本机授权 [REST API](../AIBackend/app/knowledge_management_api.py)，完整体验导出使用受保护 `GET /v1/experience-export`（[实现](../AIBackend/app/experience_export.py)）。后者由当前可信玩家范围构建只读 ZIP，再由 Unity 合并本地 Persona/设置与脱敏诊断；不是额外的模型读取工具，也不上传玩家数据。详情见[架构说明](../Docs/ARCHITECTURE.md#read-only-complete-experience-export)。
+知识管理使用 [管理 API](../AIBackend/app/knowledge_management_api.py)。体验导出使用受保护的 `GET /v1/experience-export`，读取现有持久记录并由 Unity 合并本地设置数据。
+
+## 相关文档
+
+[整体架构](../Docs/ARCHITECTURE.md) · [Backend](../AIBackend/README.md) · [记忆](../Docs/MEMORY.md) · [持久任务](../Docs/NPC_TASK_SYSTEM.md)
