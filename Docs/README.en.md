@@ -10,8 +10,8 @@ Start with the [architecture overview](ARCHITECTURE.en.md), then open the subsys
 | Long-term memory and relationships | [Memory](MEMORY.en.md) | [记忆](MEMORY.md) |
 | Persistent tasks | [Tasks](NPC_TASK_SYSTEM.en.md) | [任务](NPC_TASK_SYSTEM.md) |
 | World knowledge | [World Knowledge](../AIBackend/WORLD_KNOWLEDGE.en.md) | [世界知识](../AIBackend/WORLD_KNOWLEDGE.md) |
-| Python backend | [Backend](../AIBackend/README.en.md) | [Backend](../AIBackend/README.md) |
-| Wire protocols | [Contracts](../Contracts/README.en.md) | [Contracts](../Contracts/README.md) |
+| Python backend | [Backend](../AIBackend/README.en.md) | [Backend](../AIBackend/README.en.md) |
+| Wire protocols | [Contracts](../Contracts/README.en.md) | [Contracts](../Contracts/README.en.md) |
 | Source installation | [Source Setup](SOURCE_SETUP.en.md) | [源码安装](SOURCE_SETUP.md) |
 | Local operations | [Operations](OPERATIONS.en.md) | [本地运行](OPERATIONS.md) |
 | Context capacity | [Context Capacity](CONTEXT_CAPACITY_FEEDBACK.en.md) | [容量反馈](CONTEXT_CAPACITY_FEEDBACK.md) |
