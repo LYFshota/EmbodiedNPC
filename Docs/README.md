@@ -1,12 +1,20 @@
+[简体中文](README.md) | [English](README.en.md)
+
 # 开发文档
 
-想了解项目如何运行，可以从以下内容开始：
+初次了解项目，建议先阅读 [整体架构](ARCHITECTURE.md)，再按需要查看各子系统。
 
-- **[源码安装与启动](SOURCE_SETUP.md)**：Windows、Unity Editor、Python 后端与模型资源。
-- **[整体架构](ARCHITECTURE.md)**：感知、认知、行动、反馈和记忆的数据流。
-- **[长期记忆](MEMORY.md)** · **[持久任务](NPC_TASK_SYSTEM.md)** · **[世界知识](../AIBackend/WORLD_KNOWLEDGE.md)**：核心模块的实现。
-- **[Backend 接口](../AIBackend/README.md)** · **[通信协议](../Contracts/README.md)**：配置、请求和结构化输出。
-- **[本地运行](OPERATIONS.md)** · **[上下文容量](CONTEXT_CAPACITY_FEEDBACK.md)** · **[依赖版本](DEPENDENCIES.md)**：开发与排错。
-- **[版本下载与更新说明](https://github.com/LYFshota/EmbodiedNPC/releases)** · **[资源许可](../THIRD_PARTY_NOTICES.md)** · **[贡献指南](../CONTRIBUTING.md)**。
+| 主题 | 中文 | English |
+| --- | --- | --- |
+| 整体架构 | [架构与数据流](ARCHITECTURE.md) | [Architecture](ARCHITECTURE.en.md) |
+| 长期记忆与关系 | [记忆系统](MEMORY.md) | [Memory](MEMORY.en.md) |
+| 持久任务 | [任务系统](NPC_TASK_SYSTEM.md) | [Tasks](NPC_TASK_SYSTEM.en.md) |
+| 世界知识 | [世界知识](../AIBackend/WORLD_KNOWLEDGE.md) | [World Knowledge](../AIBackend/WORLD_KNOWLEDGE.en.md) |
+| Python 后端 | [Backend](../AIBackend/README.md) | [Backend](../AIBackend/README.en.md) |
+| 通信协议 | [Contracts](../Contracts/README.md) | [Contracts](../Contracts/README.en.md) |
+| 从源码运行 | [安装与启动](SOURCE_SETUP.md) | [Source Setup](SOURCE_SETUP.en.md) |
+| 本地操作 | [运行与数据管理](OPERATIONS.md) | [Operations](OPERATIONS.en.md) |
+| 模型上下文 | [容量与反馈](CONTEXT_CAPACITY_FEEDBACK.md) | [Context Capacity](CONTEXT_CAPACITY_FEEDBACK.en.md) |
+| 依赖与环境 | [依赖](DEPENDENCIES.md) | [Dependencies](DEPENDENCIES.en.md) |
 
-运行入口为 TitleScene → CafeDemoV2。玩家试玩与下载请返回 [项目首页](../README.md)。
+欢迎查看 [贡献指南](../CONTRIBUTING.md)。当前游戏入口为 TitleScene → CafeDemoV2；试玩包和版本更新见 [项目首页](../README.md)。
