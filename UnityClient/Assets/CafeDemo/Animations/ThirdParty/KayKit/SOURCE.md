@@ -1,137 +1,31 @@
-# KayKit Wave and Carry provenance
+[简体中文](SOURCE.md) | [English](SOURCE.en.md)
 
-## Player emote panel: Cheering and Flexing (2026-10-15)
+# KayKit 动画来源与项目改作
 
-The same supplied CC0 1.1 package provides `Cheering` from
-`Animations/fbx/Rig_Medium/Rig_Medium_Simulation.fbx` and `Flexing` from
-`Animations/fbx/Rig_Large/Rig_Large_Simulation.fbx`. Unity imports each temporary
-source as Humanoid/Create From This Model with Bake Axis Conversion, then clones
-only the selected motion to the independent `Cheering.anim` / `Flexing.anim`.
-Both are non-looping, have baked root rotation/Y/XZ and no animation events.
-The temporary imports are removed; no source FBX, source Avatar or mannequin
-mesh is required in production. CafeV2Player reuses EmoteUpperBody and its mask;
-player movement remains authoritative and Animator root motion remains disabled.
-These two actions are presentation only and add no NPC observation contract.
+项目使用 **Kay Lousberg** 的 **KayKit: Character Animations 1.1**，按随附 [CC0 许可](LICENSE.txt) 使用及改作片段。
 
-Package: **KayKit: Character Animations 1.1**, by **Kay Lousberg**.
-Local supplied package: `SceneResources/KayKit_Character_Animations_1.1`.
-Author: https://www.kaylousberg.com/ ; package-author catalog: https://kaylousberg.itch.io/ .
-The supplied `License.txt` explicitly identifies this package/version and **CC0**,
-including personal, educational and commercial use. `LICENSE.txt` is its exact copy.
-No attribution is required; provenance is retained for review.
+来源：[作者网站](https://www.kaylousberg.com/) · [KayKit 发布页](https://kaylousberg.itch.io/)。
 
-## Inventory and selection
+## 本项目使用的动作
 
-The supplied package has 37 files: 14 animation FBX files and their 14 GLB equivalents,
-2 mannequin FBX files and 2 GLB equivalents, one texture, one license and three URL links.
-Medium has eight animation categories; Large has six. There is no separate InPlace/RM tree
-and no README. All 16 GLB animation inventories were inspected. The only Wave-like take
-(Wave/Waving/Hello/Greeting/Greet/HandWave) is **Waving**, in
-`Animations/fbx/Rig_Medium/Rig_Medium_Simulation.fbx` and its GLB equivalent.
-Large has no Wave-like take. Other simulation takes are not alternative Wave clips.
+| 动画 | 原始来源 | 用途 |
+| --- | --- | --- |
+| `Waving.anim` | Medium Simulation / Waving | 玩家与 NPC 挥手 |
+| `Cheering.anim`、`Flexing.anim` | Medium/Large Simulation | 玩家表情动作 |
+| `Holding_B.anim` | Medium Tools / Holding_B | 持杯及 Carry 上半身姿态 |
+| `Idle_A.anim`、`Idle_Relaxed.anim` | Medium General / Idle_A | 站立待机及低幅度说话 |
+| `Idle_Quiet.anim`、`Idle_Quiet_Vivi.anim` | 项目在 Idle_Relaxed 基础上改作 | 星芒与薇薇更安静的待机 |
+| `Waving_PlayerRelaxed.anim` | 项目在 Waving 基础上改作 | 玩家自然挥手 |
 
-FBX SHA256: `7A75D775E966F28E0D365147C3CD844D3641B40FA97BC591F33B9FC609463142`.
-Imported in Unity 6000.5.10f1 as Humanoid, CreateFromThisModel, BakeAxisConversion,
-no materials. The valid Human source avatar has 17 bones. Only **Waving** was selected
-for extraction, baked root rotation/Y/XZ, non-looping, state speed 1.
-The formal imported AnimationClip was cloned with Unity Object.Instantiate/CreateAsset
-into `Waving.anim`; the temporary source FBX was removed. The standalone clip has
-no source FBX dependency, no events, and lasts **2.13333344 seconds**.
+片段使用 Unity Humanoid 导入并提取为独立 `.anim`，运行时复用已有 Animator、AvatarMask 和人物 Humanoid Avatar。移动与 Root Motion 仍由游戏控制组件决定。
 
-## Source motion and retarget limits
+## 项目调整
 
-Source has no locomotion (average speed approximately zero); RootT still contains
-small body sway: X 0.05010–0.09247, Y 0.96198–0.97592, Z -0.00834–-0.00643.
-RootQ/hips and legs have some sway, and the source head has motion. Spine/chest/upper
-chest muscles and neck muscles are constant. All source finger muscles are constant:
-this is an arm/hand wave, not an independently animated finger articulation.
-The existing `CafeDialogueUpperBody.mask` excludes Root, Head and both legs, and includes
-body and arms. This protects ActorRoot/navigation and leaves HeadGaze as the head writer.
-No new mask, IK or procedural arm animation was added.
+- **挥手**：使用动画原始手臂动作，结合现有上半身 Mask，保留角色头部和移动控制。
+- **持杯**：选用更接近腰部的 `Holding_B` 姿势，通过现有持物绑定与世界状态追踪杯子。
+- **待机**：`Idle_Quiet` 系列降低手臂和身体余量，让放松站姿与 VRM 角色外观更协调。
+- **表情动作**：Cheering 与 Flexing 作为展示动画，不改变游戏事件的权限和实际行动结果。
 
-Actual Animator retarget sampling on woman_2 and man_2 showed valid Human avatars,
-zero ActorRoot drift and a right upper-arm angular range of about 48.18 degrees;
-source fingers remain unanimated. CafeDemo MainCamera visual review is required in
-addition to these technical checks. Talking, Walk and procedural Nod keep their
-existing assets and implementations. No other KayKit clips or full source package
-are part of the ER-4 production change.
+原始素材与许可保持在本目录，项目改作片段与动画来源对应记录于此。其他动画见 [Quaternius](../Quaternius/SOURCE.md)。
 
-## ER-5 Carry selection
-
-The actual GLB inventories were searched for Carry/Carrying/Hold/Holding/Object/Item/
-Box/Crate/Tray. Medium Tools supplies the three relevant holding candidates:
-`Holding_A`, `Holding_B`, `Holding_C`. Each is 1.0 s; the source importer defaults
-to non-looping. All three were audited as Humanoid with a valid source avatar,
-then evaluated on Cafe Merchant's existing woman_2 avatar in Play Mode. Loop Time /
-Loop Pose and baked root rotation/Y/XZ were authored for this sustained holding use.
-UAL Standard's 43 takes have no dedicated Carry loop; Idle_Torch and weapon poses
-are not a small-cup carry choice. KayKit's weapon-holding runs are not consumed.
-
-- Holding_A: arms extended forward and wide, like supporting a larger object.
-- Holding_B: elbows lower, hands closer to the waist; selected for the small cup.
-- Holding_C: hands further across the front with a more asymmetric torso stance.
-
-Only **Holding_B.anim** is added to production; the audit controller/source FBX
-were removed. Source: `Animations/fbx/Rig_Medium/Rig_Medium_Tools.fbx`.
-SHA256: `83FE62F77D03CAA1B221D3CE1E7B9377F486CFF978204061784F9944CAA00A32`.
-Same package, license and Humanoid import method as Wave. The cloned standalone
-clip is looping, has no animation events and no FBX/avatar dependency.
-
-All three include full-body curves; their source RootT ranges are:
-
-| Take | X | Y | Z |
-| --- | --- | --- | --- |
-| Holding_A | -0.001357..-0.001288 | 0.963931..0.966909 | -0.001770..0.001273 |
-| Holding_B | -0.003258..-0.003201 | 0.950930..0.955006 | -0.032516..-0.030019 |
-| Holding_C | -0.043951 constant | 0.948957..0.953093 | -0.029547..-0.026600 |
-
-These small pose/sway curves are not locomotion. `CarryUpperBody` uses the existing
-CafeDialogueUpperBody mask: Body/Arms/Fingers on, Root/Head/Legs off. Base Walk
-remains unchanged. The low-poly model's hands use the existing retargeted shape;
-this change adds no finger articulation or IK. The Merchant-specific hold-point
-offset positions the cup at the right palm, while the existing GrabPoint alignment
-and WorldState ownership transactions continue to attach/transfer the item.
-
-## VRM NPC idle and expressive-layer compatibility (2026-10-22)
-
-`Idle_A.anim` is extracted from KayKit Character Animations 1.1,
-`Animations/fbx/Rig_Medium/Rig_Medium_General.fbx`, by Kay Lousberg,
-under the same supplied CC0 license (`LICENSE.txt`). Imported as Humanoid /
-Create From This Model with Bake Axis Conversion and no materials. The 1.0667 s
-standalone clip loops with Loop Pose, baked root rotation/Y/XZ, and root
-orientation based on Body Orientation (Keep Original Orientation disabled).
-It has no events or source FBX dependency.
-
-CafeExpressive and CafeV2Expressive use this relaxed idle; CafeV2Seated retains
-its seated base motion. The Dialogue layer reuses Idle_A as a conservative
-arm-only fallback instead of the broad retargeted Talking motion. Facial
-expressions, head/nod presentation and the existing KayKit Waving remain.
-Dialogue and GestureUpperBody use CafeConversationArms (arms/fingers only),
-preventing these layers from replacing the hips, torso, legs or head. Carry,
-drink-preparation and cleaning masks remain separate and unchanged.
-
-CafeV2Expressive Locomotion Foot IK is disabled: on Vivi's VRM 1 Avatar the
-solver widened the idle stance and distorted the existing walk. The Walk clips,
-blend thresholds, playback rates, locomotion speeds and movement code are unchanged.
-
-
-## Derived idle and wave clips
-
-Idle_Relaxed is a CC0 derivative of the existing KayKit Character Animations
-1.1 Idle_A. It adjusts relaxed arms, fingers/thumbs and standing legs, with
-130 Humanoid float curves, a 1.066667-second loop and no animation events.
-
-Idle_Quiet and Idle_Quiet_Vivi derive from Idle_Relaxed. Animated residuals
-are reduced to 18% and the loop is 3.2 seconds. The player pose brings the
-shoulder/elbow/wrist into a relaxed hanging position with palms near the
-trouser sides; the Vivi variant keeps clearance for her skirt. Fingers keep
-a light curl. Original VRM files, Walk clips/rates and seated base/foot IK
-remain unchanged. Dialogue uses Idle_Relaxed through the existing arms mask.
-
-Waving_PlayerRelaxed derives from the existing Waving clip. Its 29 left-side
-shoulder/arm/forearm/wrist/finger curves are Idle_Quiet rest + 0.15 *
-(source Wave - Idle_Quiet rest). The other 101 curves, including the complete
-main right waving arm, remain unchanged. Duration is 2.133333 seconds with no
-events. Player Wave uses its own arms layer; Cheer/Proud retain their authored
-torso motion. There is no runtime bone-forcing component or new animation framework.
-
+[第三方资源说明](../../../../../../THIRD_PARTY_NOTICES.md)
