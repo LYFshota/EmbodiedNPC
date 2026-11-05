@@ -1,8 +1,8 @@
 # CafeDemoV2 — four-NPC Demo
 
-Open `Assets/Scenes/CafeDemoV2.unity`, the current development and acceptance entry. The original `Assets/Scenes/CafeDemo.unity` is retained for legacy regressions. Current Build Settings enable TitleScene → CafeDemoV2. Windows candidates have been built, but a candidate and its historical tests do not certify the latest WIP or clean-machine acceptance. See the root README for current scope.
+`Assets/Scenes/CafeDemoV2.unity` is the main gameplay scene, launched from `TitleScene.unity`. The original `CafeDemo.unity` remains available for historical regressions.
 
-This is a local scene upgrade, not a new runtime framework. Gameplay services, identity, action contracts, existing Humanoid controllers, OrbitCamera, dialogue, and the real cup are reused. Only the visual models, presentation references, scene transforms, primitive colliders and new NavMesh data differ.
+CafeDemoV2 reuses the existing gameplay systems, character identity, action contracts and presentation components while updating the café layout, NPC visuals, navigation and interaction points. See the [project README](../../../../README.en.md) for the current feature overview and [Architecture](../../../../Docs/ARCHITECTURE.md) for the runtime flow.
 
 - Player: unchanged Xingmang, visual scale 1.00793052, gameplay height approximately 1.75 m.
 - Merchant: Vivi / 林薇薇, visual scale 1.17369533, measured T-pose mesh height 1.65 m.
@@ -12,7 +12,7 @@ This is a local scene upgrade, not a new runtime framework. Gameplay services, i
 - V2 uses simple colliders, a freshly baked `CafeDemoV2NavMesh.asset`, and the existing OrbitCamera at 3.1 m / 18 degrees.
 - Existing low-poly geometry and replaced visuals are retained inactive. The original Merchant/RegularCustomer identities remain; CompanionCustomer and QuietCustomer have independent identities. BackgroundNpc is explicitly inactive.
 
-Full raw captures and local evidence remain excluded from Git. Public capability and validation boundaries are summarized in [the acceptance summary](../../../../Docs/Validation/CafeDemoV2_2026-10-10.md).
+Full raw captures and local evidence remain excluded from Git. Public capability and validation boundaries are summarized in [release history](../../../../Docs/RELEASE_STATUS.md).
 
 ## Dependencies and source permissions
 
