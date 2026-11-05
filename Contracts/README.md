@@ -1,6 +1,6 @@
 # EmbodiedNPC wire contracts
 
-> 当前说明对应 v0.1.3-preview 生产源码。独立 TaskFailure 1.0 协议及其 Schema 已退役；行动结果反馈使用现有 Cognitive envelope。已发布版本不会自动更新玩家运行中的旧实例。
+当前运行协议包括普通认知 1.0 与任务扩展 1.1。以下列出字段、关联要求与后端内部读取流程；运行示例见 [Backend](../AIBackend/README.md)。
 
 当前认知 envelope 支持 `CognitiveRequest/Response 1.0` 和任务扩展 **1.1**。1.0 不携带 task_runtime；1.1 必须携带合法运行关联，回复保留原 request/trace/run/agent 与版本。Backend 严格模型定义在 `AIBackend/app/contracts.py`，Unity DTO 与 validator 位于 `UnityClient/Assets/Scripts/Cognition/`。本目录保留的 JSON schema/示例对应 Experience 的 1.0 合同；认知及任务扩展以实际 DTO、严格校验和[任务系统文档](../Docs/NPC_TASK_SYSTEM.md)为准，不能拿其他消息的 schema 验证认知 envelope。
 
