@@ -1,224 +1,95 @@
-# EmbodiedNPC Memory
+[简体中文](MEMORY.md) | [English](MEMORY.en.md)
 
-EmbodiedNPC stores source-qualified dialogue, observations, and action outcomes as **NPC-local Experience**. Episodes group those experiences; asynchronous consolidation turns them into durable memories that can be recalled in later conversations. Relationship reflection maintains a separate, pair-scoped social understanding.
+# EmbodiedNPC 记忆与关系系统
 
-Persona describes the character, World Knowledge supplies authored background, and Memory records what actually happened. Unity remains the source of truth for the current world and completed actions.
+记忆系统负责把 NPC **实际经历的事情**保存为有来源的长期信息，并在后续认知中按需要召回。它分开管理原始经历、事件记忆、语义事实、跨经历洞察和角色关系，不把聊天记录简单拼接成无限增长的提示词。
 
-Canonical Memory includes Episodic records, Semantic Facts, Derived Insights, evidence links, and an Embedding index. The current memory model and retrieval flow are described below.
+## 整体流程
 
-## Data model
-
-```text
-World / Dialogue / ActionOutcome
-→ observer-specific Experience
-→ append-only ExperienceLedger
-→ Episode
-→ asynchronous Consolidation (memory-consolidator/3.0)
-→ long-term Episodic Memory / open Semantic Fact
-→ low-frequency Maintenance / cross-Episode DerivedInsight
-→ asynchronous shared Embedding index
-→ governed Recall
-→ future CognitiveDecision
+```mermaid
+flowchart TD
+  E["对话 / 观察 / 真实行动结果"] --> L["ExperienceLedger · 追加式经历"]
+  L --> P["Episode · 连续经历分段"]
+  P --> C["异步 Consolidation"]
+  C --> M["EPISODIC / SEMANTIC_FACT"]
+  M --> U["低频 Maintenance / Reflection"]
+  U --> I["DERIVED_INSIGHT"]
+  M --> R["Embedding + 词法检索"]
+  I --> R
+  R --> Q["主体范围与证据校验"]
+  Q --> N["后续认知上下文"]
+  L --> RR["独立 Relationship Reflection"]
+  RR --> S["Pair-scoped RelationshipSummary"]
+  S --> N
 ```
 
-Canonical storage includes `memory_records`, `memory_subjects`, `memory_evidence`, `memory_semantic_facts`, `memory_derived_insights`, source links and `memory_embeddings`. Schema 16 introduced open Semantic Facts, 17 added Maintenance, and 18 added multi-Episode Derived Insights. Historical migrations remain available for review.
+记忆整理与关系反思在后台按各自条件运行；日常对话不必等待全部整理完成。
 
-## World, Experience, Episode, Memory
+## 1. 原始经历：ExperienceLedger
 
-These are deliberately separate concepts.
+Unity 已呈现的对话、可归属的观察和可信行动结果写入各 NPC 自己的经历账本，保留事件关联、观察者、参与者和来源信息。账本采用追加式记录，长期记忆可以由这些来源重新整理。
 
-### World
+**世界状态、经历和角色设定是三种不同的信息**：Unity 提供当下真实状态；Experience 保存角色实际遇到的事件；Persona 与 World Knowledge 提供预设身份和背景知识。
 
-What is currently true in Unity.
+## 2. Episode：把连续经历分段
 
-### Experience
+同一观察者连续的 Experience 组成 Episode。认知结果可以附带 `CONTINUE` / `END` 语义分段建议；实际生命周期还受会话结束、空闲时间、事件数量、最长持续时间和重启恢复等规则约束。
 
-What a particular NPC actually experienced, heard, learned, or executed.
+Episode 记录来源区间与分段状态，不复制第二套对话或行动历史。关闭后即可交给后台整理。
 
-Experience is durable source evidence and carries observer/provenance metadata.
+## 3. Consolidation：从经历提取长期记忆
 
-### Episode
+已关闭的 Episode 根据准确的 Experience 范围重建，结合角色信息、参与者身份及相关历史记忆，进行一次结构化整理。后端核验来源和数据关联后，保存两种主要记忆：
 
-A semantic grouping of contiguous Experience belonging to one observer.
+- **EPISODIC**：某次实际发生的事件、交流或行动。
+- **SEMANTIC_FACT**：有来源依据的独立事实，例如玩家明确表达过的饮品偏好。
 
-Episode does not copy a second `dialogue[]` or `actions[]` history. The ExperienceLedger remains the evidence source of truth.
+原始账本仍然保留。整理任务通过后台执行器处理，与玩家前台对话并发调度。
 
-### Long-term Memory
+## 4. 低频维护与跨经历反思
 
-Consolidation admits independent `EPISODIC` experiences and open atomic `SEMANTIC_FACT` claims. Low-frequency Reflection forms `DERIVED_INSIGHT` from multiple Episodes, clearly marked as a tentative interpretation with original evidence. Relationship Reflection remains a separate social interpretation layer.
+`Maintenance` 比较相关事实之间的关系，包括重复、细化、共存、取代与冲突。明确的偏好变化需要有对应证据；存在冲突时可保留双方记录，而不是只凭时间先后选一条。
 
-Historical memory cannot override current Unity truth.
+`Reflection` 在积累多段 Episode 后，尝试形成 **DERIVED_INSIGHT**，也就是引用多段经历的暂定洞察。它与一段 Episode 的普通 Consolidation 是不同的后台任务；洞察带有来源关联和不确定性。
 
-## Semantic Episode boundary
+## 5. 独立关系：Relationship Reflection
 
-Runtime v2 supports a minimal semantic directive:
+角色关系使用 **（观察者持久身份，对象持久身份）** 作为配对范围。薇薇与星芒的关系、沈知意与星芒的关系，以及薇薇与另一位玩家的关系分别维护。
 
-```text
-CONTINUE
-END
-```
+关系反思根据符合来源条件的社交经历维护交流习惯、边界与社会印象。它主要描述角色如何理解双方相处方式，而不是复制所有具体事实或委托。认知阶段可读取有界的 `RelationshipSummary`；需要核对过去某件事时，仍由 Memory Recall 提供原始证据。
 
-A semantic `END` is only consumed through a real durable Experience carrier. The carrier Experience is included first, then the Episode is closed.
+当前 Demo 是本地单玩家运行，持久身份与配对隔离为后续扩展保留了基础。
 
-Deterministic safeguards still exist:
+## 6. 索引与受限召回
 
-- source-session lifecycle;
-- idle/max-events/max-duration limits;
-- sequence-gap protection;
-- restart/replay recovery;
-- one-open-Episode and no-overlap invariants.
+记忆建立独立的 Embedding 索引，并结合词法相关性、记忆类型、身份范围和证据进行排序。世界知识使用另一套检索器。
 
-The LLM therefore contributes semantic meaning without becoming the sole lifecycle authority.
+普通认知先获取必要的角色背景与自动预取的世界知识。Step 0 如需历史信息，可请求一次 `CONTEXT_READ`，其中 `memory_plan` 说明查询主题及主体角色：
 
-## Persistent participant identity
-
-Long-term continuity requires separating the player's current world instance from the persistent player identity:
-
-```text
-entity_id
-= current player instance used by World/Action
-
-player_uid / persistent identity
-= trusted long-term subject identity used by Memory/Relationship
-```
-
-A reconnect or scene transition may produce a new `entity_id` while preserving the same persistent identity.
-
-Display name is never used as the identity key.
-
-Persistent identity is runtime/backend metadata; it does not need to be exposed verbatim to the model prompt.
-
-## Consolidation
-
-A finalized Episode is reconstructed from its exact Experience range and can be consolidated asynchronously.
-
-Current Consolidation:
-
-```text
-Finalized Episode
-+ Character
-+ relevant prior Memory
-+ participant/provenance metadata
-→ one structured consolidation call
-→ deterministic admission
-→ durable Episodic Memory / Semantic Fact
-```
-
-The raw ExperienceLedger remains replayable even if derived memory or indexes are rebuilt.
-
-The model preserves negation, time, intent, conditions, and subject relationships.
-Backend validates trusted handles, cited evidence, literal excerpts, lifecycle and
-transaction integrity; excerpt location does not prove semantic entailment. Normal
-saving performs one extraction call and never waits for Maintenance or Reflection.
-
-## Low-frequency Maintenance and Reflection
-
-One persistent Maintenance Worker shares the existing foreground-priority executor.
-It polls every 30 seconds; Maintenance becomes eligible at four pending facts per
-scope or after 300 seconds. Scoped SQL candidates are bounded before vector/lexical
-ranking. LLM-proposed DUPLICATE, REFINES, COEXISTS, SUPERSEDES, CONFLICTS and
-UNDETERMINED relations retain original evidence. Explicit supersession requires
-locatable correction/change evidence; confidence, similarity and insertion time alone
-cannot retire a fact. Conflicts preserve both sides. Calls occur outside transactions;
-revision/attempt checks and short atomic commits protect updates, retries and undo.
-
-Reflection uses the same Worker with a separate task kind. Defaults require at least
-three source Episodes and a 300-second wait; inputs contain at most eight direct
-memories. Each Insight cites memories and original evidence from multiple Episodes.
-Schema 18 stores explicit memory/Episode source links, rather than a fabricated single
-Episode or Consolidation Job. DerivedInsight is excluded as original reflection input;
-consumed batches and valid NO_INSIGHT results are recorded. Social impressions remain
-the responsibility of Relationship Reflection, not general Reflection.
-
-## Observation sampling
-
-Real-time Perception and SpatialMemory continue refreshing. At the Observation-to-
-Experience boundary, continuous visual position changes below 0.25 metres are skipped
-only when all other fields, source qualifications and lifecycle remain unchanged.
-Displacement is compared with the last admitted sample, so gradual movement accumulates.
-Visibility transitions, meaningful state changes, GameplayEvents, Dialogue and typed
-Action/Goal outcomes remain eligible. Episode timeout and background features remain enabled.
-
-## Recall
-
-The current canonical recall path is on-demand within the hybrid two-step dialogue flow:
-
-```text
-Authorized constant background + automatic world-knowledge prefetch
-→ Step 0: terminal decision OR one CONTEXT_READ batch
-→ optional knowledge_plan / memory_plan / task_plan (task-aware only)
-→ independent validated reads + per-source result states
-→ shared final-payload budget + knowledge snapshot checks
-→ Step 1: terminal decision only
-```
-
-Legacy `MEMORY_RECALL(recall_plan)` and `TASK_READ(task_query)` remain compatible. They consume the same single batch opportunity; a second read is rejected, and a direct Step 0 answer needs no second model inference. Normal turns never retrieve the whole memory store. World Knowledge and Memory keep separate retrievers; a knowledge hit is not runtime Memory, and a failed source does not mean the fact does not exist. See [internal contracts](../Contracts/README.md#backend-internal-context-reads).
-
-### Semantic subjects and shared evidence
-
-[MemoryRecallPlan](../AIBackend/app/cognitive_step_models.py) accepts a semantic query, optional memory type and `subject_role`/`subject_ref`. [CognitiveMemoryRecall](../AIBackend/app/cognitive_memory_recall.py) resolves these through the trusted [RecallSubjectCatalog](../AIBackend/app/recall_subjects.py), not model-supplied persistent IDs:
-
-| Role | Meaning and boundary |
+| 主体角色 | 含义 |
 | --- | --- |
-| `requester` | The current trusted player's statements, preferences or experiences; it does not mean the NPC owning the store. |
-| `observer` | This persistent NPC's own statements/experiences. |
-| `shared` | Candidates from this observer's authorized history, narrowed using original Ledger evidence involving this NPC and the current player. It is not a cross-NPC/global store or permission expansion. |
-| `catalog` | Another authorized subject selected by a required catalog `subject_ref`. |
+| `requester` | 当前可信玩家的陈述、偏好或经历 |
+| `observer` | 当前 NPC 自己的历史 |
+| `shared` | 进一步由原始经历核验、涉及当前 NPC 与玩家双方的证据 |
+| `catalog` | 当前授权目录中的其他主体 |
 
-Legacy plans without a role still resolve their supplied ref; a null ref is only an open-subject search within this observer's authorized history. Missing/unauthorized identity is explicit, never an unscoped fallback. `shared` requires raw event ID/sequence and persistent-participant matches, excludes `HEARD` provenance, and can only remove existing bounded candidates. If the requester or Ledger is unavailable it returns unavailable; an empty qualified set is `NO_MEMORY_FOUND`. Same CharacterId or display name does not merge different persistent NPC instances or players.
+Backend 将这些语义角色解析成可信持久身份，再读取有限候选和来源。读取结果与其他上下文共同经过 Token 预算后进入 Step 1；第二次推理直接作出最终决策。
 
-### What proves a past conversation?
+向量索引暂未就绪时可以使用词法回退；无法确认来源、主体或具体历史时，系统保留未知状态，不把它改写成确定事实。
 
-`NPC_SELF_STATEMENT` means the NPC made a source-qualified statement; its summary alone does not prove it was shown to this player. `qualify_self_statement_delivery` reopens the immutable Ledger sources and checks dialogue_response type, event/sequence, self-executed provenance, actor/observer identity, nonempty speech and the current persistent player recipient. Only that yields `PRESENTED_TO_REQUESTER`; otherwise delivery is `UNKNOWN`. This certifies delivery of the linked speech, not the truth of everything the NPC said.
+## 7. 记忆与世界结果的关系
 
-[Model request assembly](../AIBackend/app/model_requests.py) separately projects retained pair-local RecentDialogue/recent interactions and `PRESENTED SPEECH EVIDENCE JSON`. It distinguishes the player's latest question from an actual NPC answer and recomputes presentation metadata after budget selection. Generated but unpresented text is not displayed history. Missing/evicted evidence is unknown, not proof that a conversation never happened. World Knowledge biographies or preset events do not establish that a story was told to this player. A recorded plan proves the discussion/intent, not its later execution; speculation and expressive narration remain possible without asserting unsupported shared history or completed actions.
+- **NPC 实际说过的话**：能够作为对应的发言经历；是否确实呈现给某位玩家，还需要原始展示证据。
+- **玩家表达的偏好**：可以形成语义事实，保留对象、时间和原话来源。
+- **行动提案与承诺**：记录的是意图；真实完成需要匹配 Unity 的 `GoalOutcome` 或世界回执。
+- **当前世界状态**：优先参考 Unity 实时感知；历史记忆用于提供背景，不覆盖当下环境。
 
-Current world/perception always has priority over historical evidence. Recall distinguishes `SEMANTIC_FACT`, `EPISODIC` and tentative `DERIVED_INSIGHT`. Current excludes superseded facts and Insights with stale source revisions; All History retains historical labels. Conflicts remain unresolved, not a unique truth. Insight is not proof of a world action or permission. Types share the existing async Memory Embedding index and safe fallback when vectors are pending/unavailable; the separate World Knowledge index does not change Memory's identity semantics.
+## 8. 数据、预算与导出
 
-Memory P2 distinguishes an Episodic `EVENT` from an attributed `DIALOGUE_EXCHANGE` candidate. The latter requires this persistent NPC and one persistent Player, direct input and response evidence, and both participants in every cited event. Admission/2.1 retains it in the existing EPISODIC store with a backend-owned dialogue prefix and `DIALOGUE_ASSERTIONS_NOT_WORLD_PROOF` label. It certifies the conversation, not narrated world events, other actors' behavior or completed actions. NPC-only accounts retain the existing self-statement path; untyped world claims do not gain dialogue admission. Read-time source verification hides an exchange whose full pair evidence is missing. Recall, ranking, subject authorization and Cognition reuse the existing chain; no table, migration, additional inference or autobiographical subsystem is introduced. RecentDialogue may intentionally span sessions: Memory-only validation must check that the old account is absent from its bounded window, rather than assume restart clears it.
+长期记忆由 `memory_records`、`memory_subjects`、`memory_evidence`、`memory_semantic_facts`、`memory_derived_insights` 和 `memory_embeddings` 等数据结构管理。历史表迁移保留在代码中，当前读取统一使用 canonical Memory。
 
-## Relationship
+召回由当前身份、相关性和剩余上下文容量限定。新建 Main 模型配置默认 32K 预算，实际还需为输出和安全余量留空间。游戏设置支持只读体验数据导出，便于玩家查看经历和记忆来源。
 
-Relationship is a derived interpretation of social Experience rather than a world truth or action permission.
+## 相关资料
 
-Target identity key:
-
-```text
-(observer PersistentIdentity, subject PersistentIdentity)
-```
-
-For a player, the trusted player UID maps to subject PersistentIdentity. The current EntityId remains provenance, not a durable key. Backend-owned RelationshipReflectionRecord cites pair-scoped social Experience evidence; background Relationship Reflection and a deterministic, bounded on-read RelationshipSummaryReader are implemented. Backend cognition resolves a trusted current Player pair and injects the same bounded read model into Step 0 and optional context-read Step 1. It does not expose persistent IDs, change current world state, or authorize actions. The 2026-09-25 local Ollama vertical slice is historical evidence. Subsequent cloud/hybrid checks do not certify a public multiplayer server or arbitrary multi-user deployment; the current demo remains local single-player. If exact historical facts are required, Recall supplies an EvidenceSet. CurrentAffect/persistent Mood is a possible Agent Runtime concept, not an implemented state subsystem; deterministic Gameplay Relationship State would belong to host game mechanics.
-
-Relationship P1 maintains compact, subjective social understanding and lasting communication styles/boundaries, not a second store for drinks, activities, stories or concrete agreements. One new Episode plus the current PairState produces at most three independent ADD/CORRECT/CONFLICT updates in one model call. INTERPRETATION requires a nonempty Episode audit explanation but permits zero persistent updates; NO_CHANGE requires a null explanation and empty `state_updates`. Both no-delta outcomes preserve existing items and are durably processed, without projecting audit explanations into Cognition. Qualified social inference and gradual refinement from new support are allowed; rereading old state is not new evidence. Up to four current items are retained. Oversized batches are entirely unapplied and durably diagnosed; source, identity, CAS and transaction protections remain. Cognition receives the whole current snapshot as one budgeted component, never a rolling historical-interpretation window. Current Preview contracts are reflection/3.0, pair-state/2.0 and summary/3.0; initialization and restart persistence are supported on fresh current databases, without cross-Preview conversion, backfill or user-data resets.
-
-## Scale
-
-World Knowledge has its own Backend-owned complete player catalog, public/restricted access, constant/retrieval usage, hybrid RAG and Unity management UI. Its template and editable knowledge are separate from personal Memory, Relationship, current Perception and Unity authority. See [World Knowledge](../AIBackend/WORLD_KNOWLEDGE.md).
-
-Foreground Step 0/1 share one ContextBudgetAllocator and effective model capacity.
-Recall selects whole facts/excerpts rather than fixed character prefixes; independent
-Semantic Facts may split, while causes, conditions, negation and time changes remain
-self-contained. Memory and relevant Relationship use bounded candidates plus global
-remaining capacity, rather than fixed 1800/800-token quotas. Relationship updates and
-uncertain interpretations are retained together, without treating recency as proof.
-New Main model profiles without an explicit capacity default to **32768 tokens (32K)** in [model_provider_presets.py](../AIBackend/app/model_provider_presets.py). This is a developer-selected request budget, not a model/service guarantee. Existing saved values are not silently migrated. [CognitiveBackendEntry](../AIBackend/app/cognitive_entry.py) falls back to 8192 when capacity is unknown and respects a smaller declared provider capacity. Output/thinking and estimation reserves still reduce the available input budget; 32K does not imply a 32K input payload.
-
-The earlier 16K/thinking-disabled PASS WITH LIMITATIONS and the saved 8K profile on the 2026-10-13 acceptance machine are historical observations only. Small or explicit legacy capacities can still fail safely. Recall/entailment correctness is not guaranteed by admission or budgeting. Mandatory constant knowledge is included intact or yields an explicit constant-budget failure; it is never silently truncated.
-
-The runtime does not keep every known player in every prompt.
-
-```text
-many historical player UIDs
-→ durable indexed storage
-→ filter current/relevant UID
-→ bounded candidates
-→ lexical/embedding retrieval when needed
-→ bounded evidence
-→ CognitiveContextSnapshot
-```
-
-The storage implementation can evolve without changing the identity and memory semantics above.
-
-## Read-only experience export
-
-The settings experience export reads retained current-player Ledger dialogue/Experience, Episodes, canonical memories and source links, and pair-scoped Relationship records through the [existing exporter](../AIBackend/app/experience_export.py). SQLite is read in one read-only transaction, including committed WAL data; knowledge and Unity settings use separately identified snapshots. Export does not consolidate, reflect, recall, mutate or reconstruct cleaned history. Categories/counts, exclusions and incomplete evidence are reported in manifests. Personal text is preserved for voluntary analysis, while credentials and foreign private records are excluded. See [architecture and ZIP layout](ARCHITECTURE.md#read-only-complete-experience-export).
+[整体架构](ARCHITECTURE.md) · [世界知识](../AIBackend/WORLD_KNOWLEDGE.md) · [认知协议](../Contracts/README.md) · [持久任务](NPC_TASK_SYSTEM.md)
