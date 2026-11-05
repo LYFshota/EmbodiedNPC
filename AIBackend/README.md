@@ -14,7 +14,7 @@ AgentEvent → CognitiveRun → CognitiveRequest (/ws)
 
 单次普通认知最多两次模型推理。不同 NPC 的前台请求和后台记忆任务使用共享的有界并发调度器。
 
-Backend 使用 `data/model_api_configs.json` 中的 Main / Embedding 配置；未创建配置文件时可从环境变量初始化。支持 Mock、Ollama、DeepSeek Official、OpenAI-compatible、Gemini Native 和 Anthropic Native 等适配器。具体协议见 [Contracts](../Contracts/README.md)，版本验收记录见 [发布状态](../Docs/RELEASE_STATUS.md)。
+Backend 使用 `data/model_api_configs.json` 中的 Main / Embedding 配置；未创建配置文件时可从环境变量初始化。支持 Mock、Ollama、DeepSeek Official、OpenAI-compatible、Gemini Native 和 Anthropic Native 等适配器。具体协议见 [Contracts](../Contracts/README.md)。
 
 ## 启动
 
@@ -78,19 +78,17 @@ Backend 启动时只读一次 `data/model_api_configs.json`。存在时，它优
 
 v1 保存以及 v2 profile 保存/激活均不热切换运行中的 Provider。`GET /v1/runtime-status` 新增 `active_main_model`、`active_embedding`、`model_config` 和 `restart_required`，不返回 API Key。有效配置改变后重启 Backend，新的 Main/Embedding 才生效，`restart_required` 恢复 false；display name 或 revision 单独变化不触发重启。不提供 HTTP 重启接口。Unity Editor 的本机开发重启使用 `restart_local_backend.ps1` 并核对目标进程归属；Portable 则由包根 Start 的受控退出/重启流程处理，二者不混用。
 
-## 单玩家身份与对话续话（历史 v2 Lite 增量）
+## 玩家身份与对话续话
 
 Backend 默认固定 Player UID 为 `cafe-local-player-001`；隔离部署可在 app import 前设置 `EMBODIEDNPC_DEMO_PLAYER_UID`，不能从客户端显示名/LLM 文本选择身份。普通及合法已展示的自主 NPC 自述按同一本人来源规则准入，Recall 保留自述限定；不认证共同历史或实际动作。真实 ActionOutcome 继续要求合法执行证据。Step1 复用同一匿名 subject_catalog 并使用合法历史偏好。
 
 可选 `dialogue_turn_policy` 只允许 WAIT_FOR_PLAYER/MAY_CONTINUE，缺省保持一问一答，不改变 episode_directive。`npc.dialogue_continue` 仅一次可抢占后台推理，DIRECT_RESPONSE/NO_ACTION、无额外 Recall；ACK、父轮次与 Recent Dialogue 顺序校验保持。Unity 默认禁用、等待4秒、每玩家轮最多一次。
 
-能力、当前验证与 NOT_RUN 见[公开摘要](../Docs/RELEASE_STATUS.md)。
-
 ## Persona
 
 角色人设包含 character_id、display_name、role_summary、backstory、personality、speaking_style 和 boundaries。Unity 的默认配置与玩家修改由 CharacterProfileResolver 合成新的认知快照。人设负责角色表达与个性，玩家经历和真实行动结果则由各自的证据与世界系统管理。
 
-字段格式和上限见 [Contracts](../Contracts/README.md)，定向验收记录见 [发布状态](../Docs/RELEASE_STATUS.md)。
+字段格式和上限见 [Contracts](../Contracts/README.md)。
 
 ## 世界知识与上下文预算
 
