@@ -4,7 +4,7 @@ EmbodiedNPC stores source-qualified dialogue, observations, and action outcomes 
 
 Persona describes the character, World Knowledge supplies authored background, and Memory records what actually happened. Unity remains the source of truth for the current world and completed actions.
 
-Canonical Memory includes Episodic records, Semantic Facts, Derived Insights, evidence links, and an Embedding index. Migration and validation history is collected at the end of this document and in [Release Status](RELEASE_STATUS.md).
+Canonical Memory includes Episodic records, Semantic Facts, Derived Insights, evidence links, and an Embedding index. The current memory model and retrieval flow are described below.
 
 ## Data model
 
@@ -222,24 +222,3 @@ The storage implementation can evolve without changing the identity and memory s
 ## Read-only experience export
 
 The settings experience export reads retained current-player Ledger dialogue/Experience, Episodes, canonical memories and source links, and pair-scoped Relationship records through the [existing exporter](../AIBackend/app/experience_export.py). SQLite is read in one read-only transaction, including committed WAL data; knowledge and Unity settings use separately identified snapshots. Export does not consolidate, reflect, recall, mutate or reconstruct cleaned history. Categories/counts, exclusions and incomplete evidence are reported in manifests. Personal text is preserved for voluntary analysis, while credentials and foreign private records are excluded. See [architecture and ZIP layout](ARCHITECTURE.md#read-only-complete-experience-export).
-
----
-
-## Historical implementation and validation
-
-### M3 acceptance (2026-10-13)
-
-Open Semantic Fact, independent Episodic Memory, low-frequency Memory Maintenance,
-cross-Episode DerivedInsight, async Embedding / Vector-first Recall, independent
-Relationship Reflection, and Observation sampling debounce are implemented.
-M3 is **PASS within the single-player, four-NPC CafeDemoV2 acceptance scope**, including
-restart persistence and real Unity action outcomes. This is not final project release
-acceptance. Free-text semantic accuracy depends on the model; bounded Maintenance
-candidates cannot guarantee all historical relationships are found. Multiplayer
-servers, large NPC populations, and cross-platform deployment remain unvalidated.
-
-### Memory v2 Lite increment (2026-10-10)
-
-This historical increment used fixed ProfileFacts; M3 has replaced that production contract with open Semantic Facts and low-frequency semantic Maintenance. Its authority boundaries remain: the Demo binds one Player UID (default `cafe-local-player-001`), and checks request identity and linked Recall evidence, including open-subject reads. Displayed NPC speech can form owner-only self-statements with source limitations; it cannot certify world execution, another actor, or shared Player history. Skill/Goal outcomes use trusted Runtime participant bindings. Repetition does not independently verify a claim. NPC-only narration and autonomous continuation do not independently produce Player Relationship reflection.
-
-Historical real acceptance and current delivery checks are separated in [the validation summary](RELEASE_STATUS.md).
