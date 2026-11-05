@@ -21,6 +21,8 @@ World / Dialogue / ActionOutcome
 → future CognitiveDecision
 ```
 
+Canonical storage includes `memory_records`, `memory_subjects`, `memory_evidence`, `memory_semantic_facts`, `memory_derived_insights`, source links and `memory_embeddings`. Schema 16 introduced open Semantic Facts, 17 added Maintenance, and 18 added multi-Episode Derived Insights. Historical migrations remain available for review.
+
 ## World, Experience, Episode, Memory
 
 These are deliberately separate concepts.
