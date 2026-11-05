@@ -1,44 +1,34 @@
-# NPC reply language, D production projection v1 (2026-10-18)
+[简体中文](README.md) | [English](README.en.md)
 
-`reply_language` is trusted transport presentation metadata (`zh-CN` or `en-US`),
-not a model output or permission. Legacy clients default explicitly to `zh-CN`.
-Unity snapshots it at request composition; the frozen backend request carries it
-through both steps. Global preference lives in Unity's existing settings store,
-separate from Provider configuration. Session overrides are owned by each NPC
-composer and keyed by conversation plus player/NPC identities.
-Missing reliable durable identities use the global default without storing a temporary override.
+# NPC 对话语言与双语投影
 
-`default_personas.v1.json` reuses the reviewed LanguageStudy-20261018 English
-projections. `source_sha256` covers **all** original Character fields, sorted JSON
-keys, compact separators, UTF-8 with unescaped Unicode. `projection_sha256` covers
-the English view with the same algorithm. Any edit to an original/default/custom
-field disables the default projection. The original assets and DTO field caps
-remain authoritative. To update a default, review translation semantics, update
-both hashes together, increment the projection version, and run the four-default
-hash/override tests. Do not regenerate translations automatically at runtime.
+NPC 的回复语言通过可信的 `reply_language` 指定，支持 `zh-CN` 与 `en-US`。Unity 在创建认知请求时确定语言，Backend 的 Step 0、可选 Step 1 与最终展示保持同一语言要求。
 
-`behavior.v1.json` contains only reviewed model-visible prose fragments, not a
-second core Prompt. Continuation uses a shared English-equivalent final review.
-Projection is applied inside the budget renderer, so the Provider's actual wire
-payload (including expanded English text, schema and final language contract) is
-what is measured. Historical speech, Memory, knowledge and perception are unchanged.
+## 语言选择
 
-Length counts **Unicode scalar values**, including spaces/punctuation; combining
-marks count separately. Invalid isolated surrogates fail validation. Soft/hard
-limits are Chinese 100/150 and English 200/250. `reply_language.response_schema`
-changes only utterance limits; backend Pydantic validation receives the same run
-locale. Unity's correlated request/report gate enforces it again. Replies within
-the hard maximum remain verbatim. Overlong replies fail normally: no truncation,
-rewriting or automatic retry is implemented.
+- 全局语言设置保存在 Unity 玩家设置中，与模型服务商配置独立。
+- 单个 NPC 的对话会话可使用有身份关联的语言覆盖。
+- 回复语言属于请求元数据，不由模型自由选择。
 
-Temporary language recognition deliberately accepts standalone directives only,
-e.g. `这句话用中文回答`, `接下来用中文交流`, `Please reply in English`,
-`From now on, speak Chinese.` Ordinary words such as OK/yes/好的 do not change
-locale. Arbitrary prose, quoted instructions, mixed clauses and negation are not
-classified; use the preference dropdown or a standalone directive. No inferred
-language request is written to persistent settings.
+## 默认角色与提示词
 
-Validation artifacts and limitations: `D:\EmbodiedNPC-LanguageProduction-20261018`.
-The opt-in Editor tests require that isolated harness; they must never be pointed
-at a player's database or a running production backend. A successful language
-test does not prove semantic factuality or final package readiness.
+`default_personas.v1.json` 保存审核后的默认英文角色投影。原始人设内容及其哈希决定英文投影是否适用；当角色默认内容或本地自定义内容改变时，使用相应有效配置，避免套用过时翻译。
+
+`behavior.v1.json` 提供双语行为提示片段。运行时在统一的上下文预算流程中展开实际语言内容、模型 Schema 和输出限制。
+
+## 回复长度与验证
+
+当前中英文回复的软/硬长度上限分别为：
+
+| 语言 | 软上限 | 硬上限 |
+| --- | ---: | ---: |
+| 中文 `zh-CN` | 100 | 150 |
+| English `en-US` | 200 | 250 |
+
+长度按 Unicode 标量值计数。Backend 与 Unity 使用同一轮请求的语言和关联标识验证最终回复；对话续话也遵守同样的语言约束。
+
+## 调整默认翻译
+
+更新默认人设投影时，同时检查语义、`source_sha256`、`projection_sha256` 和版本号，并运行相关默认角色/覆盖配置测试。
+
+相关文档：[Backend](../../README.md) · [认知协议](../../../Contracts/README.md) · [整体架构](../../../Docs/ARCHITECTURE.md)
