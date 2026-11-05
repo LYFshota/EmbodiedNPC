@@ -77,13 +77,13 @@ Memory uses vector and lexical retrieval with identity and evidence scoping. Sel
 
 Multiple NPC foreground requests and background consolidation, relationship reflection and maintenance share a bounded model executor with foreground priority and background fairness. Default cloud limits are **6 total / 6 foreground / 2 background**; local Ollama defaults to **1 / 1 / 1**. These are overlapping caps on shared capacity.
 
-Main LLM and Embedding configurations are independent. Adapters include DeepSeek, OpenAI-compatible APIs, Gemini, Anthropic and Ollama. Configuration changes apply through save, activation and the appropriate Backend restart. See [Backend](../AIBackend/README.md) and [Source Setup](SOURCE_SETUP.md).
+Main LLM and Embedding configurations are independent. Adapters include DeepSeek, OpenAI-compatible APIs, Gemini, Anthropic and Ollama. Configuration changes apply through save, activation and the appropriate Backend restart. See [Backend](../AIBackend/README.en.md) and [Source Setup](SOURCE_SETUP.en.md).
 
 ## 6. Configuration, reuse and scope
 
 - **NPC Persona:** edit character background and behavior through the Unity UI; new runs use the updated profile.
 - **World Knowledge:** search, edit, scope by character, import/export JSON and restore entries.
-- **Persistent Tasks:** save limited future commitments and reconsider them on later visits or idle opportunities; world outcomes settle execution. See [Tasks](NPC_TASK_SYSTEM.md).
+- **Persistent Tasks:** save limited future commitments and reconsider them on later visits or idle opportunities; world outcomes settle execution. See [Tasks](NPC_TASK_SYSTEM.en.md).
 - **Presentation:** dialogue bubbles, facial expressions, gaze, gestures and motion channels remain separate from trusted world and memory facts.
 - **Other games:** reuse the cognitive and memory core while adapting entity models, events, action catalogs and presentation.
 
@@ -91,4 +91,4 @@ The current public demo focuses on a local single-player café. Future work emph
 
 ## Related documents
 
-[Memory](MEMORY.en.md) · [World Knowledge](../AIBackend/WORLD_KNOWLEDGE.md) · [Contracts](../Contracts/README.md) · [Source Setup](SOURCE_SETUP.md) · [Contributing](../CONTRIBUTING.md)
+[Memory](MEMORY.en.md) · [World Knowledge](../AIBackend/WORLD_KNOWLEDGE.en.md) · [Contracts](../Contracts/README.en.md) · [Source Setup](SOURCE_SETUP.en.md) · [Contributing](../CONTRIBUTING.en.md)
