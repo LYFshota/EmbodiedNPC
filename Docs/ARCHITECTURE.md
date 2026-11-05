@@ -6,7 +6,7 @@ For gameplay highlights and downloads, start with the [README](../README.en.md).
 
 ## Reading the diagrams
 
-The [README overview](../README.en.md#system-architecture) ([中文](../README.md#系统架构)) introduces the perception → cognition → memory/action → world-feedback loop. The diagram below expands the ordinary dialogue path; branches are alternatives or optional reads, not work that every turn must perform. Unity remains the authority for current world state and action outcomes throughout.
+The [README overview](../README.en.md#architecture) ([中文](../README.md#系统架构)) introduces the perception → cognition → memory/action → world-feedback loop. The diagram below expands the ordinary dialogue path; branches are alternatives or optional reads, not work that every turn must perform. Unity remains the authority for current world state and action outcomes throughout.
 
 | Part of the flow | How to read it |
 | --- | --- |
