@@ -1,6 +1,6 @@
-# Early Prototype release scope
+# Release history and validation
 
-> Current preview: [v0.1.5-preview](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview). Dated/versioned sections below retain their original validation scope; earlier NOT_RUN or capacity limits are not a statement of current implementation. Current module behavior is documented in [Architecture](ARCHITECTURE.md).
+The latest playable release is listed on [GitHub Releases](https://github.com/LYFshota/EmbodiedNPC/releases). This page preserves the checks recorded for individual previews; current behavior and architecture are described in [Architecture](ARCHITECTURE.md).
 
 The public source keeps TitleScene → CafeDemoV2, the café, four NPCs and Xingmang,
 AIBackend, Contracts and project dependencies. Private Git history, InternalDocs,
