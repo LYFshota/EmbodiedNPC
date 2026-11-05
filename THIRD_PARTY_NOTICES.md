@@ -19,9 +19,7 @@ Copyright 2026 LYFshota
 | Python、第三方包及原生库 | 由 [requirements](AIBackend/requirements.txt) 安装，各发行包保留原许可；[依赖快照](Docs/DEPENDENCIES.md) 不是对所有依赖重新许可。虚拟环境及 DLL 不随源码复制。 |
 | EmbeddingGemma 权重、tokenizer 和 ONNX 转换 | 不随源码提供；由开发者依 [固定资源说明](Docs/SOURCE_SETUP.md#内置-embedding-资源) 合法准备，或选外部 Embedding/关闭。模型条款不改为 Apache-2.0。 |
 
-OlyPoly 原资源、微软雅黑、三个 Mixamo 原始 FBX 以及隐藏立绘的清理结果已沿用；本准备没有再引入它们。历史私有 ZIP 不是本公开候选，不能替代此源码清单上传。
-
-许可与版本证据边界见 [发布状态](Docs/RELEASE_STATUS.md)。VamTastic 的 CC BY 具体版本未注明，保留这一事实、实际作者和修改记录，不伪造版本，也不扩大任何作者的授权范围。Unity 项目模板保留[原许可声明](ThirdPartyNotices/UnityTemplate_LICENSE.md)。
+VamTastic 的 CC BY 具体版本未注明，相关来源、署名和修改记录见 [咖啡馆素材说明](ThirdPartyNotices/Cafe_Attribution.md)。Unity 项目模板保留[原许可声明](ThirdPartyNotices/UnityTemplate_LICENSE.md)。
 
 ## Windows preview: bundled Embedding
 
