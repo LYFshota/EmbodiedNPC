@@ -1,3 +1,5 @@
+[简体中文](DEPENDENCIES.md) | [English](DEPENDENCIES.en.md)
+
 # 依赖与运行环境
 
 项目使用 **Unity 6000.5.10f1** 和 **Python 3.12 x64**，Windows 开发环境可按照 [源码运行说明](SOURCE_SETUP.md)配置。
