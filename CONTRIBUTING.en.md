@@ -26,6 +26,6 @@ For architecture or protocol changes, opening an Issue first can help coordinate
 
 ## Licenses and assets
 
-Contributions to first-party source are handled under [Apache-2.0](LICENSE). Third-party assets and Xingmang have their own [licenses](THIRD_PARTY_NOTICES.md). Submit material you are permitted to contribute and retain required credits.
+Contributions to first-party source are handled under [Apache-2.0](LICENSE). Third-party assets and Xingmang have their own [licenses](THIRD_PARTY_NOTICES.en.md). Submit material you are permitted to contribute and retain required credits.
 
 See [Architecture](Docs/ARCHITECTURE.en.md) · [Developer Docs](Docs/README.en.md) · [Source Setup](Docs/SOURCE_SETUP.en.md).
