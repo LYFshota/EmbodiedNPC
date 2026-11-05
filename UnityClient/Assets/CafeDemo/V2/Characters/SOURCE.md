@@ -1,14 +1,22 @@
-# CafeDemoV2 角色来源与许可
+[简体中文](SOURCE.md) | [English](SOURCE.en.md)
 
-保留原作者、格式转换/项目使用记录；NPC 的中文身份是项目设定，不代表原作者背书。下表沿用已核实证据；Ao 精确修订对应的缺口保留。
+# CafeDemoV2 角色模型来源
 
-| 角色 | 原作者/转换 | 许可与原页 |
-|---|---|---|
-| Vivi / 林薇薇 | pixiv / VRoid Project；VRM1转换Coatie（coati） | CC0；[官方Vivi样例](https://vroid.pixiv.help/hc/ja/articles/360014900273)；[转换发布页](https://hub.vroid.com/en/characters/4593660874193246717/models/6231093367809816026) |
-| GirlA / 沈知意 | くつした / Kutsushita | CC0 1.0；[少女A原始页](https://hub.vroid.com/en/characters/5271108759876567944/models/9069514665234246177) |
-| 桜田 史利矢 / 江亦舟 | VRoidプロジェクト / pixiv | CC0；[官方许可](https://vroid.pixiv.help/hc/ja/articles/360014788554)；[官方模型](https://hub.vroid.com/en/characters/6912965120285194650/models/2261505926203110716)。当前元数据可以正确解码，不再写作者乱码未知 |
-| Ao / 温予安 | 白い白米 / siroihakumai | 所有者确认从[具体女仆VRM1页](https://hub.vroid.com/en/characters/1245908975744054638/models/5095341574274335587)取得；[VRM Public License1.0](https://vrm.dev/en/licenses/1.0/)及具体设置。允许原始及改作模型再分发、个人/公司商用；不允许政治宗教、反社会仇恨表达；署名非强制。当前文件m2、23,951,288字节、SHA256 0fc49d1530e08f2e55552dcade036b0271d8ef81f6667c117c4fc9c2ccdb9337；没有内嵌发布修订号，原始下载文件级对应仍待确认。不得声称CC0或已完成远端哈希核对 |
+本场景使用四名 NPC 的 VRM 模型。游戏内姓名是 EmbodiedNPC 的角色设定，原始模型作者与许可分别列于下表。
 
-Ao部件链接沿用已核实原作者面/身体纹理5677816、短发5343048、女仆头饰5670594、drawers4285819；只对已建立关联的具体版本说明，不自动覆盖未来另加部件。Xingmang属于另一目录并由其独立许可处理，所有者已确认相关著作财产权买断归属（OWNER CONFIRMED），不要求公开私人合同；独立项目内非商业许可已由所有者正式采用，第三方独立部件如有则仍遵守其原许可。原作者字段保留。
+| 角色 | 原作者 / 贡献者 | 来源与许可 |
+| --- | --- | --- |
+| 林薇薇（Vivi） | pixiv / VRoid Project；Coatie（VRM1 转换） | [官方 Vivi 样例](https://vroid.pixiv.help/hc/ja/articles/360014900273)、[转换版](https://hub.vroid.com/en/characters/4593660874193246717/models/6231093367809816026)，CC0 |
+| 沈知意（GirlA） | くつした / Kutsushita | [少女 A 模型](https://hub.vroid.com/en/characters/5271108759876567944/models/9069514665234246177)，CC0 1.0 |
+| 江亦舟（桜田史利矢） | VRoid Project / pixiv | [官方模型](https://hub.vroid.com/en/characters/6912965120285194650/models/2261505926203110716)、[官方许可](https://vroid.pixiv.help/hc/ja/articles/360014788554)，CC0 |
+| 温予安（Ao） | 白い白米 / siroihakumai | [指定 VRoid Hub 模型](https://hub.vroid.com/en/characters/1245908975744054638/models/5095341574274335587)，[VRM Public License 1.0](https://vrm.dev/en/licenses/1.0/) 与该模型页面设置 |
 
-CC0工具地址：https://creativecommons.org/publicdomain/zero/1.0/ 。自愿来源署名不变成对原CC0权利新增条件。
+Ao 当前文件的 SHA-256 为：
+
+```text
+0fc49d1530e08f2e55552dcade036b0271d8ef81f6667c117c4fc9c2ccdb9337
+```
+
+Ao 的许可包含对应的使用场景设置；具体模型授权以原页面和嵌入的 VRM 元数据为准。上述角色模型在 Unity 中作为 Humanoid 外观使用，角色的认知身份、能力与玩家关系由 EmbodiedNPC 运行系统管理。
+
+玩家角色星芒另见 [角色许可](../../../VRMCompatibilityTest/Xingmang.LICENSE.md)。完整资源声明：[第三方素材说明](../../../../../THIRD_PARTY_NOTICES.md)。
