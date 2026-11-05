@@ -92,4 +92,4 @@ Recall is bounded by authorized identities, relevance and available context spac
 
 ## Related documents
 
-[Architecture](ARCHITECTURE.en.md) · [World Knowledge](../AIBackend/WORLD_KNOWLEDGE.md) · [Contracts](../Contracts/README.md) · [Persistent Tasks](NPC_TASK_SYSTEM.md)
+[Architecture](ARCHITECTURE.en.md) · [World Knowledge](../AIBackend/WORLD_KNOWLEDGE.en.md) · [Contracts](../Contracts/README.en.md) · [Persistent Tasks](NPC_TASK_SYSTEM.en.md)
