@@ -1,27 +1,38 @@
+[简体中文](WORLD_KNOWLEDGE.md) | [English](WORLD_KNOWLEDGE.en.md)
+
 # 世界知识与管理
 
-内置 [咖啡馆知识模板](app/knowledge/cafedemo_v2.json) 目前包含 **161 条**知识，覆盖角色、场景、饮品和点心等背景。玩家可在游戏中按角色配置访问范围、编辑知识或导入导出 JSON。具体结构由 [知识模型](app/world_knowledge.py) 与 [部署配置](app/knowledge/cafedemo_v2_deployment.json)定义。
+世界知识提供角色、咖啡馆、饮品和街区等**可被 NPC 使用的背景信息**。当前内置 [咖啡馆模板](app/knowledge/cafedemo_v2.json) 包含 **161 条**知识。玩家可以在 Unity 设置页面中按 NPC 权限管理、搜索、编辑、导入和导出。
 
-- 默认模板只读。首次初始化或旧覆盖格式显式迁移后，玩家的 `data/world_knowledge.json` 是 `schema_version=2` 的完整目录；游戏更新不合并新默认内容。
-- `access.mode=public` 面向部署/场景条件匹配的可信注册角色；`restricted` 只允许明确 CharacterId。缺失字段按旧 restricted 范围解释。
-- `usage=constant` 经权限过滤后计入上下文预算；`retrieval` 使用现有词法 + Embedding + RRF、Top-K=3。仅语义投影改变才重算向量。
-- 普通对话先自动预检索：通常使用当前玩家文本，短追问可结合当前会话最近话题；混合排序后以名称/关键词的词法话题支持筛掉无关预取。模型可在 Step 0 用 `CONTEXT_READ` 补查语义知识、Memory 和 task-aware Schema 允许的 Task Read，或直接终结；Step 1 必须终态，最多两次推理。自动与补查共用三个不同检索 ID 的额度，常驻不占 Top-K，也不会重复注入。
-- Unity 设置提供搜索、类型/使用模式/访问范围/NPC 筛选、编辑、完整 JSON 导入导出和恢复系统默认。导入是完整替换，预览后 revision 变化会拒绝提交。
-- 复用跨进程写锁、revision 校验、备份和原子写入。知识专用 JSON 上限 16 MiB；无目录级 128 条限制。
-- 知识内容不是实时世界状态，不授予制作权限，也不是玩家真实经历。Memory、Relationship、Persona 和世界事务独立。
+## 数据来源与使用模式
 
-本地 CLI：从 AIBackend 运行 `python -m tools.manage_world_knowledge --help`。测试必须用独立 `--file`，先显式 initialize；普通读取不产生迁移或写入。运行和会话配置见 [SOURCE_SETUP](../Docs/SOURCE_SETUP.md)。
+- 内置模板用于首次初始化及主动恢复默认。玩家编辑的完整知识目录保存在 `data/world_knowledge.json`（schema 2），更新游戏后继续使用自己的目录。
+- `access.mode=public` 适用于允许访问的角色和部署场景；`restricted` 指定可访问的 CharacterId。
+- `usage=constant` 为常驻背景，在权限筛选后直接进入上下文；`retrieval` 则使用关键词、向量和 RRF 融合检索。当前相关知识 Top-K 为 3。
+- 世界知识描述角色被授权知道的背景，不代替 Unity 世界状态、玩家经历或动作权限。
 
-## 运行入口与边界
+## 认知如何读取知识
 
-- [WorldKnowledgeResolver](app/world_knowledge_store.py) 的 capture/prefetch/query/validate_snapshot 在同一 Run 复用目录快照；目录内容或 revision 变化、读取失败都会使旧快照失效，不用撤权/删除前的结果继续发布回复或行动。
-- [KnowledgeEmbeddingIndex](app/knowledge_embeddings.py) 是可重建 SQLite 派生索引。指纹来自实际 `embedding_text()`（ID、名称、类型、正文、attributes）及投影版本；模型空间和维度也需匹配。只改权限、usage、source 或管理版本/时间不重算向量。常驻不后台编码，切回 retrieval 时可复用仍有效向量。检索前仍按当前目录/权限过滤，旧缓存不能授予访问权。
-- [model_requests.py](app/model_requests.py) 将常驻加入必需上下文预算，放不下时明确失败，不截断事实；其他知识/Memory/Task/Relationship 与最终 Provider 载荷共享预算。新 Main 配置默认 32K，保留旧保存值，见[记忆与预算](../Docs/MEMORY.md#scale)。
-- [Knowledge Management API](app/knowledge_management_api.py) 与 [Unity 面板](../UnityClient/Assets/CafeDemo/Scripts/CafeWorldKnowledgePanel.cs) 复用同一 Store。UI 本地化只改变显示名，类型 ID/CharacterId/正文保持原样；权限和 NPC 筛选取交集。来源是内部元数据，不再作为普通玩家编辑/筛选项。
-- [完整体验导出](app/experience_export.py) 只读导出当前完整目录，保留权限/usage；它不是导入、恢复默认或隐式模板同步。详细[架构](../Docs/ARCHITECTURE.md#read-only-complete-experience-export)与[内部读取协议](../Contracts/README.md#backend-internal-context-reads)说明各模块职责。
-- 十种热饮知识只提供可聊的参考；可制作集合由 [DrinkType](app/drink_types.py) 和 Unity DrinkTypes/动作准入定义，世界知识不能新增能力、配方、库存或实时经营事实。
+普通对话在第一次模型推理前，依据玩家当前话题自动预检索知识。短追问可结合最近的会话话题。自动预取和模型后续补查复用同一目录快照。
 
+如果 Step 0 判断还需要更多资料，可以通过一次 `CONTEXT_READ` 联合查询世界知识、长期记忆及适用的任务信息，随后由 Step 1 输出最终结果。自动预取与补查合计最多展示三个不同的检索条目；常驻背景独立计入预算。
 
-## v0.1.4 默认背景扩充
+## Unity 编辑与后台管理
 
-四名 NPC 各新增 12 条受角色权限限制的生活背景。原有 108 条保留，共 156 条；默认模板与玩家目录仍然独立。自动预取与模型补查沿用原有 Top-K、Token 预算及两步上限，不新增关键词触发器或模型调用。旧玩家目录不会自动合并新条目，恢复默认前应导出备份。
+Unity 面板支持按类型、使用模式、权限和角色筛选，编辑条目，以及完整 JSON 导入、导出与恢复默认。导入前提供预览，最终提交使用版本检查。
+
+后端通过 `WorldKnowledgeStore` 负责权限、完整目录和版本，通过 `KnowledgeEmbeddingIndex` 管理可重建的 SQLite 向量索引。只有参与向量内容的字段变化才需要重新编码；权限更改在读取时立即应用。目录写入使用锁、备份和原子更新。
+
+从 `AIBackend` 目录可运行：
+
+```powershell
+python -m tools.manage_world_knowledge --help
+```
+
+管理 API、模型请求和索引代码分别位于 [knowledge_management_api.py](app/knowledge_management_api.py)、[model_requests.py](app/model_requests.py)、[knowledge_embeddings.py](app/knowledge_embeddings.py)。
+
+## 与其他系统的关系
+
+Persona 负责“角色是谁”，World Knowledge 负责“角色知道什么背景”，Memory 负责“角色亲历了什么”。知识内容不会自动增加咖啡制作菜单或新的动作能力；实际服务范围由 [DrinkType](app/drink_types.py) 和 Unity 行动准入定义。
+
+参见 [整体架构](../Docs/ARCHITECTURE.md)、[记忆](../Docs/MEMORY.md) 和 [协议](../Contracts/README.md)。
