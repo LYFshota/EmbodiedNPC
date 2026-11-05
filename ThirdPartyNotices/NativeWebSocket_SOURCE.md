@@ -1,3 +1,11 @@
-# NativeWebSocket notices
+[简体中文](NativeWebSocket_SOURCE.md) | [English](NativeWebSocket_SOURCE.en.md)
 
-Pinned UPM package: Endel Dreyer, com.endel.nativewebsocket 2.0.7, Git c612a4fef60f2ae57614b73202d2d261ba56aa3e. The distributed package.json declares MIT; that Git tree does not ship a standalone license file. The official upstream repository root supplies the Apache-2.0 notice retained in NativeWebSocket_LICENSE.txt (Git blob 9201a869da7fd8f91a65b31642c4ae9701f4e864). Both records are preserved rather than silently rewriting the package declaration. Source: https://github.com/endel/NativeWebSocket . Apache-2.0 full terms are included in the project LICENSE. No project-specific modifications to this package.
+# NativeWebSocket 来源与许可
+
+项目使用 Endel Dreyer 的 `com.endel.nativewebsocket` **2.0.7**，固定 Git 提交为 `c612a4fef60f2ae57614b73202d2d261ba56aa3e`。
+
+上游：[NativeWebSocket](https://github.com/endel/NativeWebSocket)。
+
+该版本的 `package.json` 标注 MIT；官方仓库根目录提供 Apache-2.0 许可声明，项目保留了相应的 [许可证副本](NativeWebSocket_LICENSE.txt)（Git blob `9201a869da7fd8f91a65b31642c4ae9701f4e864`）。项目未对第三方包进行专门代码修改。
+
+两项上游许可记录均予保留，具体使用以适用的许可证原文为准。
