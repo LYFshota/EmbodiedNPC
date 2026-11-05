@@ -173,7 +173,7 @@ class DeepSeekProviderTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn(KEY, health.model_dump_json())
         def fail(req):
             raise httpx.ConnectError(KEY, request=req)
-        self.assertEqual("DEEPSEEK_UNAVAILABLE", (await provider(fail).health()).detail)
+        self.assertEqual("DEEPSEEK_CONNECTION_FAILED", (await provider(fail).health()).detail)
 
     async def test_runtime_status_reports_safe_active_deepseek_health(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -162,9 +162,9 @@ namespace EmbodiedNPC.Settings
         {
             if (embeddingCategories == null || embeddingChoices == null) return;
             int category = embeddingEnabled.isOn ? EmbeddingCategory(EditingEmbeddingPreset()) : 3;
-            string[] labels = { SettingsUiLanguage.T("内置模型（新配置默认） · EmbeddingGemma 300M Q4", "Built-in model (new configuration default) · EmbeddingGemma 300M Q4"),
+            string[] labels = { SettingsUiLanguage.T("内置本地模型（推荐）", "Built-in local model (recommended)"),
                 SettingsUiLanguage.T("本地 Ollama", "Local Ollama"), SettingsUiLanguage.T("云端 API", "Cloud API"),
-                SettingsUiLanguage.T("关闭 Embedding", "Embedding off") };
+                SettingsUiLanguage.T("关闭记忆查找", "Memory search off") };
             for (int i = 0; i < embeddingCategories.Length; i++)
             {
                 embeddingCategories[i].SetIsOnWithoutNotify(i == category);
@@ -172,7 +172,7 @@ namespace EmbodiedNPC.Settings
                 embeddingCategories[i].GetComponentInChildren<TMP_Text>(true).text = labels[i];
             }
             embeddingCategories[0].transform.parent.Find("EmbeddingCategoryTitle").GetComponent<TMP_Text>().text =
-                SettingsUiLanguage.T("Embedding 模式", "Embedding mode");
+                SettingsUiLanguage.T("记忆查找方式", "Memory search method");
             embeddingSupplier.transform.parent.gameObject.SetActive(category == 2);
             SetRow(embeddingSupplier, "云端供应商", "Cloud provider");
             RefreshEmbeddingModeInformation();
@@ -213,7 +213,7 @@ namespace EmbodiedNPC.Settings
             {
                 bool dirty = embeddingEditingPresetId != initialEmbeddingPresetId || DraftSignature(true) != embeddingBaseline;
                 string application = dirty ? SettingsUiLanguage.T("未保存修改", "Unsaved changes") :
-                    IsNewEmbeddingConfiguration ? SettingsUiLanguage.T("尚未保存（默认启用草稿）", "Default enabled draft; not saved") :
+                    IsNewEmbeddingConfiguration ? SettingsUiLanguage.T("保存并应用 AI 配置后启用", "Enabled after Save & Apply") :
                     EmbeddingSelectionNeedsRestart() ? SettingsUiLanguage.T("已保存，待重启应用", "Saved; restart to apply") :
                     currentIndex == null ? SettingsUiLanguage.T("应用状态未确认", "Application status unconfirmed") :
                     currentIndex.provider_status == "failed" || profilesView.active_runtime?.embedding?.resource_status == "missing"
@@ -221,7 +221,7 @@ namespace EmbodiedNPC.Settings
                     currentIndex.applied ? SettingsUiLanguage.T("已应用", "Applied") :
                     profilesView.selected_to_activate == null ? SettingsUiLanguage.T("尚未配置", "Not configured") :
                     SettingsUiLanguage.T("已保存，待重启应用", "Saved; restart to apply");
-                embeddingBrief.text = SettingsUiLanguage.T("Embedding 配置：", "Embedding configuration: ") + application;
+                embeddingBrief.text = SettingsUiLanguage.T("记忆查找：", "Memory search: ") + application;
                 if (!embeddingEnabled.isOn) embeddingBrief.text += SettingsUiLanguage.T(" · 关闭向量检索", " · Vector retrieval off");
                 else if (EditingEmbeddingPreset().protocol == "builtin" &&
                     (BuiltinEditingConfig()?.resource_status ?? profilesView.builtin_resource_status) == "missing")

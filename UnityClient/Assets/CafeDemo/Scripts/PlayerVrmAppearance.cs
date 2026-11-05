@@ -68,6 +68,8 @@ namespace CafeDemo
             { SetDiagnostic("Default visual scale is unsupported."); visual = null; return; }
             adapter = GetComponent<HumanoidMotionAdapter>() ?? gameObject.AddComponent<HumanoidMotionAdapter>();
             adapter.Configure(visual, original);
+            var gaze = GetComponent<PlayerDialogueGaze>() ?? gameObject.AddComponent<PlayerDialogueGaze>();
+            gaze.Configure(dialogue, original, visual);
             SetDiagnostic(null);
         }
         private async void Start()

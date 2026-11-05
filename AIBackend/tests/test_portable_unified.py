@@ -114,6 +114,30 @@ class UnifiedLaunchTests(unittest.TestCase):
         self.assertFalse((destination / "UserData").exists())
         self.assertFalse((destination / "Backend/models/embeddinggemma-300m-q4/do-not-copy-extra.json").exists())
 
+    def test_zip_has_direct_launch_entry_and_never_includes_userdata(self):
+        import zipfile
+        spec = importlib.util.spec_from_file_location("portable_assemble", Path(__file__).parents[1] / "portable/assemble.py")
+        assembler = importlib.util.module_from_spec(spec); spec.loader.exec_module(assembler)
+        stage = Path(self.temp.name) / "stage"; stage.mkdir()
+        (stage / "启动游戏.cmd").write_text("synthetic")
+        archive = Path(self.temp.name) / "candidate.zip"
+        assembler.create_zip(stage, archive)
+        with zipfile.ZipFile(archive) as result: self.assertEqual(["启动游戏.cmd"], result.namelist())
+        (stage / "UserData").mkdir()
+        with self.assertRaisesRegex(ValueError, "UserData"): assembler.create_zip(stage, Path(self.temp.name) / "private.zip")
+
+    def test_automatic_port_comes_from_owned_backend_and_is_forwarded_to_player(self):
+        backend = SimpleNamespace(pid=111, poll=lambda: None)
+        player = SimpleNamespace(pid=222, poll=lambda: 0, returncode=0)
+        with patch.object(entry.subprocess, "Popen", side_effect=[backend, player]) as spawn, \
+             patch.object(entry, "owned_identity", return_value=None), \
+             patch.object(entry, "backend_record", return_value={"instance_id":"x"*64,"state":"listening","port":23147}), \
+             patch.object(entry, "controlled_stop"):
+            self.assertEqual(0, entry.start(self.root, self.backend, self.player, 0, 1, 1))
+        self.assertEqual("0", spawn.call_args_list[0].args[0][-1])
+        self.assertIn("ws://127.0.0.1:23147/ws", spawn.call_args_list[1].args[0])
+        self.assertEqual("http://127.0.0.1:23147", spawn.call_args_list[1].kwargs["env"]["EMBODIEDNPC_KNOWLEDGE_ADMIN_URL"])
+
     def test_assembly_refuses_existing_destination_before_any_copy(self):
         spec = importlib.util.spec_from_file_location("portable_assemble", Path(__file__).parents[1] / "portable/assemble.py")
         assembler = importlib.util.module_from_spec(spec); spec.loader.exec_module(assembler)
@@ -125,7 +149,7 @@ class UnifiedLaunchTests(unittest.TestCase):
         player = SimpleNamespace(pid=222, poll=lambda: 0, returncode=0)
         with patch.object(entry.subprocess, "Popen", side_effect=[backend, player]), \
              patch.object(entry, "owned_identity", return_value=None), \
-             patch.object(entry, "backend_record", return_value={"instance_id":"x"*64,"state":"listening"}), \
+             patch.object(entry, "backend_record", return_value={"instance_id":"x"*64,"state":"listening","port":18991}), \
              patch.object(entry, "controlled_stop", side_effect=entry.owner.PortableError("PORTABLE_STOP_TIMEOUT")) as stopping:
             with self.assertRaisesRegex(entry.owner.PortableError, "PORTABLE_STOP_TIMEOUT"):
                 entry.start(self.root, self.backend, self.player, 18991, 1, 1)

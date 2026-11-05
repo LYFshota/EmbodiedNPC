@@ -17,6 +17,8 @@ namespace EmbodiedNPC.Settings
 
     public sealed class PortablePreferenceFile
     {
+        public const string DefaultAppearanceDescription = "黑色头发，白色 T 恤，黑色短裤，蓝色鞋子。";
+        public const string DefaultAppearanceDescriptionEnglish = "Black hair, a white T-shirt, black shorts, and blue shoes.";
         private readonly PortablePathSet paths;
         private bool dirty;
         public int Language { get; private set; }
@@ -37,7 +39,12 @@ namespace EmbodiedNPC.Settings
             if (!paths.SafeFile(paths.SettingsFile)) { Error = "PORTABLE_ROOT_UNSAFE"; return; }
             try
             {
-                if (!File.Exists(paths.SettingsFile)) { dirty = true; Flush(); return; }
+                if (!File.Exists(paths.SettingsFile))
+                {
+                    // Initialize only new preferences. Existing missing/cleared descriptions stay empty.
+                    PlayerAppearanceDescription = DefaultAppearanceDescription;
+                    dirty = true; Flush(); return;
+                }
                 JObject document;
                 using (var stream = new FileStream(paths.SettingsFile, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {

@@ -419,6 +419,7 @@ namespace CafeDemo
 
         private void OnSettingsKey()
         {
+            if (TextInputContextMenu.ConsumeCancel()) return;
             if (UiFlow != null) { UiFlow.RequestCancel(); return; }
             var emotePanel = FindAnyObjectByType<PlayerEmotePanel>();
             if (emotePanel != null && emotePanel.BlocksOtherUi) return;
@@ -688,11 +689,11 @@ namespace CafeDemo
             SetLabel(npcButton, "NPC 人设", "NPC Character");
             SetLabel(debugButton, "调试", "Debug");
             SetLabel(traceButton, "运行追踪", "Runtime Trace");
-            SetNamedLabel(overviewPage, "OverviewTitle", "总览", "Overview");
+            SetNamedLabel(overviewPage, "OverviewTitle", "运行诊断", "Runtime diagnostics");
             SetNamedLabel(npcPage, "NpcTitle", "NPC 人设", "NPC Character");
             SetNamedLabel(npcPage, "NpcPickerLabel", "当前 NPC", "Selected NPC");
-            SetNamedLabel(npcPage, "NpcIdLabel", "NPC ID（只读）", "NPC ID (read only)");
-            SetNamedLabel(npcPage, "NameLabel", "原始姓名（可编辑）", "Raw display name (editable)");
+            SetNamedLabel(npcPage, "NpcIdLabel", "角色编号（只读）", "Character ID (read only)");
+            SetNamedLabel(npcPage, "NameLabel", "角色名字", "Character name");
             SetNamedLabel(npcPage, "RoleLabel", "角色身份", "Role");
             SetNamedLabel(npcPage, "BackstoryLabel", "背景经历", "Backstory");
             SetNamedLabel(npcPage, "PersonalityLabel", "性格特征", "Personality");
@@ -707,11 +708,11 @@ namespace CafeDemo
             SetNamedLabel(debugPage, "EntityIdsToggleLabel", "显示实体 ID", "Show entity IDs");
             SetNamedLabel(debugPage, "PerceivedToggleLabel", "高亮已感知实体", "Highlight perceived entities");
             SetNamedLabel(tracePage, "TraceTitle", "运行追踪", "Runtime Trace");
-            SetNamedLabel(tracePage, "AutoScrollLabel", "自动滚动", "Auto scroll");
+            SetNamedLabel(tracePage, "AutoScrollLabel", "滚动到最新记录", "Scroll to latest");
             SetNamedLabel(tracePage, "FilterLabel", "分类", "Category");
             SetNamedButton(tracePage, "PauseView", "暂停显示", "Pause view");
             SetNamedButton(tracePage, "ClearView", "清空视图", "Clear view");
-            SetNamedButton(tracePage, "OpenLogFolder", "打开日志目录", "Open log folder");
+            SetNamedButton(tracePage, "OpenLogFolder", "打开追踪日志目录", "Open trace log folder");
             if (panelRoot != null)
                 foreach (Toggle toggle in panelRoot.GetComponentsInChildren<Toggle>(true))
                     SettingsUiLanguage.StyleToggle(toggle);
@@ -849,7 +850,7 @@ namespace CafeDemo
             string http = statusFailed ? statusHttpCode > 0 ? SettingsUiLanguage.T("已响应；状态读取失败", "Responded; status read failed") :
                 SettingsUiLanguage.T("连接检查未成功", "Connection check unsuccessful") : SettingsUiLanguage.T("已响应", "Responded");
             bool wsConnected = startupBackend != null && startupBackend.ConnectionStatus == "CONNECTED";
-            backendText.text = "HTTP: " + http + SettingsUiLanguage.T("\nWebSocket：", "\nWebSocket: ") +
+            backendText.text = SettingsUiLanguage.T("配置服务（HTTP）：", "Configuration service (HTTP): ") + http + SettingsUiLanguage.T("\n游戏通信（WebSocket）：", "\nGame connection (WebSocket): ") +
                 (wsConnected ? SettingsUiLanguage.T("已连接", "Connected") : SettingsUiLanguage.T("未连接", "Disconnected"));
         }
 
@@ -857,18 +858,23 @@ namespace CafeDemo
         {
             string unknown = SettingsUiLanguage.T("未知", "unknown");
             RefreshBackendLine();
-            mainText.text = SettingsUiLanguage.T("主模型：", "Main model: ") +
+            mainText.text = SettingsUiLanguage.T("NPC 回复模型：", "NPC reply model: ") +
                             (status.active_main_model?.provider ?? unknown) +
                             " / " + (status.active_main_model?.model ?? unknown);
             ActiveEmbeddingStatus embedding = status.active_embedding;
-            embeddingText.text = embedding == null ? SettingsUiLanguage.T("Embedding：未知", "Embedding: unknown") :
-                !embedding.enabled ? SettingsUiLanguage.T("Embedding：已关闭", "Embedding: Disabled") :
-                SettingsUiLanguage.T("Embedding：已启用 · ", "Embedding: Enabled · ") +
+            embeddingText.text = embedding == null ? SettingsUiLanguage.T("记忆查找模型：未知", "Memory search model: unknown") :
+                !embedding.enabled ? SettingsUiLanguage.T("记忆查找模型：已关闭", "Memory search model: Disabled") :
+                SettingsUiLanguage.T("记忆查找模型：已启用 · ", "Memory search model: Enabled · ") +
                 (embedding.provider ?? unknown) + " / " + (embedding.model ?? unknown);
             healthText.text = SettingsUiLanguage.T("服务状态：", "Provider health: ") +
                               (status.active_provider == null ? unknown : status.active_provider.available ?
                                   SettingsUiLanguage.T("可用", "Available") : SettingsUiLanguage.T("不可用", "Unavailable"));
-            restartText.text = SettingsUiLanguage.T("需要重启：", "Restart required: ") +
+            if (status.active_provider?.available == false)
+            {
+                var reason = P0FeedbackText.ModelError(status.active_provider.detail);
+                healthText.text += "\n" + SettingsUiLanguage.T(reason.Chinese, reason.English) + "\n" + status.active_provider.detail;
+            }
+            restartText.text = SettingsUiLanguage.T("已保存设置需重启游戏应用：", "Saved settings require a game restart: ") +
                 (status.restart_required ? SettingsUiLanguage.T("是", "Yes") : SettingsUiLanguage.T("否", "No")) +
                 (statusCheckedAt.HasValue ? SettingsUiLanguage.T("\n检查：", "\nChecked: ") + statusCheckedAt.Value.ToString("HH:mm:ss") : "");
             settingsLayout?.FormatOverview();

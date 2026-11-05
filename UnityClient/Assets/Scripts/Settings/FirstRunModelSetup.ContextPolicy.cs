@@ -68,8 +68,8 @@ namespace EmbodiedNPC.Settings
             recentPresets.RefreshShownValue();
             recentTitle.text = SettingsUiLanguage.T("近期对话保留", "Recent dialogue retention");
             recentHelp.text = SettingsUiLanguage.T(
-                "自动按有效容量选择：8K→8条，16K及以上→16条。手动范围1–64。\n一条消息是玩家或NPC的一次真实发言；NPC回复与合法续话分别计数。当前输入属于CurrentTask，不重复计入历史。实际入模可能少于目标，必要时最多加两条衔接消息。更长历史增加输入Token消耗；此设置不改变模型上下文容量。",
-                "Auto uses effective capacity: 8K → 8; 16K+ → 16. Manual range: 1–64.\nOne message is one real Player or NPC utterance; NPC replies and valid continuations count separately. Current input belongs to CurrentTask, not history. The model may receive fewer than the target, with up to two extra linking messages. Longer history costs more input tokens; this does not change the model's context capacity.");
+                "决定模型每次参考多少条最近聊天，推荐保持自动。手动可选 1–64 条；更长的聊天记录会增加用量。此设置不改变模型本身的容量。",
+                "Controls how many recent chat messages the model sees. Auto is recommended. Manual range: 1–64; longer history uses more input. This does not change the model's capacity.");
             string applied = contextPolicyView?.applied?.config == null ? "—" : PolicyCaption(contextPolicyView.applied.config);
             string state = SettingsUiLanguage.T("当前已应用：", "Currently applied: ") + applied;
             if (!contextPolicyConnected) state += SettingsUiLanguage.T(" · Backend未连接 / 状态未确认", " · Backend disconnected / status unconfirmed");

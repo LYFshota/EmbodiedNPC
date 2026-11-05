@@ -24,18 +24,23 @@ EmbodiedNPC 是一个探索**游戏 NPC 长期交互与自主行为**的开源�
 - **更自然的场景表现**：薇薇会在柜台内走动、停留和擦拭；温予安与江亦舟会偶尔拿杯饮用；玩家拥有待机微笑和动作表情联动。
 - **多 NPC 并发与可配置模型**：前台对话和后台记忆任务支持有界并发；主模型、Embedding 与相关运行参数可分别配置。
 
-### 最新版本：v0.1.5-preview
+### 最新版本：v0.1.6-preview
 
-本版新增**咖啡馆日常行为、点心菜单与取餐服务、玩家表情联动、Left Alt 鼠标切换**，并改进了记忆、关系处理与交互表现。
+本版重点改善**首次 AI 配置、API 兼容与失败反馈、Windows 启动体验，以及玩家交谈时的自然转头**。
 
-点心目前支持牛角包、马卡龙、小蛋糕和布丁，店员会走到展示位置完成取餐动作，并显示服务结果。更多版本细节和验证记录见 [Releases](https://github.com/LYFshota/EmbodiedNPC/releases)。
+- 中文「启动游戏.cmd」、自动空闲端口和更清楚的配置重启；ZIP 不再自带重复顶层目录。
+- 设置说明与高级参数重新整理，保留全部配置能力；输入框支持右键编辑。
+- 自定义 OpenAI 兼容接口按已确认能力处理 JSON 格式与参数差异，保留严格校验；区分连接、格式、思考控制和预算错误。
+- 玩家平滑看向交谈 NPC，结束后恢复；连续回复解析也能识别代码块或前置说明中的单个 JSON。
+
+DeepSeek 官方接口已有定向真实验证；其他官方接口主要通过协议与模拟验证。部分中转模型已测通，兼容性仍取决于具体模型和线路。简短连接测试不代表完整 NPC 对话兼容。
 
 ## 🎮 下载试玩
 
-**[下载 Windows x64 试玩版](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [查看 v0.1.5-preview 更新说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
+**[下载 Windows x64 试玩版](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.6-preview/EmbodiedNPC-v0.1.6-preview-Windows-x64.zip)** · [查看 v0.1.6-preview 更新说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.6-preview)
 
-1. 解压 ZIP，双击 `Start.cmd` 启动游戏和 Backend，无需单独安装 Unity 或 Python。
-2. 在设置中配置你自己的主模型（Main LLM），可使用兼容的云端 API 或本地模型服务。
+1. 解压 ZIP，双击 `启动游戏.cmd`（保留 `Start.cmd` 兼容入口）启动游戏和 Backend，无需单独安装 Unity 或 Python。
+2. 在「设置 → AI 配置」填写 API 地址、Key 和模型 ID；默认自定义接口，也可选择已有供应商预设。
 3. 进入咖啡馆，和 NPC 交谈、提出委托，或观察他们的日常生活。
 
 试玩包已包含本地记忆向量模型 **EmbeddingGemma-300M Q4 ONNX**；主聊天模型和 API Key 需要自行准备。

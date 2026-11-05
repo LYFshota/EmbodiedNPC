@@ -33,7 +33,8 @@ namespace CafeDemo
         public bool IsDeveloper { get; private set; }
         public GameObject GeneralPage => general;
         public GameObject AudioPage => audio;
-        public Transform DailyDebugRoot => daily.transform;
+        private Transform dailyContent;
+        public Transform DailyDebugRoot => dailyContent;
 
         public PlayerSettingsNavigation(Transform window, FirstRunModelSetup form, CafeBackgroundMusic music,
             TMP_Dropdown existingLanguage, GameObject[] existingPages, Action<Action> request, Action showModel,
@@ -95,7 +96,7 @@ namespace CafeDemo
             });
             Place(npcReplyLanguage.transform, new Vector2(.45f, 0), Vector2.one, Vector2.zero, Vector2.zero);
             Height(Heading(generalContent.transform, "操作说明", "Controls").gameObject,40);
-            help = Label(generalContent.transform, "", "", 23); Height(help.gameObject, 190);
+            help = Label(generalContent.transform, "", "", 23); FlexibleText(help, 190);
             Height(Heading(generalContent.transform, "支持与诊断", "Support & diagnostics").gameObject,40);
             var actions=Node("DiagnosticsActions",generalContent.transform,typeof(HorizontalLayoutGroup),typeof(LayoutElement));Height(actions,56);
             var actionLayout=actions.GetComponent<HorizontalLayoutGroup>();actionLayout.spacing=12;actionLayout.childControlWidth=actionLayout.childControlHeight=true;actionLayout.childForceExpandWidth=true;
@@ -108,9 +109,18 @@ namespace CafeDemo
             BuildAppearance();
             Heading(audio.transform, "音频", "Audio");
             BuildAudio(audio.transform, music);
-            var dailyStack = daily.AddComponent<VerticalLayoutGroup>();
-            dailyStack.padding = new RectOffset(70, 70, 30, 30); dailyStack.spacing = 18; dailyStack.childForceExpandHeight = false;
-            Heading(daily.transform, "NPC 日常行为调试", "NPC daily behavior debug");
+            var dailyBody = Node("DailyContent", daily.transform, typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            dailyContent = dailyBody.transform;
+            var dailyRect = (RectTransform)dailyContent; dailyRect.anchorMin = new Vector2(0, 1); dailyRect.anchorMax = Vector2.one;
+            dailyRect.pivot = new Vector2(.5f, 1); dailyRect.sizeDelta = Vector2.zero;
+            dailyBody.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var dailyStack = dailyBody.GetComponent<VerticalLayoutGroup>();
+            dailyStack.padding = new RectOffset(36, 36, 20, 20); dailyStack.spacing = 18; dailyStack.childForceExpandHeight = false;
+            daily.AddComponent<Image>().color = Color.clear; daily.AddComponent<RectMask2D>();
+            var dailyScroll = daily.AddComponent<ScrollRect>(); dailyScroll.viewport = (RectTransform)daily.transform;
+            dailyScroll.content = dailyRect; dailyScroll.horizontal = false; dailyScroll.scrollSensitivity = 32;
+            dailyScroll.movementType = ScrollRect.MovementType.Clamped;
+            Height(Heading(dailyContent, "NPC 日常行为调试", "NPC daily behavior debug").gameObject, 44);
             ordinaryNav = NavigationColumn("PlayerSettingsNavigation");
             NavigationHeading(ordinaryNav.transform,"普通设置","Settings");
             ActionButton(ordinaryNav.transform, "GeneralSettingsNav", "通用与操作", "General & controls", ShowGeneral);
@@ -147,7 +157,7 @@ namespace CafeDemo
             }
             if(developerActions.Length==0)ActionButton(developerNav.transform,"ModelDiagnosticsNav","运行诊断 · 模型配置状态","Runtime diagnostics · Models",ShowModelDiagnostics);
             if(developerActions.Length==0)ActionButton(developerNav.transform,"ModelConcurrencyNav","并发调整","Concurrency settings",ShowConcurrency);
-            ActionButton(developerNav.transform, "ModelContractsNav", "模型合同测试", "Model contracts", ShowModelContracts);
+            ActionButton(developerNav.transform, "ModelContractsNav", "NPC 兼容性测试", "NPC compatibility", ShowModelContracts);
             developerEntry = ActionButton(window, "DeveloperToolsEntry", "开发者工具", "Developer tools", () => SetDeveloper(true));
             Place(developerEntry.transform, Vector2.zero,Vector2.zero,new Vector2(24,24),new Vector2(SidebarWidth,78));
             var back = ActionButton(window, "BackToPlayerSettings", "返回普通设置", "Back to settings", () => SetDeveloper(false));
@@ -271,7 +281,9 @@ namespace CafeDemo
         public static void LayoutPageOperations(Transform page)
         {
             var footer=page.Find("SettingsFooter");if(footer==null)return;
-            Place(footer,Vector2.zero,Vector2.right,Vector2.zero,new Vector2(0,140));
+            bool trace = page.name == "TracePage";
+            float footerHeight = trace ? 190 : 140;
+            Place(footer,Vector2.zero,Vector2.right,Vector2.zero,new Vector2(0,footerHeight));
             var actions=footer.Find("FooterActions");
             int count=0;foreach(Transform child in actions)if(child.gameObject.activeSelf)count++;
             float width=Mathf.Max(260,count*220);
@@ -284,7 +296,7 @@ namespace CafeDemo
                 }
             foreach(var scroll in page.GetComponentsInChildren<ScrollRect>(true))
                 if(scroll.transform.parent==page || scroll.transform.parent?.name=="ModelConfigForm")
-                {var r=(RectTransform)scroll.transform;r.offsetMin=new Vector2(r.offsetMin.x,154);}
+                {var r=(RectTransform)scroll.transform;r.offsetMin=new Vector2(r.offsetMin.x,footerHeight+14);}
         }
         private GameObject NavigationColumn(string name)
         {

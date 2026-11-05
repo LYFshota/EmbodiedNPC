@@ -17,11 +17,12 @@ namespace EmbodiedNPC.Settings
         private TMP_Dropdown mainSupplier, embeddingSupplier, schemaMode, tokenMode, thinkingMode, reasoningMode, healthMode;
         private TMP_InputField totalConcurrency, foregroundConcurrency, backgroundConcurrency;
         private TMP_InputField topP, thinkingBudget, embeddingDimensions, embeddingVersion;
-        private Toggle sendTemperature;
+        private TMP_Dropdown sendTemperature;
         private TMP_Text mainProfileState, embeddingProfileState, indexState, probeDetails;
         private TMP_Text mainConnectionState, embeddingConnectionState;
         private ModelProbeView lastProbeResult;
-        private string lastProbeError;
+        private string lastProbeError, lastProbeOperation, lastProbeSignature;
+        private bool lastProbeEmbedding;
         private Button mainSave, mainApply, embeddingSave, embeddingApply, contractTest, indexAction;
         private readonly List<(Component control, string chinese, string english)> profileLabels = new();
         private ModelPresetView[] mainChoices, embeddingChoices;
@@ -275,31 +276,32 @@ namespace EmbodiedNPC.Settings
                 mainProvider.transform.parent.GetSiblingIndex() + 1);
             embeddingSupplier = (TMP_Dropdown)AddProfileRow(mainProvider, "EmbeddingSupplier", "Embedding 供应商", "Embedding provider", embedParent,
                 embeddingProvider.transform.parent.GetSiblingIndex() + 1);
-            schemaMode = (TMP_Dropdown)AddProfileRow(mainProvider, "SchemaMode", "出站 Schema", "Outbound schema", mainParent);
-            tokenMode = (TMP_Dropdown)AddProfileRow(mainProvider, "TokenMode", "输出 Token 参数", "Output token field", mainParent);
-            thinkingMode = (TMP_Dropdown)AddProfileRow(mainProvider, "ThinkingMode", "思考参数映射", "Thinking field", mainParent);
-            reasoningMode = (TMP_Dropdown)AddProfileRow(mainProvider, "ReasoningMode", "推理强度", "Reasoning effort", mainParent);
-            healthMode = (TMP_Dropdown)AddProfileRow(mainProvider, "HealthMode", "启动检测（生成会计费）", "Startup check (generation costs)", mainParent);
-            SetOptions(schemaMode, "raw", "portable_union", "openai_strict", "anthropic");
-            SetOptions(tokenMode, "max_tokens", "max_completion_tokens");
-            SetOptions(thinkingMode, "none", "enable_thinking", "thinking", "reasoning_effort");
+            schemaMode = (TMP_Dropdown)AddProfileRow(mainProvider, "SchemaMode", "回复格式（Schema）", "Reply format (schema)", mainParent);
+            tokenMode = (TMP_Dropdown)AddProfileRow(mainProvider, "TokenMode", "长度上限字段", "Output limit field", mainParent);
+            thinkingMode = (TMP_Dropdown)AddProfileRow(mainProvider, "ThinkingMode", "思考控制字段", "Reasoning control field", mainParent);
+            reasoningMode = (TMP_Dropdown)AddProfileRow(mainProvider, "ReasoningMode", "思考强度", "Reasoning effort", mainParent);
+            healthMode = (TMP_Dropdown)AddProfileRow(mainProvider, "HealthMode", "启动检查（生成可能计费）", "Startup check (generation may be billed)", mainParent);
+            SetOptions(schemaMode, "auto", "json_object", "raw", "portable_union", "openai_strict", "anthropic");
+            SetOptions(tokenMode, "auto", "max_tokens", "max_completion_tokens");
+            SetOptions(thinkingMode, "auto", "none", "enable_thinking", "thinking", "reasoning_effort");
             SetOptions(reasoningMode, "default", "none", "minimal", "low", "medium", "high", "xhigh");
             SetOptions(healthMode, "models", "generation_once");
-            sendTemperature = (Toggle)AddProfileRow(thinking, "SendTemperature", "发送 Temperature", "Send temperature", mainParent);
-            totalConcurrency = (TMP_InputField)AddProfileRow(mainTimeout, "TotalConcurrency", "模型总并发（1–32）", "Total concurrency (1–32)", mainParent);
-            foregroundConcurrency = (TMP_InputField)AddProfileRow(mainTimeout, "ForegroundConcurrency", "前台并发（1–总并发）", "Foreground concurrency (1–total)", mainParent);
-            backgroundConcurrency = (TMP_InputField)AddProfileRow(mainTimeout, "BackgroundConcurrency", "后台并发（1–总并发）", "Background concurrency (1–total)", mainParent);
-            topP = (TMP_InputField)AddProfileRow(mainTimeout, "TopP", "Top P（可选）", "Top P (optional)", mainParent);
-            thinkingBudget = (TMP_InputField)AddProfileRow(mainTimeout, "ThinkingBudget", "原生思考预算（可选）", "Native thinking budget", mainParent);
+            sendTemperature = (TMP_Dropdown)AddProfileRow(mainProvider, "SendTemperature", "是否发送 Temperature", "Send Temperature", mainParent);
+            SetOptions(sendTemperature, "auto", "send", "omit");
+            totalConcurrency = (TMP_InputField)AddProfileRow(mainTimeout, "TotalConcurrency", "同时请求总上限（1–32）", "Total request limit (1–32)", mainParent);
+            foregroundConcurrency = (TMP_InputField)AddProfileRow(mainTimeout, "ForegroundConcurrency", "对话请求上限", "Dialogue request limit", mainParent);
+            backgroundConcurrency = (TMP_InputField)AddProfileRow(mainTimeout, "BackgroundConcurrency", "后台工作请求上限", "Background request limit", mainParent);
+            topP = (TMP_InputField)AddProfileRow(mainTimeout, "TopP", "候选范围（Top P）", "Top P (optional)", mainParent);
+            thinkingBudget = (TMP_InputField)AddProfileRow(mainTimeout, "ThinkingBudget", "思考用量上限", "Native thinking budget", mainParent);
             embeddingDimensions = (TMP_InputField)AddProfileRow(embeddingTimeout, "EmbeddingDimensions", "维度（可选）", "Dimensions (optional)", embedParent);
             embeddingVersion = (TMP_InputField)AddProfileRow(embeddingBaseUrl, "EmbeddingVersion", "版本 / digest（可选）", "Version / digest", embedParent);
             mainSave = AddAction(mainParent, "MainSave", "保存主模型", "Save main profile", () => Begin(SaveProfile(false, false)));
             mainApply = AddAction(mainParent, "MainApply", "保存并应用主模型", "Save and apply main", () => Begin(SaveProfile(false, true)));
             embeddingSave = AddAction(embedParent, "EmbeddingSave", "保存 Embedding", "Save embedding profile", () => Begin(SaveProfile(true, false)));
             embeddingApply = AddAction(embedParent, "EmbeddingApply", "应用 Embedding 开关 / 配置", "Apply embedding switch / profile", () => Begin(SaveProfile(true, true)));
-            AddAction(mainParent, "ClearMainKey", "清除保存的主模型密钥", "Clear saved main key", () => { mainClearKey = true; mainApiKey.text = ""; });
-            AddAction(embedParent, "ClearEmbeddingKey", "清除保存的 Embedding 密钥", "Clear saved embedding key", () => { embeddingClearKey = true; embeddingApiKey.text = ""; });
-            contractTest = AddAction(mainParent, "ContractTest", "测试正式 NPC 合同", "Test NPC contracts", () => PromptProbe(false, "contracts"));
+            AddAction(mainParent, "ClearMainKey", "清除主模型密钥（需保存）", "Clear main key (save required)", () => { mainClearKey = true; mainApiKey.text = ""; });
+            AddAction(embedParent, "ClearEmbeddingKey", "清除记忆查找密钥（需保存）", "Clear memory-search key (save required)", () => { embeddingClearKey = true; embeddingApiKey.text = ""; });
+            contractTest = AddAction(mainParent, "ContractTest", "运行 NPC 兼容性测试", "Test NPC compatibility", () => PromptProbe(false, "contracts"));
             probeDetails = AddState(mainParent, "ModelProbeDetails");
             var detailsLayout = probeDetails.GetComponent<LayoutElement>();
             detailsLayout.minHeight = 24; detailsLayout.preferredHeight = -1;
@@ -345,8 +347,8 @@ namespace EmbodiedNPC.Settings
                 preset = profilesView.embedding_profiles?.FirstOrDefault()?.preset_id;
             if (!embedding && preset == null)
             {
-                LoadSupplierOptions(false, 0, null); mainSupplier.SetValueWithoutNotify(-1);
-                LoadEditingProfile(false); initialMainPresetId = ""; return;
+                LoadSupplierOptions(false, 0, "custom");
+                LoadEditingProfile(false); initialMainPresetId = "custom"; return;
             }
             if (preset == null) preset = profilesView.default_embedding_preset_id;
             if (embedding && IsNewEmbeddingConfiguration) preset = "builtin_gemma";
@@ -426,7 +428,7 @@ namespace EmbodiedNPC.Settings
                 SelectOption(schemaMode, c.schema_profile); SelectOption(tokenMode, c.token_parameter);
                 SelectOption(thinkingMode, c.thinking_parameter); SelectOption(reasoningMode, c.reasoning_effort ?? "default");
                 SelectOption(healthMode, c.health_strategy);
-                sendTemperature.SetIsOnWithoutNotify(c.send_temperature);
+                sendTemperature.SetValueWithoutNotify(c.send_temperature.HasValue ? (c.send_temperature.Value ? 1 : 2) : 0);
                 topP.SetTextWithoutNotify(c.top_p >= 0 ? c.top_p.ToString(CultureInfo.InvariantCulture) : "");
                 thinkingBudget.SetTextWithoutNotify(c.thinking_budget > 0 ? c.thinking_budget.ToString() : "");
                 mainBaseline = DraftSignature(false);
@@ -434,10 +436,46 @@ namespace EmbodiedNPC.Settings
             RefreshEmbeddingFields(); RefreshLanguage(); RefreshProfileStates();
         }
 
-        private static void SelectOption(TMP_Dropdown dropdown, string text)
+        private void SelectOption(TMP_Dropdown dropdown, string text)
         {
-            int index = dropdown.options.FindIndex(o => o.text == text);
+            var keys = ProtocolKeys(dropdown);
+            int index = keys == null ? dropdown.options.FindIndex(o => o.text == text) : Array.IndexOf(keys, text);
             dropdown.SetValueWithoutNotify(index < 0 ? 0 : index);
+        }
+
+        private string[] ProtocolKeys(TMP_Dropdown dropdown) => dropdown == schemaMode
+            ? new[] { "auto", "json_object", "raw", "portable_union", "openai_strict", "anthropic" }
+            : dropdown == tokenMode ? new[] { "auto", "max_tokens", "max_completion_tokens" }
+            : dropdown == thinkingMode ? new[] { "auto", "none", "enable_thinking", "thinking", "reasoning_effort" }
+            : dropdown == sendTemperature ? new[] { "auto", "send", "omit" }
+            : dropdown == healthMode ? new[] { "models", "generation_once" }
+            : dropdown == reasoningMode ? new[] { "default", "none", "minimal", "low", "medium", "high", "xhigh" } : null;
+        private string ProtocolValue(TMP_Dropdown dropdown) => ProtocolKeys(dropdown)[dropdown.value];
+        private void RefreshProtocolCaptions()
+        {
+            foreach (var dropdown in new[] { schemaMode, tokenMode, thinkingMode, sendTemperature, healthMode, reasoningMode })
+            {
+                if (dropdown == null) continue;
+                var keys = ProtocolKeys(dropdown);
+                for (int i = 0; i < keys.Length; i++) dropdown.options[i].text = keys[i] switch {
+                    "auto" => SettingsUiLanguage.T("自动", "Automatic"),
+                    "models" => SettingsUiLanguage.T("读取模型列表", "Read model list"),
+                    "generation_once" => SettingsUiLanguage.T("简短回复（可能计费）", "Short reply (may be billed)"),
+                    "default" => SettingsUiLanguage.T("默认", "Default"),
+                    "minimal" => SettingsUiLanguage.T("极低", "Minimal"),
+                    "low" => SettingsUiLanguage.T("低", "Low"),
+                    "medium" => SettingsUiLanguage.T("中", "Medium"),
+                    "high" => SettingsUiLanguage.T("高", "High"),
+                    "xhigh" => SettingsUiLanguage.T("很高", "Extra high"),
+                    "raw" => SettingsUiLanguage.T("原始 JSON Schema", "Original JSON Schema"),
+                    "json_object" => SettingsUiLanguage.T("JSON Object（本地严格校验）", "JSON Object (strict local validation)"),
+                    "portable_union" => SettingsUiLanguage.T("兼容 Schema 映射", "Portable schema mapping"),
+                    "openai_strict" => SettingsUiLanguage.T("OpenAI 严格 Schema", "OpenAI strict schema"),
+                    "none" => SettingsUiLanguage.T("不发送", "Do not send"),
+                    "send" => SettingsUiLanguage.T("发送", "Send"),
+                    "omit" => SettingsUiLanguage.T("不发送", "Do not send"), _ => keys[i] };
+                dropdown.RefreshShownValue();
+            }
         }
 
         private bool TryConcurrency(out int total, out int foreground, out int background)
@@ -461,7 +499,7 @@ namespace EmbodiedNPC.Settings
                 embeddingDimensions.text, embeddingVersion.text, embeddingClearKey.ToString(), embeddingEnabled.isOn.ToString() } :
                 new[] { mainBaseUrl.text, mainModel.text, mainApiKey.text, temperature.text, thinking.isOn.ToString(), maxOutputTokens.text,
                     contextLength.text, mainTimeout.text, totalConcurrency.text, foregroundConcurrency.text, backgroundConcurrency.text, schemaMode.value.ToString(), tokenMode.value.ToString(), thinkingMode.value.ToString(),
-                    reasoningMode.value.ToString(), sendTemperature.isOn.ToString(), topP.text, thinkingBudget.text, mainClearKey.ToString(), healthMode.value.ToString() };
+                    reasoningMode.value.ToString(), sendTemperature.value.ToString(), topP.text, thinkingBudget.text, mainClearKey.ToString(), healthMode.value.ToString() };
             return string.Concat(values.Select(v => (v ?? "").Length + ":" + v));
         }
 
@@ -541,10 +579,10 @@ namespace EmbodiedNPC.Settings
                     base_url = mainBaseUrl.text.Trim(), model = SelectedModel(mainModel, mainCandidates), temperature = temp,
                     thinking = thinking.isOn, max_output_tokens = tokens, context_length = context, timeout_seconds = timeout,
                     model_total_concurrency = total, model_foreground_concurrency = foreground, model_background_concurrency = background,
-                    schema_profile = schemaMode.options[schemaMode.value].text, token_parameter = tokenMode.options[tokenMode.value].text,
-                    thinking_parameter = thinkingMode.options[thinkingMode.value].text, send_temperature = sendTemperature.isOn, top_p = p,
-                    thinking_budget = budget, reasoning_effort = reasoningMode.value == 0 ? null : reasoningMode.options[reasoningMode.value].text,
-                    health_strategy = healthMode.options[healthMode.value].text });
+                    schema_profile = ProtocolValue(schemaMode), token_parameter = ProtocolValue(tokenMode),
+                    thinking_parameter = ProtocolValue(thinkingMode), send_temperature = sendTemperature.value == 0 ? (bool?)null : sendTemperature.value == 1, top_p = p,
+                    thinking_budget = budget, reasoning_effort = reasoningMode.value == 0 ? null : ProtocolValue(reasoningMode),
+                    health_strategy = ProtocolValue(healthMode) });
                 var existing = profilesView.main_profiles?.FirstOrDefault(p => p.profile_id == mainEditingId)?.config;
                 if (existing != null && existing.context_length <= 0 && context == 8192)
                     config["context_length"] = JValue.CreateNull(); // Preserve an unchanged legacy unspecified capacity.
@@ -752,8 +790,8 @@ namespace EmbodiedNPC.Settings
             { SetStatus("请填写主模型密钥；待清除或已清除的密钥不会用于测试。", "Enter a main-model key; pending/cleared credentials are not used for tests."); return; }
             if (embedding && CurrentPreset(true).protocol == "builtin")
             { Begin(ProbeCurrentProfile(true, operation)); return; }
-            ShowProfileModal(operation == "contracts" ? "将执行 3 次合成上下文请求，可能产生费用。" : "连接测试会发送合成文本，可能产生费用。",
-                operation == "contracts" ? "Run 3 synthetic contract requests. API charges may apply." : "Send a synthetic connection test. API charges may apply.",
+            ShowProfileModal(operation == "contracts" ? "最多发送 6 次请求（含必要的接口适配），可能产生费用；连续失败将停止。" : "连接测试最多发送 4 次简短请求（含必要的接口适配），可能产生费用。",
+                operation == "contracts" ? "Send up to 6 requests including necessary compatibility retries. Stop on failure. API charges may apply." : "Send up to 4 short requests including necessary compatibility retries. API charges may apply.",
                 new[] { ("确认", "Confirm", (Action)(() => Begin(ProbeCurrentProfile(embedding, operation)))), ("取消", "Cancel", (Action)(() => { })) });
         }
 
@@ -780,31 +818,53 @@ namespace EmbodiedNPC.Settings
             catch (ArgumentException) { SetStatus("配置参数无效。", "Invalid configuration parameters."); yield break; }
             if (operation == "discover" && string.IsNullOrEmpty((string)command["config"]["model"])) command["config"]["model"] = "discovery-only";
             command["operation"] = operation; command["confirm_paid_requests"] = operation != "discover";
+            string requestedSignature = ProbeSignature(embedding);
+            ShowOperation(operation == "discover" ? "正在获取模型列表…" : "正在测试，请等待模型回复…",
+                operation == "discover" ? "Fetching model list…" : "Testing; waiting for the model…", embedding, operation);
             ModelProbeView result = null; string error = null;
             yield return client.ProbeProfile(command.ToString(Formatting.None), (value, code) => { result = value; error = code; });
             if (operation == "discover")
             {
                 ApplyDiscoveryResult(embedding, result == null ? null : new DiscoverModelsResponse { success = result.success, models = result.models, error_code = result.error_code }, error);
+                operationSignature = requestedSignature; RefreshOperationFeedback();
                 yield break;
             }
+            lastProbeOperation = operation; lastProbeEmbedding = embedding;
+            lastProbeSignature = requestedSignature;
+            if (operation == "connection" && !embedding)
+            {
+                verifiedMainSignature = lastProbeSignature;
+                verifiedMainSuccess = error == null && result?.error_code == null && result?.success == true;
+                verifiedMainError = error ?? result?.error_code;
+            }
             ApplyProbeResult(result, error);
+            RefreshBriefAiState();
         }
 
         private void ApplyProbeResult(ModelProbeView result, string error)
         {
             lastProbeResult = result; lastProbeError = error;
-            statusText.textWrappingMode = TextWrappingModes.NoWrap;
-            statusText.overflowMode = TextOverflowModes.Ellipsis;
-            statusText.enableAutoSizing = true; statusText.fontSizeMin = 12; statusText.fontSizeMax = 17;
-            SetStatus(result?.success == true ? "测试通过；详见页内结果，未测试能力未确认。" : "测试失败；详见页内结果。",
-                result?.success == true ? "Test passed; see results. Untested capabilities are unverified." : "Test failed; see results.");
+            bool passed = error == null && result?.error_code == null && result?.success == true;
+            var message = P0FeedbackText.ModelError(error ?? result?.error_code);
+            ShowOperation(passed ? (lastProbeOperation == "contracts" ? "本次 NPC 兼容性检查通过；未测试项目仍未确认。" : "简短连接测试通过；尚未确认完整 NPC 对话兼容。") : "测试失败：" + message.Chinese,
+                passed ? (lastProbeOperation == "contracts" ? "These NPC compatibility checks passed; untested items remain unverified." : "Short connection test passed; full NPC dialogue compatibility is unverified.") : "Test failed: " + message.English,
+                lastProbeEmbedding, lastProbeOperation, lastProbeSignature);
+            if (result?.compatibility != null)
+            {
+                var c = result.compatibility;
+                string format = c.response_format == "json_object" ? "JSON Object" : "JSON Schema";
+                string suffixZh = $"\n本次请求 {c.api_calls} 次。" + (passed ? $"已确认：{format}、{c.token_parameter}" + (c.send_temperature ? "。" : "、不发送 Temperature。") + "适配结果仅用于当前配置、本次运行。" : "接口能力尚未确认。请按失败原因调整配置。");
+                string suffixEn = $"\nRequests: {c.api_calls}. " + (passed ? $"Confirmed: {format}, {c.token_parameter}" + (c.send_temperature ? ". " : ", Temperature omitted. ") + "Applies to this configuration in this Backend session." : "API capabilities unconfirmed. Adjust settings using the failure reason.");
+                operationChinese += suffixZh; operationEnglish += suffixEn;
+                RefreshOperationFeedback();
+            }
             RefreshProbeDetails();
         }
 
         private void RefreshProbeDetails()
         {
             if (probeDetails == null) return;
-            bool hasResult = lastProbeResult != null || lastProbeError != null;
+            bool hasResult = lastProbeOperation == "contracts" && (lastProbeResult != null || lastProbeError != null);
             probeDetails.gameObject.SetActive(hasResult);
             probeDetails.fontSize=19;
             if(contractSummary!=null)
@@ -815,11 +875,11 @@ namespace EmbodiedNPC.Settings
                 contractSummary.text=SettingsUiLanguage.T($"通过 {passed} 项 · 失败 {failed} 项 · 未测试 {notRun} 项",$"Passed {passed} · Failed {failed} · Not run {notRun}");
             }
             if (!hasResult) return;
-            string detail = SettingsUiLanguage.T("合同 / 连接测试结果", "Contract / connection test results");
+            string detail = SettingsUiLanguage.T("NPC 兼容性结果", "NPC compatibility results");
             foreach (var item in lastProbeResult?.results ?? Array.Empty<ModelContractResult>())
             {
-                detail += "\n\n" + ContractCaseCaption(item.@case) + "  ·  " + item.status +
-                    "\n  " + item.@case + (item.error_code == null ? "" : " · " + item.error_code);
+                detail += "\n\n" + ContractCaseCaption(item.@case) + "  ·  " + (item.status == "PASS" ? SettingsUiLanguage.T("通过", "Passed") : item.status == "FAIL" ? SettingsUiLanguage.T("未通过", "Failed") : SettingsUiLanguage.T("未测试", "Not tested")) +
+                    "\n  " + item.@case + " · " + item.status + (item.error_code == null ? "" : " · " + item.error_code + "\n" + SettingsUiLanguage.T(P0FeedbackText.ModelError(item.error_code).Chinese, P0FeedbackText.ModelError(item.error_code).English));
                 if (item.error_code == "COGNITIVE_PROMPT_BUDGET_EXCEEDED")
                     detail += SettingsUiLanguage.T("\n草稿的上下文容量不足；请求未发送，请选择模型支持的至少 16K。", "\nDraft context capacity is insufficient; no request was sent. Choose a supported capacity of at least 16K.");
             }
@@ -830,6 +890,7 @@ namespace EmbodiedNPC.Settings
             if (error == "MODEL_PROFILE_DRAFT_INVALID") detail += SettingsUiLanguage.T("\n当前草稿参数无效；请求未发送，请检查配置。", "\nDraft parameters are invalid; no request was sent. Check the configuration.");
             detail += SettingsUiLanguage.T("\n未执行的能力未确认；结构结果不证明语义或世界执行。",
                 "\nUntested capabilities are unverified; structure does not prove semantics or world execution.");
+            if (lastProbeSignature != ProbeSignature(lastProbeEmbedding)) detail = SettingsUiLanguage.T("配置已修改：以下为旧草稿结果。\n", "Configuration changed: results below belong to an earlier draft.\n") + detail;
             probeDetails.text = detail;
         }
 
@@ -887,10 +948,10 @@ namespace EmbodiedNPC.Settings
                 string active = embedding ? profilesView.active_runtime?.embedding_profile_id : profilesView.active_runtime?.main_profile_id;
                 string activeModel = embedding ? profilesView.active_runtime?.embedding?.model : profilesView.active_runtime?.main_model?.model;
                 string selectedModel = embedding ? profilesView.selected_to_activate?.embedding?.model : profilesView.selected_to_activate?.main_model?.model;
-                return SettingsUiLanguage.T("编辑：", "Editing: ") + editing +
-                    SettingsUiLanguage.T(" · 已保存：", " · Saved: ") + (saved == true ? editing : SettingsUiLanguage.T("无", "none")) +
-                    SettingsUiLanguage.T("\n选定配置：", "\nSelected: ") + (selected ?? "-") + " · " + (selectedModel ?? "-") +
-                    SettingsUiLanguage.T("\n实际运行：", "\nRuntime: ") + (active ?? "-") + " · " + (activeModel ?? "-");
+                return SettingsUiLanguage.T("当前正在编辑：", "Editing now: ") + (embedding ? embeddingModel.text : mainModel.text) + " (" + editing + ")" +
+                    SettingsUiLanguage.T("\n磁盘中已保存：", "\nSaved on disk: ") + (saved == true ? editing : SettingsUiLanguage.T("无", "none")) +
+                    SettingsUiLanguage.T("\n下次启用：", "\nNext to activate: ") + (selected ?? "-") + " · " + (selectedModel ?? "-") +
+                    SettingsUiLanguage.T("\n本次运行中：", "\nRunning now: ") + (active ?? "-") + " · " + (activeModel ?? "-");
             }
             mainProfileState.text = Describe(false); embeddingProfileState.text = Describe(true);
             if (mainConnectionState != null)
@@ -908,15 +969,7 @@ namespace EmbodiedNPC.Settings
             if (mainConnectionState == null) return;
             string pending = profilesView?.restart_required == true
                 ? SettingsUiLanguage.T(" · 待重启生效", " · restart required") : "";
-            string text = SettingsUiLanguage.T("当前运行：", "Runtime: ") +
-                (profilesView?.active_runtime?.main_model?.model ?? "-") + pending;
-            if (int.TryParse(contextLength?.text, out int draft) && draft > 0)
-                text += SettingsUiLanguage.T("\n编辑配置：", "\nEditing capacity: ") + draft + " tokens。" +
-                    (draft < 16384 ? SettingsUiLanguage.T(
-                        "低于此 Demo 建议的最低 16K；请保持模型实际支持值，必要输入可能超限。",
-                        "Below this Demo's recommended minimum 16K; keep the model's supported value. Required input may exceed it.") : "") +
-                    SettingsUiLanguage.T("实际模型容量尚未验证。32K 是推荐预算，不代表模型支持；64K 同样需要实际 Provider 或本地模型支持。请按模型能力设置。",
-                        "Actual model capacity is unverified. 32K is the recommended budget, not a capability guarantee. 64K also requires support from the actual provider or local model. Set a supported value.");
+            string text = SettingsUiLanguage.T("容量是模型一次能处理的文字预算（token）。按服务商实际支持的容量填写，推荐 32K；设置值不代表已经验证模型支持。\n当前草稿容量：", "Context capacity is the text budget a model can process at once (tokens). Use a supported value; 32K is recommended. The setting does not verify model support.\nDraft capacity: ") + contextLength.text;
             var active = profilesView?.active_runtime?.main_model;
             if (active != null)
             {
@@ -941,14 +994,15 @@ namespace EmbodiedNPC.Settings
                 if (item.control is Button button) SetButton(button, item.chinese, item.english);
             }
             SetButton(saveButton, "保存并应用配置", "Save & Apply");
-            SetButton(restoreDefaultsButton, defaultsRestored ? "取消重置（重新加载）" : "恢复默认",
-                defaultsRestored ? "Cancel reset (reload)" : "Restore Defaults");
+            SetButton(restoreDefaultsButton, defaultsRestored ? "取消重置（重新加载）" : "重置主模型配置",
+                defaultsRestored ? "Cancel reset (reload)" : "Reset main model");
             if (advancedSettings != null)
             {
                 if (developerDiagnostics != null) developerDiagnostics.Find("DiagnosticsTitle").GetComponent<TMP_Text>().text = SettingsUiLanguage.T("诊断信息", "Diagnostics");
             }
-            if (advancedToggle != null) SetButton(advancedToggle, advancedSettings.activeSelf ? "主模型生成参数（高级） −" : "主模型生成参数（高级） +",
-                advancedSettings.activeSelf ? "Main generation parameters −" : "Main generation parameters +");
+            if (advancedToggle != null) SetButton(advancedToggle, advancedSettings.activeSelf ? "AI 高级设置 −" : "AI 高级设置 +",
+                advancedSettings.activeSelf ? "AI advanced settings −" : "AI advanced settings +");
+            RefreshProtocolCaptions();
             RefreshAiSectionLanguage();
             if (mainSupplier.placeholder is TMP_Text mainPlaceholder) mainPlaceholder.text = SettingsUiLanguage.T("请选择", "Please select");
             RefreshContextPolicy();
@@ -956,8 +1010,8 @@ namespace EmbodiedNPC.Settings
             SetPlaceholder(embeddingApiKey, embeddingKeyPresent ? "********" : "输入 API 密钥", embeddingKeyPresent ? "********" : "Enter API key");
             SetPlaceholder(embeddingVersion, "版本 / digest（可选）", "Version / digest (optional)");
             SetPlaceholder(embeddingDimensions, "维度（可选）", "Dimensions (optional)");
-            SetPlaceholder(topP, "Top P（可选）", "Top P (optional)");
-            SetPlaceholder(thinkingBudget, "原生思考预算（可选）", "Native thinking budget (optional)");
+            SetPlaceholder(topP, "候选范围（Top P）", "Top P (optional)");
+            SetPlaceholder(thinkingBudget, "思考用量上限", "Native thinking budget (optional)");
             if(mainChoices==null || embeddingChoices==null)return;
             contextLength.transform.parent.gameObject.SetActive(true);
             thinkingBudget.transform.parent.gameObject.SetActive(CurrentPreset(false).protocol is "gemini_native" or "anthropic_native");

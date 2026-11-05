@@ -349,11 +349,22 @@ class CognitiveRequestTests(unittest.TestCase):
 
     def test_provider_feedback_preserves_reason_and_only_exports_known_diagnostics(self):
         m3_main = get_test_app()
+        from app.model_schema_projection import ModelSchemaOutputError
 
         for error, expected in ((ProviderError("OPENAI_COMPATIBLE_AUTH_FAILED"), "AUTH_FAILED"),
                                 (ProviderError("DEEPSEEK_TIMEOUT"), "TIMEOUT"),
                                 (ProviderError("OPENAI_COMPATIBLE_CONTEXT_LENGTH_EXCEEDED"), "CONTEXT_LENGTH_EXCEEDED"),
                                 (ProviderError("OPENAI_COMPATIBLE_OUTPUT_RESERVE_EXCEEDS_CONTEXT"), "OUTPUT_RESERVE_EXCEEDS_CONTEXT"),
+                                (ProviderError("OPENAI_COMPATIBLE_THINKING_CONTROL_UNVERIFIED"), "THINKING_CONTROL_UNVERIFIED"),
+                                (ProviderError("OPENAI_COMPATIBLE_THINKING_DISABLE_NOT_HONORED"), "THINKING_DISABLE_NOT_HONORED"),
+                                (ProviderError("OPENAI_COMPATIBLE_PROTOCOL_ERROR"), "PROTOCOL_ERROR"),
+                                (ProviderError("MODEL_SCHEMA_ENVELOPE_INVALID"), "RESPONSE_SCHEMA_INVALID"),
+                                (ModelSchemaOutputError("RESPONSE_JSON_INVALID"), "RESPONSE_JSON_INVALID"),
+                                (ModelSchemaOutputError("RESPONSE_FIELDS_INVALID"), "RESPONSE_FIELDS_INVALID"),
+                                (ModelSchemaOutputError("RESPONSE_TOO_LONG"), "RESPONSE_TOO_LONG"),
+                                (ProviderError("OPENAI_COMPATIBLE_OUTPUT_TRUNCATED"), "OUTPUT_TRUNCATED"),
+                                (ProviderError("OPENAI_COMPATIBLE_PARAMETER_REJECTED"), "PARAMETER_REJECTED"),
+                                (ProviderError("OPENAI_COMPATIBLE_TOTAL_GENERATION_BOUND_UNVERIFIED"), "TOTAL_GENERATION_BOUND_UNVERIFIED"),
                                 (ProviderError("private upstream body secret-sentinel"), None),
                                 (RuntimeError("DEEPSEEK_TIMEOUT"), None)):
             with self.subTest(expected=expected):
@@ -369,6 +380,35 @@ class CognitiveRequestTests(unittest.TestCase):
                 self.assertEqual(response.get("diagnostic_category"), expected)
                 self.assertEqual(response["trace_id"], "trace_01")
                 self.assertNotIn("secret-sentinel", json.dumps(response))
+
+    def test_consecutive_custom_replies_cross_real_cognitive_entry_without_extra_calls(self):
+        import httpx
+        from app.model_config_runtime import build_main_provider
+        from tests.test_model_compatibility import config, good
+        m3_main = get_test_app()
+        plain = json.dumps({"decision_kind": "DIRECT_RESPONSE", "utterance": "hello"})
+        replies = [plain, "```json\n" + plain + "\n```", '{"utterance":"hello"}', plain]
+        calls = []
+        def send(request):
+            calls.append(json.loads(request.content))
+            return good(replies[len(calls) - 1])
+        provider = build_main_provider(config(), httpx.MockTransport(send))
+        entry = CognitiveBackendEntry(provider, PrioritizedModelExecutor(), context_length=DEFAULT_COGNITIVE_CONTEXT_LENGTH)
+        with patch.object(m3_main, "cognitive_entry", entry):
+            with native_app_client(m3_main) as client, client.websocket_connect("/ws") as websocket:
+                for index in range(len(replies)):
+                    request = _event_request()
+                    request["request_id"] = "reply_sequence_" + str(index)
+                    request["run"]["run_id"] = request["context"]["run_id"] = "reply_run_" + str(index)
+                    websocket.send_json(request)
+                    response = websocket.receive_json()
+                    self.assertEqual(response["request_id"], request["request_id"])
+                    if index == 2:
+                        self.assertEqual(response["diagnostic_category"], "RESPONSE_FIELDS_INVALID")
+                        self.assertNotIn("decision", response)
+                    else:
+                        self.assertEqual(response["decision"]["utterance"], "hello")
+        self.assertEqual(len(calls), len(replies))
 
     def test_local_context_overflow_reports_diagnostic_without_calling_model(self):
         m3_main = get_test_app()

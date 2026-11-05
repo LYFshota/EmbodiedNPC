@@ -182,6 +182,7 @@ namespace CafeDemo
             cancelFrame = Time.frameCount;
             // Keep the native IME's current draft authoritative when composition is observable.
             if (!string.IsNullOrEmpty(composition)) return;
+            if (TextInputContextMenu.ConsumeCancel()) return;
             // Settings is a sibling of this prefab. Check its active dropdown before its host.
             foreach (var dropdown in FindObjectsByType<TMP_Dropdown>())
                 if (dropdown.gameObject.scene == gameObject.scene && dropdown.IsExpanded) { dropdown.Hide(); return; }

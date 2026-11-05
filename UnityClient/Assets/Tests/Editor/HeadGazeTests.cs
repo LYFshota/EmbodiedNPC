@@ -12,6 +12,18 @@ namespace EmbodiedNPC.Tests
         [TearDown] public void TearDown() { Object.DestroyImmediate(actor); }
         private Vector3 Solve(float yaw, float pitch = 0) => HeadGazeController.SolveAngles(actor.transform,
             body.transform, Vector3.zero, Quaternion.Euler(-pitch, yaw, 0) * Vector3.forward * 3);
+        [Test] public void MissingHumanoid_SkipsExplicitPointWithoutChangingActor()
+        {
+            var animator = body.AddComponent<Animator>();
+            var gaze = actor.AddComponent<HeadGazeController>();
+            gaze.Configure(null, animator, body.transform, actor.transform);
+            gaze.SetGazePoint(new Vector3(2, 1, 2));
+            gaze.Tick(.5f);
+            Assert.IsFalse(gaze.IsRigReady);
+            Assert.AreEqual(0, gaze.CurrentWeight);
+            Assert.AreEqual(Quaternion.identity, actor.transform.rotation);
+            gaze.SetGazePoint(null);
+        }
         [TestCase(20, 1)][TestCase(40, .5f)][TestCase(60, 0)]
         public void YawSoftFade_Bounded(float yaw, float weight)
         { Vector3 value = Solve(yaw); Assert.That(value.z, Is.EqualTo(weight).Within(.001)); Assert.That(Mathf.Abs(value.x), Is.LessThanOrEqualTo(50)); }

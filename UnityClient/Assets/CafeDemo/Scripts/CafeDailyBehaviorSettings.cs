@@ -62,7 +62,8 @@ namespace CafeDemo
             Place(dropdown.GetComponent<RectTransform>(), new Vector2(.4f, 0), Vector2.one, new Vector2(0, 12), new Vector2(-20, -12));
             status = MakeText("DailyBehaviorModeStatus", parent, 16);
             var height = status.gameObject.AddComponent<LayoutElement>();
-            height.minHeight = height.preferredHeight = 58;
+            height.minHeight = 100; height.preferredHeight = -1;
+            status.enableAutoSizing = false; status.fontSize = 20; status.textWrappingMode = TextWrappingModes.Normal;
             SettingsPanelTheme.Apply(row);
             dropdown.onValueChanged.AddListener(RequestSelection);
             RefreshLanguage();
@@ -90,9 +91,10 @@ namespace CafeDemo
             if (dropdown == null) return;
             label.text = SettingsUiLanguage.T("林薇薇生活模式", "Lin Weiwei life mode");
             dropdown.ClearOptions();
-            dropdown.AddOptions(new List<string> { SettingsUiLanguage.T("工作 Work", "Work"), SettingsUiLanguage.T("休息 Rest", "Rest") });
+            dropdown.AddOptions(new List<string> { SettingsUiLanguage.T("工作", "Work"), SettingsUiLanguage.T("休息", "Rest") });
             RefreshState();
         }
+        private static string ModeCaption(DailyBehaviorMode mode) => mode == DailyBehaviorMode.Work ? SettingsUiLanguage.T("工作", "Work") : mode == DailyBehaviorMode.Rest ? SettingsUiLanguage.T("休息", "Rest") : SettingsUiLanguage.T("休闲", "Leisure");
         private void RefreshState()
         {
             if (dropdown == null) return;
@@ -103,16 +105,18 @@ namespace CafeDemo
             DailyBehaviorMode selected = pendingRequest && dailyBehavior.TryGetPendingMode(out var requested) ?
                 requested : dailyBehavior == null ? DailyBehaviorMode.Work : dailyBehavior.CurrentMode;
             string waiting = SettingsUiLanguage.T("（等待切换）", " (waiting)");
-            dropdown.options[0].text = SettingsUiLanguage.T("工作 Work", "Work") + (pendingRequest && selected == DailyBehaviorMode.Work ? waiting : "");
-            dropdown.options[1].text = SettingsUiLanguage.T("休息 Rest", "Rest") + (pendingRequest && selected == DailyBehaviorMode.Rest ? waiting : "");
+            dropdown.options[0].text = SettingsUiLanguage.T("工作", "Work") + (pendingRequest && selected == DailyBehaviorMode.Work ? waiting : "");
+            dropdown.options[1].text = SettingsUiLanguage.T("休息", "Rest") + (pendingRequest && selected == DailyBehaviorMode.Rest ? waiting : "");
             dropdown.SetValueWithoutNotify(selected == DailyBehaviorMode.Rest ? 1 : 0);
             dropdown.RefreshShownValue();
-            string text = SettingsUiLanguage.T("本地调试 · 选择即请求切换，不需保存\n当前：", "Local debug · request on selection; no save needed\nCurrent: ") +
-                (dailyBehavior == null ? "N/A" : dailyBehavior.CurrentMode.ToString());
+            string text = SettingsUiLanguage.T("仅调试林薇薇本次运行的行为。选择即请求，无需保存，不改变默认人设。\n当前实际模式：", "Debugs Lin Weiwei during this run only. Selection sends a request without saving or changing the default persona.\nActual current mode: ") +
+                (dailyBehavior == null ? SettingsUiLanguage.T("不可用", "Unavailable") : ModeCaption(dailyBehavior.CurrentMode));
             if (!available) text += SettingsUiLanguage.T(" · 不可用", " · unavailable");
             else if (dailyBehavior.TryGetPendingMode(out var pending))
-                text += SettingsUiLanguage.T(" · 等待切换：", " · waiting for: ") + pending;
+                text += SettingsUiLanguage.T(" · 等待切换：", " · waiting for: ") + ModeCaption(pending);
             else if (rejected) text += SettingsUiLanguage.T(" · 请求未接受", " · request rejected");
+            if (dailyBehavior?.LastTransitionReason == "deferred_busy_or_cooldown") text += SettingsUiLanguage.T("\n正在忙碌或等待切换间隔结束。", "\nBusy or waiting for the switching interval to end.");
+            if (!string.IsNullOrEmpty(dailyBehavior?.LastTransitionReason)) text += "\n" + SettingsUiLanguage.T("最近切换：", "Latest transition: ") + SettingsUiLanguage.DebugValue(dailyBehavior.LastTransitionReason);
             status.text = text;
         }
     }

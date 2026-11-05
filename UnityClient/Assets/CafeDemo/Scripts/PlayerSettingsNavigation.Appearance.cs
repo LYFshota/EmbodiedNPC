@@ -35,8 +35,8 @@ namespace CafeDemo
             BuildAppearanceDescription(content.transform);
             Height(Heading(content.transform, "角色外观", "Player appearance").gameObject, 36);
             var instructions = Label(content.transform,
-                "先把 VRM 文件放进角色目录，再扫描、选择并使用。换角色前，请先结束当前动作或对话。",
-                "Open the avatar folder, copy your own .vrm file into it, then scan, select and use it. Up to 64 MiB; stored locally. Finish movement, emotes and interaction first.", 21);
+                "VRM 是角色模型文件（最多 64 MiB，仅保存在本机）。打开角色目录 → 放入 .vrm → 扫描 VRM → 选择 → 导入并使用。换角色前停止移动，等待动作结束并关闭对话。",
+                "VRM is an avatar model file (up to 64 MiB, stored locally). Open avatar folder → copy .vrm → Scan VRM → select → Import & use. Stop moving, finish actions and close chat before switching.", 21);
             CompactPlayerText(instructions); FlexibleText(instructions, 28);
             avatarState = Label(content.transform, "", "", 21); CompactPlayerText(avatarState); FlexibleText(avatarState, 28);
             labels.RemoveAll(x => x.text == avatarState);
@@ -75,7 +75,7 @@ namespace CafeDemo
             avatarDefault.interactable = available; avatarScan.interactable = available; avatarFolder.interactable = available;
             avatarChoice.interactable = available && avatarFiles.Length > 0;
             RefreshAppearanceDescription(service, available);
-            avatarState.text = service == null ? SettingsUiLanguage.T("进入游戏后可更换玩家外观。", "Enter the game to change player appearance.") :
+            avatarState.text = service == null ? SettingsUiLanguage.T("进入咖啡馆后可修改外观描述和更换角色。", "Enter the cafe to edit your appearance description and change avatars.") :
                 service.IsLoading ? SettingsUiLanguage.T("正在验证并加载 VRM…原外观保持显示。", "Validating and loading VRM… Current appearance remains visible.") :
                 (service.IsCustom ? SettingsUiLanguage.T("当前：自定义角色", "Current: custom avatar") : SettingsUiLanguage.T("当前：默认角色", "Current: default avatar")) +
                 (string.IsNullOrEmpty(service.Diagnostic) ? "" : "\n" + SettingsUiLanguage.T("操作未完成：", "Operation incomplete: ") + service.Diagnostic);

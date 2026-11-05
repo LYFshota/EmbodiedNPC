@@ -117,7 +117,7 @@ namespace CafeDemo.Tests
         }
         [UnityTest] public IEnumerator ExistingHeadVisionSettingsModelSwitchAndRestart()
         {
-            Assert.IsNull(DescriptionOf(Capture("unconfigured")));
+            Assert.AreEqual(PortablePreferenceFile.DefaultAppearanceDescription, DescriptionOf(Capture("new-default")));
             Assert.IsTrue(PlayerNameSettings.TrySave("小羽",out _));
             string uid=player.GetComponent<PlayerIdentityBinding>().CurrentIdentity.PlayerUid,id=player.EntityId;
             SessionState.SetString(S+"uid",uid);SessionState.SetString(S+"entity",id);

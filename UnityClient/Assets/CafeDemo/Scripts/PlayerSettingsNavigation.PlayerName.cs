@@ -22,6 +22,7 @@ namespace CafeDemo
             playerName = root.GetComponent<TMP_InputField>(); playerName.targetGraphic = root.GetComponent<Image>();
             playerName.textViewport = (RectTransform)viewport.transform; playerName.textComponent = (TextMeshProUGUI)text;
             playerName.lineType = TMP_InputField.LineType.SingleLine;
+            playerName.onValueChanged.AddListener(_ => { playerNameResult = "DIRTY"; RefreshPlayerNameStatus(); });
             playerName.characterLimit = 0; // Validation reports overflow; never silently truncate a pasted nickname.
             var row = Node("PlayerNameActions", parent, typeof(HorizontalLayoutGroup), typeof(LayoutElement)); Height(row, 56);
             var layout = row.GetComponent<HorizontalLayoutGroup>(); layout.spacing = 12;
@@ -48,9 +49,10 @@ namespace CafeDemo
         {
             if (playerNameStatus == null) return;
             playerNameStatus.text = playerNameResult == "SAVED" ? SettingsUiLanguage.T("昵称已保存，后续对话生效。", "Name saved for subsequent conversations.") :
-                playerNameResult == "PLAYER_NAME_INVALID" ? SettingsUiLanguage.T("请输入 1–24 个 Unicode 字符；不能包含换行、控制或隐藏格式字符。", "Use 1–24 Unicode characters without line breaks, control or hidden format characters.") :
+                playerNameResult == "PLAYER_NAME_INVALID" ? SettingsUiLanguage.T("昵称请输入 1–24 个字符，不要换行或使用不可见字符。", "Use 1–24 characters without line breaks or invisible characters.") :
+                playerNameResult == "DIRTY" ? SettingsUiLanguage.T("昵称尚未保存。", "Name has unsaved changes.") :
                 !string.IsNullOrEmpty(playerNameResult) ? SettingsUiLanguage.T("无法读取或保存昵称，请检查本地设置权限。", "Cannot read or save the name. Check local settings permissions.") :
-                SettingsUiLanguage.T("1–24 个 Unicode 字符；昵称不会改变玩家身份或双方约定的称呼。", "1–24 Unicode characters. Identity and agreed forms of address stay the same.");
+                SettingsUiLanguage.T("昵称限 1–24 个字符，保存后用于后续对话。", "Use 1–24 characters. Your saved name is used in subsequent conversations.");
         }
     }
 }

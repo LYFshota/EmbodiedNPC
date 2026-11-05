@@ -37,21 +37,22 @@ or provide a Launcher.exe.
 
 ## Unified package entry
 
-Copy `root/Start.cmd` and `root/Stop.cmd` to the **game root**, and `unified.py` beside
+Copy `root/启动游戏.cmd`, `root/Start.cmd` and `root/Stop.cmd` to the **game root**, and `unified.py` beside
 `Backend/launcher.py`. Keep the root templates in their separate source subdirectory:
 Windows filenames are case-insensitive, so root Start.cmd must not replace Backend/start.cmd.
 
-Double-click root **Start.cmd**. It resolves its own package location and always uses
+Double-click root **启动游戏.cmd** (or the compatible **Start.cmd**). It resolves its own package location and always uses
 `<game>/UserData`, regardless of CWD or inherited DATA_ROOT. It checks required resources,
 write permissions and ownership, starts B1, waits at most 60 seconds for B1's *listening*
 record, then opens `UnityPlayer/EmbodiedNPC.exe`. During a slow startup the console reports
 elapsed waiting every five seconds. This deliberately reuses the B2 Player without a build
 or a second startup checker; it waits for HTTP listening, not AI/Provider readiness.
-Title retains the existing configuration/Provider/WS checks and manual retry. If Backend
+Title retains automatic configuration/Provider/WS checks; manual state refresh is in AI settings. If Backend
 fails unexpectedly later, the entry reports it and does not automatically restart it or close
 the Player. The explicit one-shot configuration apply/restart flow is described below.
 
-Testing may explicitly use `Start.cmd --port <isolated-port>` (normal default: 127.0.0.1:8000).
+The unified entry defaults to `--port 0`: Backend binds `127.0.0.1:0` once and retains that socket, so the OS allocates and reserves a free port atomically. Its owned instance record publishes the actual port; Player WS, model HTTP and knowledge management receive that same port. Configuration restart repeats this process. No port is probed and released before binding.
+Testing may explicitly use `Start.cmd --port <isolated-port>`. The separate Backend maintenance entry retains its compatible default of 8000.
 Optional bounds are `--startup-timeout <seconds>` and `--stop-timeout <seconds>`.
 Backend and Player receive the same root, authorization file and HTTP URL;
 Player receives matching `--backend-url` and `-logFile UserData/logs/Player.log`.
@@ -127,3 +128,8 @@ recovery flow, without killing or adopting another service.
 On Windows, an ordinary copy can inherit the destination folder's broader permissions.
 The current entry does not repair copied credential-file ACLs automatically; verify or
 restore their private permissions before using real credentials in the restored installation.
+
+
+## Candidate archive
+
+`assemble.py --zip <new-file.zip>` archives package contents directly at the ZIP root. A normal Extract-to-folder operation therefore creates one enclosing folder. It refuses an existing ZIP and never packages a stage containing UserData. Player instructions are `README-试玩说明.txt`; this technical document is copied to `Backend/PORTABLE-START.txt`. Keep Licenses and LICENSES.md in their established package locations. The assembler copies the same authored CafeSnackCatalog.json into the Backend’s existing bundled resource path.

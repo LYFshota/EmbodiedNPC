@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Collections;
 using System.IO;
@@ -26,8 +27,33 @@ namespace CafeDemo.Tests
 {
     public sealed class P0SettingsFeedbackTests
     {
+        [TestCase("RESPONSE_JSON_INVALID", "单个回复", "single result")]
+        [TestCase("RESPONSE_FIELDS_INVALID", "必要信息", "required information")]
+        [TestCase("RESPONSE_TOO_LONG", "允许长度", "allowed length")]
+        public void ModelOutputFailure_ExplainsCauseAndNextStepInBothLanguages(string code, string chinese, string english)
+        {
+            var text = P0FeedbackText.Dialogue(code);
+            Assert.That(text.Chinese, Does.Contain(chinese));
+            Assert.That(text.English, Does.Contain(english));
+            Assert.That(text.Chinese, Does.Contain("请"));
+            Assert.That(text.English, Does.Contain("model"));
+            Assert.AreEqual(text, P0FeedbackText.ModelError(code));
+            Assert.That(text.Chinese.Length, Is.LessThan(70));
+            Assert.That(text.English.Length, Is.LessThan(180));
+        }
+
         private GameObject root;
         private bool originalLanguage;
+        private string previousSession, previousUrl, testSession;
+        private void AuthorizeHttp(int port)
+        {
+            testSession = Path.Combine(Path.GetTempPath(), "p0-feedback-" + Guid.NewGuid().ToString("N") + ".json");
+            string url = "http://127.0.0.1:" + port;
+            File.WriteAllText(testSession, new JObject { ["schema_version"] = 1, ["pid"] = System.Diagnostics.Process.GetCurrentProcess().Id,
+                ["created_at"] = DateTime.UtcNow.ToString("o"), ["base_url"] = url, ["token"] = new string('a', 64) }.ToString());
+            Environment.SetEnvironmentVariable("EMBODIEDNPC_KNOWLEDGE_ADMIN_FILE", testSession);
+            Environment.SetEnvironmentVariable("EMBODIEDNPC_KNOWLEDGE_ADMIN_URL", url);
+        }
         private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
         private static void Set(object target, string name, object value) => target.GetType().GetField(name, Private).SetValue(target, value);
         private static object Call(object target, string name, params object[] args) => target.GetType().GetMethod(name, Private).Invoke(target, args);
@@ -38,12 +64,17 @@ namespace CafeDemo.Tests
         }
         [SetUp] public void Setup()
         {
+            previousSession = Environment.GetEnvironmentVariable("EMBODIEDNPC_KNOWLEDGE_ADMIN_FILE");
+            previousUrl = Environment.GetEnvironmentVariable("EMBODIEDNPC_KNOWLEDGE_ADMIN_URL");
             root = new GameObject("IsolatedFeedback", typeof(RectTransform)); root.SetActive(false);
             originalLanguage = SettingsUiLanguage.IsEnglish;
             SettingsUiLanguage.SetEnglish(true);
         }
         [TearDown] public void Cleanup()
         {
+            Environment.SetEnvironmentVariable("EMBODIEDNPC_KNOWLEDGE_ADMIN_FILE", previousSession);
+            Environment.SetEnvironmentVariable("EMBODIEDNPC_KNOWLEDGE_ADMIN_URL", previousUrl);
+            if (testSession != null) { File.Delete(testSession); testSession = null; }
             UnityEngine.Object.DestroyImmediate(root);
             SettingsUiLanguage.SetEnglish(originalLanguage);
         }
@@ -61,7 +92,7 @@ namespace CafeDemo.Tests
             var healthy = new RuntimeStatusView { active_provider = new ActiveProviderStatus { available = true } };
             panel.ApplyRuntimeStatus(healthy);
             panel.ApplyRuntimeFailure("BACKEND_UNAVAILABLE", httpCode);
-            Assert.That(labels["backendText"].text, Does.Contain("WS: Connected"));
+            Assert.That(labels["backendText"].text, Does.Contain("(WebSocket): Connected"));
             Assert.AreEqual("CONNECTED", backend.ConnectionStatus);
             Assert.That(labels["mainText"].text, Does.Contain("unknown"));
             if (httpCode > 0) Assert.That(labels["backendText"].text, Does.Contain("Responded"));
@@ -70,19 +101,19 @@ namespace CafeDemo.Tests
             Assert.AreEqual(error, labels["healthText"].text);
             SettingsUiLanguage.SetEnglish(false); Call(panel, "RefreshLanguage");
             Assert.That(labels["mainText"].text, Does.Contain("未知"));
-            Assert.That(labels["backendText"].text, Does.Contain("WS: 已连接"));
+            Assert.That(labels["backendText"].text, Does.Contain("（WebSocket）：已连接"));
             panel.ApplyRuntimeStatus(healthy);
             Assert.That(labels["healthText"].text, Does.Contain("可用"));
             typeof(BackendWebSocketClient).GetProperty("ConnectionStatus").SetValue(backend, "OFFLINE");
             Call(panel, "RefreshBackendLine");
-            Assert.That(labels["backendText"].text, Does.Contain("WS: 未连接"));
+            Assert.That(labels["backendText"].text, Does.Contain("（WebSocket）：未连接"));
         }
 
         [UnityTest]
         public IEnumerator RuntimeHttpClient_503DoesNotChangeConnectedWebSocketProjection()
         {
             var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port; AuthorizeHttp(port);
             Task serve = ServeJson(listener, 503, "{\"error\":{\"code\":\"MODEL_CONFIG_DOCUMENT_INVALID\"}}");
             try
             {
@@ -122,7 +153,7 @@ namespace CafeDemo.Tests
         public IEnumerator StartupProjection_CarriesV2ProfilesFromIsolatedHttpWithoutLegacyWrite()
         {
             var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port; AuthorizeHttp(port);
             Task serve = ServeJson(listener, 200, "{\"schema_version\":2,\"revision\":7,\"configured\":false}");
             try
             {
@@ -210,6 +241,9 @@ namespace CafeDemo.Tests
             return value;
         }
 
+        [TestCase("THINKING_CONTROL_UNVERIFIED", "reasoning", "思考")]
+        [TestCase("PROTOCOL_ERROR", "format", "格式")]
+        [TestCase("PARAMETER_REJECTED", "parameters", "参数")]
         [TestCase("AUTH_FAILED", "key", "密钥")]
         [TestCase("TIMEOUT", "timed out", "超时")]
         [TestCase("CLIENT_TIMEOUT", "still be processing", "仍在处理")]
@@ -218,7 +252,8 @@ namespace CafeDemo.Tests
         public void OwnedFailure_IsVisibleBilingualAndIgnoresLateOtherRequest(string reason, string english, string chinese)
         {
             var controller = Dialogue(out var label);
-            Assert.That(label.text, Does.Contain("Waiting"));
+            // Pending replies use waiting bubbles; the footer is reserved for actionable feedback.
+            Assert.AreEqual("request_fixture", typeof(DialogueController).GetField("feedbackRequestId", Private).GetValue(controller));
             Call(controller, "HandleRequestFeedback", Feedback("failed", reason));
             Assert.That(label.text, Does.Contain(english));
             Assert.That(label.text, Does.Contain("Storage unconfirmed"));
@@ -235,7 +270,7 @@ namespace CafeDemo.Tests
         {
             var controller = Dialogue(out var label);
             Call(controller, "HandleRequestFeedback", Feedback("response_received", null));
-            Assert.That(label.text, Does.Contain("pending confirmation"));
+            Assert.AreEqual("", label.text, "Pending replies do not masquerade as footer success or failure.");
             Call(controller, "HandleExperienceSettled", Draft(), null, settlement);
             Assert.That(label.text, Does.Contain("unconfirmed"));
             string warning = label.text;
@@ -247,7 +282,7 @@ namespace CafeDemo.Tests
             Call(controller, "HandleExperienceSettled", Draft(), Ack(), "inserted");
             Assert.AreEqual("", label.text);
             Call(controller, "HandleFeedbackPresentation", new PresentedCognitiveUtterance("request_fixture", "trace_fixture", "run_fixture", "npc_fixture", "player_fixture", "synthetic", 1, 1, "source_response", "conversation_fixture", null));
-            Assert.That(label.text, Does.Contain("pending confirmation"));
+            Assert.AreEqual("", label.text, "Pending replies do not masquerade as footer success or failure.");
             Call(controller, "HandleExperienceSettled", Draft("dialogue_response", "source_response"), Ack(), "inserted");
             Assert.AreEqual("", label.text);
         }

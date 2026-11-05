@@ -80,7 +80,7 @@ namespace EmbodiedNPC.Settings
             if (indexState == null) return;
             RefreshBuiltinState();
             RefreshEmbeddingModeInformation();
-            if (indexTitle != null) indexTitle.text = SettingsUiLanguage.T("记忆索引", "Memory index");
+            if (indexTitle != null) indexTitle.text = SettingsUiLanguage.T("记忆查找维护（高级）", "Memory search maintenance (advanced)");
             indexState.enableAutoSizing = false; indexState.fontSize = 21; indexState.color = SettingsPanelTheme.Ink;
             bool known = currentIndex != null && currentIndex.counts_known != false;
             string state = currentIndex?.status ?? "unknown";
@@ -110,13 +110,13 @@ namespace EmbodiedNPC.Settings
             }
             if ((state is "waiting" or "running" or "paused" or "failed") && (!known || currentIndex.pending > 0))
                 summary += "\n" + IncompleteIndexText();
-            indexState.text = summary;
+            indexState.text = SettingsUiLanguage.T("为已有记忆准备查找数据，通常无需重复操作。需要时可开始、暂停或继续；进度和错误见下方。\n", "Prepares search data for existing memories; repeated maintenance is usually unnecessary. Start, pause or resume when needed; progress and errors appear below.\n") + summary;
             bool canOperate = currentIndex != null && currentIndex.applied && currentIndex.control_allowed != false &&
                 currentIndex.error_code != "EMBEDDING_CONTROL_STATE_INVALID" &&
                 (state is "waiting" or "running" or "paused" or "failed") && (!known || currentIndex.total > 0);
             indexAction.interactable = !busy && canOperate;
             indexAction.transform.parent.gameObject.SetActive(canOperate);
-            string zh = state == "running" ? "暂停构建" : state == "waiting" ? "开始构建" : "继续构建";
+            string zh = state == "running" ? "暂停准备" : state == "waiting" ? "开始准备" : "继续准备";
             string en = state == "running" ? "Pause indexing" : state == "waiting" ? "Start indexing" : "Resume indexing";
             SetRow(indexAction, zh, en); SetButton(indexAction, zh, en);
             if (indexProgress != null)
@@ -127,20 +127,16 @@ namespace EmbodiedNPC.Settings
             if (ordinaryIndexState != null)
             {
                 ordinaryIndexState.fontSize = 21; ordinaryIndexState.color = SettingsPanelTheme.Ink;
-                ordinaryIndexState.text = SettingsUiLanguage.T("记忆索引维护\n", "Memory Index Maintenance\n") + summary;
-                if (state == "disabled") ordinaryIndexState.text += profilesView?.active_runtime?.embedding == null
-                    ? profilesView != null && embeddingChoices != null && embeddingEnabled.isOn &&
-                        EditingEmbeddingPreset().protocol == "builtin" && IsNewEmbeddingConfiguration
-                        ? SettingsUiLanguage.T("\n当前运行尚未启用 Embedding。默认选择仍是草稿，保存主模型配置时会一并启用；之后无需重复设置。",
-                            "\nRuntime Embedding is not enabled yet. The default selection is still a draft; saving the main-model configuration also enables it, with no repeated setup afterward.")
-                        : SettingsUiLanguage.T("\n当前运行尚未配置 Embedding；启用草稿须保存并应用后才能维护索引。",
-                            "\nRuntime Embedding is not configured; save and apply the enabled draft before maintaining the index.")
-                    : SettingsUiLanguage.T("\n当前运行 Embedding 已关闭，不能维护向量索引。", "\nRuntime Embedding is off; vector maintenance is unavailable.");
-                else if (state == "restart_required") ordinaryIndexState.text += SettingsUiLanguage.T(
-                    "\nEmbedding 配置已保存；请重启 Backend 以应用。", "\nEmbedding configuration is saved; restart the Backend to apply it.");
-                else if (currentIndex?.applied != true) ordinaryIndexState.text += SettingsUiLanguage.T("\n请先保存并应用 Embedding 配置。", "\nSave and apply Embedding configuration first.");
-                ordinaryIndexAction.interactable = !busy && currentIndex?.applied == true && state != "running" && state != "disabled";
-                SetButton(ordinaryIndexAction, "检查并维护索引", "Check & maintain index");
+                ordinaryIndexState.text = state == "disabled"
+                    ? SettingsUiLanguage.T(embeddingEnabled.isOn ? "保存并应用 AI 配置后启用。" : "本次运行未启用记忆查找。", embeddingEnabled.isOn ? "Enabled after Save & Apply." : "Memory search is disabled in this run.")
+                    : state == "restart_required" ? SettingsUiLanguage.T("设置已保存，重启游戏后启用。", "Settings saved; restart the game to enable.")
+                    : currentIndex == null ? SettingsUiLanguage.T("运行状态尚未确认，请刷新状态。", "Runtime status is unconfirmed; refresh status.")
+                    : SettingsUiLanguage.T("准备状态：", "Preparation: ") + IndexStateCaption(state) +
+                        (profilesView?.active_runtime?.embedding?.provider_type == "builtin" ? " · " + EmbeddingLoadCaption() : "");
+                if (error != null) ordinaryIndexState.text += "\n" + IndexErrorText(error);
+                ordinaryIndexAction.interactable = !busy;
+                SetButton(ordinaryIndexAction, canOperate ? (state == "running" ? "暂停准备" : state == "waiting" ? "开始准备" : "继续准备") : "刷新状态",
+                    canOperate ? (state == "running" ? "Pause preparation" : state == "waiting" ? "Start preparation" : "Resume preparation") : "Refresh status");
             }
             RebuildSettingsLayout();
         }
@@ -184,6 +180,7 @@ namespace EmbodiedNPC.Settings
             if (error == null && runtime != null && ModelConfigClient.StartupReady(fresh, runtime) &&
                 AppliedSnapshotMatches(saved.selected_to_activate, fresh.active_runtime))
             {
+                checkedRuntimeStatus = runtime;
                 SetStatus("配置已生效。", "Configuration applied."); ConfigurationActivated?.Invoke();
                 if (!developerMode && savedThisSession) Complete();
             }

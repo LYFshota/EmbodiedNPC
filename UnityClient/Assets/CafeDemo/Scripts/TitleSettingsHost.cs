@@ -15,11 +15,13 @@ namespace CafeDemo
         [SerializeField] private Button closeButton, saveButton;
         private PlayerSettingsNavigation navigation;
         public PlayerSettingsNavigation Navigation => navigation;
-        public event Action Activated;
+        public event Action<RuntimeStatusView> Activated;
         public event Action Closed;
         public bool IsOpen => surface != null && surface.activeSelf;
         public bool IsBusy => IsOpen && form != null && form.IsSavingSettings;
         public bool AIRequiresRestart => form != null && form.SavedAIRequiresRestart;
+        public RuntimeStatusView CheckedRuntimeStatus => form?.CheckedRuntimeStatus;
+        public string RuntimeReadError => form?.RuntimeReadError;
 
         private void OnEnable()
         {
@@ -79,7 +81,7 @@ namespace CafeDemo
             // ConfigurationActivated can precede ContextPolicy saving in the same form operation.
             yield return null;
             while (IsBusy) yield return null;
-            Activated?.Invoke();
+            Activated?.Invoke(form.CheckedRuntimeStatus);
         }
     }
 }

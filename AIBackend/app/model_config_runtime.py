@@ -17,7 +17,7 @@ def build_provider_from_model_config(document: ModelApiConfigDocument) -> ModelP
     return build_main_provider(document.main_model)
 
 
-def build_main_provider(main: MainModelConfig, transport=None) -> ModelProvider:
+def build_main_provider(main: MainModelConfig, transport=None, *, probe_budget=None) -> ModelProvider:
     if main.provider_type == "mock":
         return create_mock_provider()
     if main.provider_type == "ollama":
@@ -35,7 +35,7 @@ def build_main_provider(main: MainModelConfig, transport=None) -> ModelProvider:
         timeout_seconds=main.timeout_seconds, schema_profile=main.schema_profile,
         token_parameter=main.token_parameter, thinking_parameter=main.thinking_parameter,
         send_temperature=main.send_temperature, top_p=main.top_p, reasoning_effort=main.reasoning_effort,
-        health_strategy=main.health_strategy, transport=transport)
+        health_strategy=main.health_strategy, transport=transport, compatibility_config=main, probe_budget=probe_budget)
 
 
 def build_embedding_from_model_config(document: ModelApiConfigDocument):

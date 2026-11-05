@@ -6,7 +6,7 @@ namespace EmbodiedNPC.Settings
     [Serializable] public sealed class ModelPresetView
     {
         public string preset_id, name, source, protocol, base_url, discovery, schema_profile, thinking_parameter, token_parameter, health_strategy;
-        public bool send_temperature;
+        public bool? send_temperature;
         public int default_context_length = 32768;
     }
     [Serializable] public sealed class MainProfileView
@@ -51,12 +51,20 @@ namespace EmbodiedNPC.Settings
         public string @case, status, error_code;
         public int latency_ms;
     }
+    [Serializable] public sealed class ModelCompatibilityView
+    {
+        public string scope, response_format, schema_profile, token_parameter, thinking_parameter;
+        public bool send_temperature, strict_validation;
+        public int api_calls;
+        public string[] unverified;
+    }
     [Serializable] public sealed class ModelProbeView
     {
         public bool success;
         public string error_code;
         public string[] models;
         public ModelContractResult[] results;
+        public ModelCompatibilityView compatibility;
     }
 
     public static class ModelProfileJson

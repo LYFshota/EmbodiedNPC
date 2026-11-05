@@ -28,9 +28,11 @@ namespace EmbodiedNPC.Tests
         private GameObject embeddingFields;
         private GameObject embeddingConnectionFields;
 
+        private bool previousUiLanguage;
         [SetUp]
         public void SetUp()
         {
+            previousUiLanguage = SettingsUiLanguage.IsEnglish; SettingsUiLanguage.SetEnglish(false);
             root = new GameObject("setup-test");
             root.SetActive(false);
             setup = root.AddComponent<FirstRunModelSetup>();
@@ -72,6 +74,7 @@ namespace EmbodiedNPC.Tests
         [TearDown]
         public void TearDown()
         {
+            SettingsUiLanguage.SetEnglish(previousUiLanguage);
             UnityEngine.Object.DestroyImmediate(root);
             UnityEngine.Object.DestroyImmediate(panel);
         }
@@ -247,7 +250,7 @@ namespace EmbodiedNPC.Tests
             setup.ApplyDiscoveryResult(false, new DiscoverModelsResponse { success = false,
                 error_code = "MODEL_DISCOVERY_HTTP_FAILED" }, null);
             Assert.AreEqual("manual-model", mainModel.text);
-            StringAssert.Contains("手动输入", statusText.text);
+            StringAssert.Contains("获取模型失败", statusText.text);
             mainModel.text = "another-manual-model";
             Assert.AreEqual("another-manual-model", mainModel.text);
         }

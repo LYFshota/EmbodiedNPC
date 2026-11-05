@@ -30,6 +30,22 @@ namespace CafeDemo
         private readonly List<CognitiveContextComposer> candidates = new();
         private CharacterOverrideStore store;
         private bool selectionExplicit;
+        private readonly Dictionary<string, string[]> drafts = new();
+        private string editingCharacterId;
+        private string[] savedFields;
+        private TMP_InputField[] PersonaFields => new[] { displayName, roleSummary, backstory, personality, speakingStyle, boundaries };
+        private string[] ReadFields() => PersonaFields.Select(x => x.text).ToArray();
+        private void KeepDraft()
+        {
+            if (editingCharacterId == null || savedFields == null) return;
+            if (ReadFields().SequenceEqual(savedFields)) drafts.Remove(editingCharacterId);
+            else drafts[editingCharacterId] = ReadFields();
+        }
+        private void PersonaChanged(string _)
+        {
+            if (savedFields != null && !ReadFields().SequenceEqual(savedFields))
+                SetStatus("人设尚未保存；切换 NPC 会保留本次运行期间的草稿。", "Persona has unsaved changes. Switching NPCs keeps drafts for this run.");
+        }
         private string lastChineseStatus;
         private string lastEnglishStatus;
         private TMP_Text backstoryLabel;
@@ -47,6 +63,7 @@ namespace CafeDemo
         public void SelectCandidate(int index)
         {
             if (GetCandidate(index) == null || npcDropdown == null) return;
+            KeepDraft();
             selectionExplicit = true;
             npcDropdown.SetValueWithoutNotify(index);
             npcDropdown.RefreshShownValue();
@@ -64,7 +81,22 @@ namespace CafeDemo
             // Keep over-limit drafts intact; report and reject them at the save boundary.
             backstory.characterLimit = 0;
             backstory.onValueChanged.AddListener(OnBackgroundChanged);
+            foreach (var field in PersonaFields) field.onValueChanged.AddListener(PersonaChanged);
+            SetPersonaHints();
             RefreshBackgroundFeedback();
+        }
+
+        private void SetPersonaHints()
+        {
+            var hints = new[] {
+                ("NPC 的显示名字", "NPC display name"),
+                ("身份与职责，例如：咖啡馆店员", "Identity and role, e.g. cafe barista"),
+                ("经历、关系与重要往事", "Past experiences, relationships and key events"),
+                ("性格特点，例如：耐心、喜欢聊天", "Traits, e.g. patient and talkative"),
+                ("怎样表达，例如：简短、温和", "How they speak, e.g. brief and gentle"),
+                ("不愿做什么、需要遵守什么", "What they avoid and rules they follow") };
+            for (int i = 0; i < PersonaFields.Length; i++)
+                if (PersonaFields[i].placeholder is TMP_Text label) label.text = SettingsUiLanguage.T(hints[i].Item1, hints[i].Item2);
         }
 
         private void OnDisable()
@@ -74,10 +106,12 @@ namespace CafeDemo
             restoreButton.onClick.RemoveListener(RestoreDefault);
             saveButton.onClick.RemoveListener(Save);
             backstory.onValueChanged.RemoveListener(OnBackgroundChanged);
+            foreach (var field in PersonaFields) field.onValueChanged.RemoveListener(PersonaChanged);
         }
 
         public void RefreshCandidates()
         {
+            KeepDraft();
             store ??= CharacterOverrideStore.Shared;
             string previousEntityId = selectionExplicit ? SelectedComposer?.GetComponent<WorldEntity>()?.EntityId : null;
             candidates.Clear();
@@ -113,6 +147,7 @@ namespace CafeDemo
 
         private void OnNpcChanged(int _)
         {
+            KeepDraft();
             selectionExplicit = true;
             LoadSelected();
         }
@@ -123,17 +158,22 @@ namespace CafeDemo
             if (definition == null) return;
             CognitiveCharacterDto effective = CharacterProfileResolver.Resolve(definition, store);
             characterIdText.text = effective.character_id;
-            displayName.text = effective.display_name;
-            roleSummary.text = effective.role_summary;
-            backstory.text = effective.backstory;
-            personality.text = effective.personality;
-            speakingStyle.text = effective.speaking_style;
-            boundaries.text = effective.boundaries;
+            displayName.SetTextWithoutNotify(effective.display_name);
+            roleSummary.SetTextWithoutNotify(effective.role_summary);
+            backstory.SetTextWithoutNotify(effective.backstory);
+            personality.SetTextWithoutNotify(effective.personality);
+            speakingStyle.SetTextWithoutNotify(effective.speaking_style);
+            boundaries.SetTextWithoutNotify(effective.boundaries);
+            editingCharacterId = definition.CharacterId; savedFields = ReadFields();
+            if (drafts.TryGetValue(editingCharacterId, out var draft))
+                for (int i = 0; i < PersonaFields.Length; i++) PersonaFields[i].SetTextWithoutNotify(draft[i]);
             if (store.LoadRejected)
                 SetStatus("人设文件无法读取，暂用默认值；原文件保留，请备份后检查。", "Character file could not be read; using defaults. The file is preserved. Back up and review it.");
             else if (store.TryGet(definition.CharacterId, out _))
                 SetStatus("当前使用本地人设设置。", "Using local character settings.");
             else SetStatus("当前使用内置默认人设。", "Using built-in character defaults.");
+            PersonaChanged(null);
+            RefreshBackgroundFeedback();
             SelectionChanged?.Invoke(SelectedComposer);
         }
 
@@ -154,6 +194,7 @@ namespace CafeDemo
                     store.Remove(definition.CharacterId);
                 else store.Save(definition.CharacterId, displayName.text, roleSummary.text, backstory.text,
                     personality.text, speakingStyle.text, boundaries.text);
+                drafts.Remove(definition.CharacterId); savedFields = ReadFields();
                 UpdateSelectedLabel();
                 SetStatus("已保存，将从下一次 NPC 思考开始生效。", "Saved. Applies from the next NPC thought.");
             }
@@ -173,6 +214,7 @@ namespace CafeDemo
             try
             {
                 store.Remove(definition.CharacterId);
+                drafts.Remove(definition.CharacterId);
                 LoadSelected();
                 UpdateSelectedLabel();
                 SetStatus("已恢复默认人设，将从下一次 NPC 思考开始生效。",
@@ -204,6 +246,7 @@ namespace CafeDemo
 
         private void RefreshLanguage()
         {
+            SetPersonaHints();
             // Captions only: never reload the selected editor or overwrite an unsaved name.
             for (int i = 0; i < candidates.Count && i < npcDropdown.options.Count; i++)
                 npcDropdown.options[i].text = SettingsUiLanguage.NpcDisplayName(candidates[i].CharacterDefinition.CharacterId,

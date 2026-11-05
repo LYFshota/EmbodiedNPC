@@ -13,7 +13,7 @@ class ProviderPreset:
     discovery: str = "models"
     schema_profile: str = "raw"
     thinking_parameter: str = "none"
-    send_temperature: bool = True
+    send_temperature: bool | None = True
     token_parameter: str = "max_tokens"
     health_strategy: str = "models"
     default_context_length: int = 0
@@ -36,7 +36,7 @@ MAIN_PRESETS = (
     ProviderPreset("openrouter", "OpenRouter", "cloud", "openai_compatible", "https://openrouter.ai/api/v1"),
     ProviderPreset("siliconflow", "SiliconFlow", "cloud", "openai_compatible", "https://api.siliconflow.cn/v1", thinking_parameter="enable_thinking"),
     ProviderPreset("ollama", "Ollama", "local", "ollama", "http://127.0.0.1:11434", discovery="ollama"),
-    ProviderPreset("custom", "Custom OpenAI-compatible", "cloud", "openai_compatible", "", health_strategy="generation_once"),
+    ProviderPreset("custom", "Custom OpenAI-compatible", "cloud", "openai_compatible", "", schema_profile="auto", token_parameter="auto", thinking_parameter="auto", send_temperature=None, health_strategy="generation_once"),
 )
 
 EMBEDDING_PRESETS = (
@@ -71,5 +71,7 @@ def validate_preset(kind, preset_id, config):
         raise ValueError("MODEL_PROFILE_PROTOCOL_MISMATCH")
     if preset.source == "cloud" and preset_id != "custom" and not config.api_key:
         raise ValueError("MODEL_PROFILE_KEY_REQUIRED")
+    if kind == "main" and preset_id != "custom" and (config.schema_profile == "auto" or config.token_parameter == "auto" or config.thinking_parameter == "auto" or config.send_temperature is None):
+        raise ValueError("MODEL_PROFILE_AUTO_CUSTOM_REQUIRED")
     if kind == "main" and config.thinking and config.provider_type == "openai_compatible" and config.thinking_parameter == "none":
         raise ValueError("MODEL_THINKING_MAPPING_REQUIRED")

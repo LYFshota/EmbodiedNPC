@@ -14,6 +14,12 @@ namespace CafeDemo.Tests
 {
     public sealed class RuntimeTraceLiveOverlayTests
     {
+        [Test] public void LocalizedCategoryLabelsKeepOriginalRecorderKeys()
+        {
+            CollectionAssert.AreEqual(new[] { "All", "session", "agent_event", "perception", "cognition", "action", "transport", "experience", "Errors" },
+                Enumerable.Range(0, 9).Select(CafeRuntimeTracePanel.CategoryKey));
+        }
+
         [Test]
         public void UiTimeUsesSystemZoneAcrossDatesWithoutChangingRawLine()
         {
@@ -76,22 +82,20 @@ namespace CafeDemo.Tests
             var overlay = Object.FindAnyObjectByType<CafeRuntimeTracePanel>();
             Assert.That(panel, Is.Not.Null);
             Assert.That(overlay, Is.Not.Null);
-            Assert.That(panel.transform.parent.Find("DeveloperPanelRoot/Window/TracePage"), Is.Not.Null);
-            Assert.That(panel.transform.parent.Find("DeveloperPanelRoot/Window/TraceNav"), Is.Not.Null);
-            Assert.That(typeof(CafeRuntimeTracePanel).GetField("recorder", BindingFlags.Instance |
-                BindingFlags.NonPublic).GetValue(overlay), Is.TypeOf<RuntimeTraceRecorder>());
-            var root = panel.transform.parent.Find("DeveloperPanelRoot").gameObject;
+            var fields = BindingFlags.Instance | BindingFlags.NonPublic;
+            var root = (GameObject)typeof(CafeDemoDeveloperPanel).GetField("panelRoot", fields).GetValue(panel);
+            var page = (GameObject)typeof(CafeRuntimeTracePanel).GetField("tracePage", fields).GetValue(overlay);
+            Assert.IsTrue(page.transform.IsChildOf(root.transform));
+            Assert.That(typeof(CafeRuntimeTracePanel).GetField("recorder", fields).GetValue(overlay), Is.TypeOf<RuntimeTraceRecorder>());
             try
             {
                 root.SetActive(true);
                 panel.ShowTrace();
-                var page = root.transform.Find("Window/TracePage");
-                Assert.That(page.gameObject.activeSelf, Is.True);
-                Assert.That(root.transform.Find("Window/DebugPage").gameObject.activeSelf, Is.False);
+                Assert.That(page.activeSelf, Is.True);
+                Assert.That(((GameObject)typeof(CafeDemoDeveloperPanel).GetField("debugPage", fields).GetValue(panel)).activeSelf, Is.False);
                 overlay.Buffer.Add(Line(42));
                 overlay.RefreshView();
-                Assert.That(page.Find("TraceScrollView/Viewport/Content")
-                    .GetComponent<TMP_Text>().text, Does.Contain("run_42"));
+                Assert.That(((TMP_Text)typeof(CafeRuntimeTracePanel).GetField("entriesText", fields).GetValue(overlay)).text, Does.Contain("run_42"));
             }
             finally { root.SetActive(false); }
         }

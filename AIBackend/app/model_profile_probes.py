@@ -5,6 +5,7 @@ import time
 import httpx
 from pydantic import ValidationError
 
+from .model_list_transport import get_model_list, transport_error_suffix
 from .contracts import CognitiveRequest
 from .cognitive_step_models import CognitiveStepResult, TerminalCognitiveStep, DialogueContinuationStep, RecallOutcome
 from .model_requests import CognitiveModelRequestFactory
@@ -12,6 +13,7 @@ from .model_config_runtime import build_main_provider
 from .model_api_config_api import DiscoverModelsRequest, _discover, _safe_code
 from .providers import InferenceOptions, ProviderError
 from .context_budget_allocator import ContextBudgetExceeded
+from .model_schema_projection import ModelSchemaOutputError
 
 
 def synthetic_request(continuation=False):
@@ -33,9 +35,9 @@ def synthetic_request(continuation=False):
             perception=dict(observer_entity_id="probe_npc", perception_revision=0, entities=[]))))
 
 
-async def contract_probe(main, transport=None):
+async def contract_probe(main, transport=None, *, probe_budget=None):
     bounded = main.model_copy(update={"timeout_seconds": min(main.timeout_seconds, 20.0)})
-    provider = build_main_provider(bounded, transport)
+    provider = build_main_provider(bounded, transport, probe_budget=probe_budget)
     options = InferenceOptions(temperature=main.temperature, think=main.thinking,
                               max_output_tokens=min(main.max_output_tokens, 2048))
     cases = [("cognition_step_0", synthetic_request(), None, CognitiveStepResult),
@@ -43,18 +45,24 @@ async def contract_probe(main, transport=None):
              ("dialogue_continuation", synthetic_request(True), None, DialogueContinuationStep)]
     results = []
     for name, context, outcome, validator in cases:
+        if any(r["status"] == "FAIL" for r in results):
+            results.append(dict(case=name, status="NOT_RUN", error_code=None))
+            continue
         start = time.monotonic()
         try:
             # Same saved draft capacity as cognition; the factory's legacy 8K default
             # must not reject a valid 16K draft before any provider call.
+            prepared = provider.cognitive_options(options, main.context_length or 8192) if callable(getattr(provider, "cognitive_options", None)) else options
             request = CognitiveModelRequestFactory.create_event(context, recall_outcome=outcome,
-                inference_options=options, knowledge_context_limit=main.context_length or 8192)
+                inference_options=prepared, knowledge_context_limit=main.context_length or 8192,
+                budget_payload_builder=getattr(provider, "budget_payload", None))
             async with asyncio.timeout(22):
                 response = await provider.generate(request)
             validator.model_validate_json(response.text)
             status, code = "PASS", None
         except ProviderError as error:
-            status, code = "FAIL", _safe_code(str(error), "MODEL_CONTRACT_FAILED")
+            code = error.diagnostic_category if isinstance(error, ModelSchemaOutputError) else str(error)
+            status, code = "FAIL", _safe_code(code, "MODEL_CONTRACT_FAILED")
         except ContextBudgetExceeded:
             status, code = "FAIL", "COGNITIVE_PROMPT_BUDGET_EXCEEDED"
         except (ValidationError, ValueError, TypeError):
@@ -64,8 +72,13 @@ async def contract_probe(main, transport=None):
         results.append(dict(case=name, status=status, error_code=code, latency_ms=round((time.monotonic()-start)*1000)))
     results.extend(dict(case=name, status="NOT_RUN", error_code=None) for name in
                    ("memory_consolidation", "relationship_reflection", "action_feedback"))
-    return {"success": all(r["status"] != "FAIL" for r in results), "results": results,
-            "max_calls": 3, "semantic_correctness": "NOT_PROVEN", "world_execution": "NOT_RUN"}
+    result = {"success": all(r["status"] != "FAIL" for r in results), "results": results,
+            "error_code": next((r["error_code"] for r in results if r["status"] == "FAIL"), None),
+            "max_calls": 6 if probe_budget is not None else 3, "semantic_correctness": "NOT_PROVEN", "world_execution": "NOT_RUN"}
+    if probe_budget is not None:
+        from .model_compatibility import report
+        result["compatibility"] = report(main, provider._policy(), probe_budget.calls)
+    return result
 
 
 async def discover_profile(config, kind, preset, transport=None):
@@ -81,10 +94,11 @@ async def discover_profile(config, kind, preset, transport=None):
         ids, token = set(), None
         async with httpx.AsyncClient(timeout=min(config.timeout_seconds, 15.0), trust_env=False, transport=transport) as client:
             for _ in range(3):
-                response = await client.get(config.base_url + "/models", headers=headers,
-                    params={"pageToken": token} if token else None)
+                response = await get_model_list(client, config.base_url + "/models", headers=headers,
+                    params={"pageToken": token} if token else None, timeout_seconds=min(config.timeout_seconds, 15.0))
                 if response.status_code >= 400:
-                    raise ValueError
+                    code = {401: "AUTH_FAILED", 403: "AUTH_FAILED", 404: "ENDPOINT_NOT_FOUND", 429: "RATE_LIMITED"}.get(response.status_code, "HTTP_FAILED")
+                    return dict(success=False, models=[], error_code="MODEL_DISCOVERY_" + code, manual_entry_allowed=True)
                 body = response.json()
                 records = body["models"] if config.provider_type == "gemini_native" else body["data"]
                 for item in records[:1000]:
@@ -102,5 +116,10 @@ async def discover_profile(config, kind, preset, transport=None):
             raise ValueError
         return dict(success=bool(ids), models=sorted(ids), error_code=None if ids else "MODEL_DISCOVERY_EMPTY",
                     manual_entry_allowed=True, truncated=bool(token))
-    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError):
-        return dict(success=False, models=[], error_code="MODEL_DISCOVERY_FAILED", manual_entry_allowed=True)
+    except httpx.TimeoutException:
+        code = "TIMEOUT"
+    except httpx.HTTPError as error:
+        code = transport_error_suffix(error)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        code = "PROTOCOL_ERROR"
+    return dict(success=False, models=[], error_code="MODEL_DISCOVERY_" + code, manual_entry_allowed=True)

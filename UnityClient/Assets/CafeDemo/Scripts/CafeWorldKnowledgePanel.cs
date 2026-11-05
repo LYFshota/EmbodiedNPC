@@ -95,7 +95,7 @@ namespace CafeDemo
             Label(form, "知识使用模式", "Knowledge usage");
             usageMode = view.Dropdown(form, "KnowledgeUsageMode", new[] { "常驻知识", "按需检索" }, new[] { "Constant background", "On-demand retrieval" });
             CafeKnowledgeView.Height(usageMode.gameObject, 46);
-            Label(form, "常驻会完整计入上下文预算，不代表更高权限；按需知识通过检索使用。", "Constant background consumes context budget and grants no extra authority. Retrieval is on demand.", 16, 58);
+            Label(form, "常驻：每次思考都会参考，适合简短的基础设定。按需：遇到相关话题时查找，适合较多资料。", "Always included: read on every thought, suitable for short basic facts. On demand: searched when relevant, suitable for larger reference material.", 16, 58);
             Label(form, "知识类型", "Knowledge Type");
             typePreset = view.Dropdown(form, "KnowledgeTypePreset", presetValues.Select(v => v.Length == 0 ? "其他自定义类型" : TypeCaption(v)).ToArray(),
                 presetValues.Select(v => v.Length == 0 ? "Other custom type" : TypeCaption(v)).ToArray());
@@ -124,7 +124,7 @@ namespace CafeDemo
             Label(form, "访问范围", "Access scope");
             accessMode = view.Dropdown(form, "KnowledgeAccessMode", new[] { "公共知识", "指定 NPC 知识" }, new[] { "Public knowledge", "Selected NPC knowledge" });
             CafeKnowledgeView.Height(accessMode.gameObject, 46);
-            Label(form, "两种权限均受可信部署与场景限制；常驻内容也需要通过相同权限校验。", "Both modes obey trusted deployment and scene scope; constant knowledge uses the same access checks.", 16, 58);
+            Label(form, "公共：当前场景内符合范围的 NPC 均可使用。指定 NPC：仅勾选的角色可使用；常驻和按需都遵守此范围。", "Public: available to NPCs within this scene’s scope. Selected NPCs: only checked characters may use it. Both usage modes respect this scope.", 16, 58);
             preserveScope = view.Toggle(form, "PreserveKnowledgeScope", "", false);
             preserveScope.onValueChanged.AddListener(value =>
             {
@@ -441,11 +441,11 @@ namespace CafeDemo
         private void RefreshIndex(KnowledgeIndexView value)
         {
             if (value != null && catalog != null) catalog.index = value;
-            if (value == null) { indexText.text = SettingsUiLanguage.T("索引状态暂不可用；按需知识可词法回退。常驻不依赖向量。", "Index status unavailable; retrieval can fall back to lexical. Constant background needs no vectors."); return; }
-            indexText.text = SettingsUiLanguage.T("常驻（无需向量）：", "Constant (no vectors): ") + value.constant +
-                SettingsUiLanguage.T("；按需向量缓存：", "; retrieval vector cache: ") + value.ready + "/" + value.total +
+            if (value == null) { indexText.text = SettingsUiLanguage.T("查找准备状态暂不可用；按需资料仍可按文字匹配。常驻资料不受此影响。", "Search preparation status unavailable. On-demand material can still match by text; always-included material is unaffected."); return; }
+            indexText.text = SettingsUiLanguage.T("常驻资料：", "Always included: ") + value.constant +
+                SettingsUiLanguage.T("；按需查找已准备：", "; on-demand search prepared: ") + value.ready + "/" + value.total +
                 (value.mode == "running" ? SettingsUiLanguage.T("；未就绪条目使用词法检索。", "; pending entries use lexical retrieval.") :
-                    SettingsUiLanguage.T("；编码不可用 / 暂停，按需使用词法检索。", "; encoding unavailable / paused, using lexical retrieval."));
+                    SettingsUiLanguage.T("；查找准备暂停或不可用，当前按文字匹配。", "; preparation paused or unavailable; using text matching."));
         }
         private void SetStatus(string zh, string en) { statusZh = zh; statusEn = en; if (status != null) status.text = SettingsUiLanguage.T(zh, en); }
         private void Error(string zh, string en) => SetStatus(zh, en);
@@ -699,7 +699,7 @@ namespace CafeDemo
         private void LayoutPageFooter()
         {
             var footer=CafeKnowledgeView.Node("KnowledgeFooter",transform,typeof(Image));
-            CafeKnowledgeView.Rect(footer.transform,Vector2.zero,Vector2.right,Vector2.zero,new Vector2(0,164));
+            CafeKnowledgeView.Rect(footer.transform,Vector2.zero,Vector2.right,Vector2.zero,new Vector2(0,212));
             footer.GetComponent<Image>().color=SettingsPanelTheme.Paper;
             var actions=CafeKnowledgeView.Node("KnowledgeFooterActions",footer.transform,typeof(HorizontalLayoutGroup));
             CafeKnowledgeView.Rect(actions.transform,Vector2.zero,Vector2.right,new Vector2(20,12),new Vector2(-20,64));
@@ -712,12 +712,12 @@ namespace CafeDemo
             foreach(var button in new[]{importCatalog,exportCatalog,restoreAll})
             {button.transform.SetParent(transfers.transform,false);var e=button.gameObject.AddComponent<LayoutElement>();e.flexibleWidth=1;}
             status.transform.SetParent(footer.transform,false);
-            CafeKnowledgeView.Rect(status.transform,Vector2.zero,Vector2.right,new Vector2(20,110),new Vector2(-20,138));
-            status.fontSize=18;status.textWrappingMode=TextWrappingModes.Normal;status.overflowMode=TextOverflowModes.Ellipsis;
+            CafeKnowledgeView.Rect(status.transform,Vector2.zero,Vector2.right,new Vector2(20,112),new Vector2(-20,164));
+            status.fontSize=18;status.textWrappingMode=TextWrappingModes.Normal;status.overflowMode=TextOverflowModes.Overflow;
             indexText.transform.SetParent(footer.transform,false);
-            CafeKnowledgeView.Rect(indexText.transform,Vector2.zero,Vector2.right,new Vector2(20,138),new Vector2(-20,164));
+            CafeKnowledgeView.Rect(indexText.transform,Vector2.zero,Vector2.right,new Vector2(20,166),new Vector2(-20,210));
             foreach(var scroll in new[] { list.GetComponentInParent<ScrollRect>(true), form.GetComponentInParent<ScrollRect>(true) })
-            {var r=(RectTransform)scroll.transform;r.offsetMin=new Vector2(r.offsetMin.x,scroll.name == "KnowledgeList" ? 228 : 178);}
+            {var r=(RectTransform)scroll.transform;r.offsetMin=new Vector2(r.offsetMin.x,scroll.name == "KnowledgeList" ? 276 : 226);}
         }
         private void Label(Transform parent, string zh, string en, float size = 20, float height = 32)
         { var label = view.Text(parent, "KnowledgeLabel", zh, en, size); CafeKnowledgeView.Height(label.gameObject, height); }

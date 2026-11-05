@@ -181,21 +181,21 @@ namespace CafeDemo
             text.Append(SettingsUiLanguage.T("显示名称：", "Display Name: ")).AppendLine(SettingsUiLanguage.NpcDisplayName(character?.character_id, character?.display_name) ?? "N/A");
             text.Append(SettingsUiLanguage.T("角色 ID：", "CharacterId: ")).AppendLine(character?.character_id ?? "N/A");
             text.Append(SettingsUiLanguage.T("实体 ID：", "EntityId: ")).AppendLine(entity.EntityId);
-            text.Append(SettingsUiLanguage.T("Agent 身份：", "AgentRole: ")).AppendLine(entity.AgentRole.ToString());
-            text.Append(SettingsUiLanguage.T("认知行为模式：", "Cognitive Behavior Mode: ")).AppendLine(behaviorMode == null ? "N/A" : behaviorMode.CurrentModeId);
-            text.Append(SettingsUiLanguage.T("生活行为模式：", "Daily Behavior Mode: ")).AppendLine(dailyBehavior == null ? "N/A" : dailyBehavior.CurrentMode.ToString());
+            text.Append(SettingsUiLanguage.T("Agent 身份：", "AgentRole: ")).AppendLine(SettingsUiLanguage.DebugValue(entity.AgentRole.ToString()));
+            text.Append(SettingsUiLanguage.T("认知行为模式：", "Cognitive Behavior Mode: ")).AppendLine(SettingsUiLanguage.DebugValue(behaviorMode == null ? "N/A" : behaviorMode.CurrentModeId));
+            text.Append(SettingsUiLanguage.T("生活行为模式：", "Daily Behavior Mode: ")).AppendLine(SettingsUiLanguage.DebugValue(dailyBehavior == null ? "N/A" : dailyBehavior.CurrentMode.ToString()));
             if (dailyBehavior != null)
             {
-                text.Append(SettingsUiLanguage.T("主要日常活动：", "Daily Activity: ")).AppendLine(dailyBehavior.CurrentActivity?.ToString() ?? "Idle");
-                text.Append(SettingsUiLanguage.T("活动状态：", "Activity State: ")).AppendLine(dailyBehavior.ActivityReason);
-                text.Append(SettingsUiLanguage.T("正式任务占用：", "Formal Task: ")).AppendLine(dailyBehavior.IsFormalTaskOccupied.ToString());
-                text.Append(SettingsUiLanguage.T("活动失败冷却：", "Activity Retry Cooldown: ")).AppendLine(dailyBehavior.IsActivityFailureCoolingDown.ToString());
+                text.Append(SettingsUiLanguage.T("主要日常活动：", "Daily Activity: ")).AppendLine(SettingsUiLanguage.DebugValue(dailyBehavior.CurrentActivity?.ToString() ?? "Idle"));
+                text.Append(SettingsUiLanguage.T("活动状态：", "Activity State: ")).AppendLine(SettingsUiLanguage.DebugValue(dailyBehavior.ActivityReason));
+                text.Append(SettingsUiLanguage.T("正式任务占用：", "Formal Task: ")).AppendLine((dailyBehavior.IsFormalTaskOccupied ? SettingsUiLanguage.T("是", "Yes") : SettingsUiLanguage.T("否", "No")));
+                text.Append(SettingsUiLanguage.T("活动失败冷却：", "Activity Retry Cooldown: ")).AppendLine((dailyBehavior.IsActivityFailureCoolingDown ? SettingsUiLanguage.T("是", "Yes") : SettingsUiLanguage.T("否", "No")));
             }
             bool? cognition = featureBinding?.Configuration?.CognitionEnabled;
             text.Append(SettingsUiLanguage.T("认知已启用：", "Cognition Enabled: ")).AppendLine(cognition == null ? "N/A" :
                 cognition.Value ? SettingsUiLanguage.T("是", "Yes") : SettingsUiLanguage.T("否", "No"));
             text.Append(SettingsUiLanguage.T("当前运行：", "Current Run: ")).AppendLine(run == null ?
-                SettingsUiLanguage.T("空闲", "Idle") : run.State.ToString());
+                SettingsUiLanguage.T("空闲", "Idle") : SettingsUiLanguage.DebugValue(run.State.ToString()));
             if (run != null) text.Append(SettingsUiLanguage.T("运行 ID：", "RunId: ")).AppendLine(run.RunId);
             text.Append(SettingsUiLanguage.T("当前任务：", "Current Task: ")).AppendLine(runDriver?.CurrentTaskEventType ??
                 SettingsUiLanguage.T("无", "None"));
@@ -212,7 +212,7 @@ namespace CafeDemo
                 }
                 text.AppendLine();
             }
-            text.AppendLine(SettingsUiLanguage.T("可视化仅显示当前所选 NPC；其他角色可从上方列表选择。", "Overlays show the selected NPC; choose other characters above."));
+            text.AppendLine(SettingsUiLanguage.T("选择查看哪个 NPC。开关只显示调试图形，不改变感知范围；关闭设置后显示，菜单或对话期间可能隐藏。", "Choose the NPC to inspect. Toggles only draw overlays and do not change sensing ranges. Overlays appear after closing settings and may hide during menus or dialogue."));
             return text.ToString();
         }
 
@@ -252,14 +252,14 @@ namespace CafeDemo
         {
             text.AppendLine(title == "Visible" ? SettingsUiLanguage.T("当前可见", "Visible") :
                 title == "Nearby" ? SettingsUiLanguage.T("附近", "Nearby") :
-                SettingsUiLanguage.T("记忆中", "Remembered"));
+                SettingsUiLanguage.T("已离开视野的对象（当前感知记录）", "Objects no longer in view (current perception records)"));
             int count = 0;
             foreach (PerceivedEntityRecord record in entities.Values)
             {
                 if (!record.KnownFields.TryGetValue(field, out string value) ||
                     !string.Equals(value, expected, StringComparison.Ordinal)) continue;
                 text.Append("• ").Append(DisplayName(record)).Append(" · ").Append(record.EntityId);
-                if (title == "Remembered") text.Append(SettingsUiLanguage.T(" · 记忆中", " · remembered"));
+                if (title == "Remembered") text.Append(SettingsUiLanguage.T(" · 已离开视野", " · no longer in view"));
                 text.AppendLine();
                 count++;
             }

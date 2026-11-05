@@ -173,6 +173,9 @@ class ModelConfigApiTests(unittest.TestCase):
             self.assertEqual("MODEL_DISCOVERY_UNSUPPORTED", unsupported.json()["error_code"])
 
         for handler, code in (
+            (lambda _: httpx.Response(401, text="secret-sentinel"), "MODEL_DISCOVERY_AUTH_FAILED"),
+            (lambda _: httpx.Response(429, text="secret-sentinel"), "MODEL_DISCOVERY_RATE_LIMITED"),
+            (lambda _: httpx.Response(404, text="secret-sentinel"), "MODEL_DISCOVERY_ENDPOINT_NOT_FOUND"),
             (lambda _: httpx.Response(200, json={"data": {}}), "MODEL_DISCOVERY_PROTOCOL_ERROR"),
             (lambda _: httpx.Response(200, json={"data": []}), "MODEL_DISCOVERY_EMPTY"),
             (lambda _: (_ for _ in ()).throw(httpx.ReadTimeout("timeout")), "MODEL_DISCOVERY_TIMEOUT"),
@@ -275,7 +278,9 @@ class ModelConfigApiTests(unittest.TestCase):
                    "EMBODIEDNPC_PROVIDER": "mock"}
             script = (
                 "from app import m3_main as m; from fastapi.testclient import TestClient; "
-                "c=TestClient(m.app); s=c.get('/v1/model-config').json(); "
+                "from fastapi import FastAPI; from app.model_api_config_api import create_model_api_config_router; "
+                "a=FastAPI(); a.include_router(create_model_api_config_router(m.model_api_config_store)); "
+                "c=TestClient(a); s=c.get('/v1/model-config').json(); "
                 "p=c.put('/v1/model-config', json={'expected_revision': s['revision'], "
                 "'config': {'main_model': s['main_model'], 'embedding': s['embedding']}}); "
                 "print(m.provider.name, m.canonical_embedding_provider is None, s['configured'], "
@@ -311,24 +316,21 @@ class CompatibleProviderTests(unittest.IsolatedAsyncioTestCase):
             return httpx.Response(200, json={"choices": [{"message": {"content": '{"ok":true}'}, "finish_reason": "stop"}],
                 "usage": {"prompt_tokens": 5, "completion_tokens": 3, "completion_tokens_details": {"reasoning_tokens": 0}}})
         provider = OpenAICompatibleProvider(base_url="https://gateway.test/v1", api_key=KEY,
-            model="[特价]DeepSeek-V4.1-Flash", transport=httpx.MockTransport(handler))
+            model="[特价]DeepSeek-V4.1-Flash", thinking_parameter="thinking", transport=httpx.MockTransport(handler))
         options = provider.cognitive_options(InferenceOptions(think=False, max_output_tokens=512), 16384)
         result = await provider.generate(ModelRequest(messages=(ModelMessage(role="user", content="test"),), inference_options=options))
         self.assertEqual(captured["thinking"], {"type": "disabled"})
         self.assertEqual(captured["max_tokens"], options.output_token_reserve)
         self.assertEqual(result.usage.reasoning_tokens, 0)
         self.assertNotIn("output_token_reserve", captured)
-        with self.assertRaisesRegex(ProviderError, "OUTPUT_RESERVE_EXCEEDS_CONTEXT"):
-            provider.cognitive_options(InferenceOptions(think=True, max_output_tokens=512), 16384)
-        enabled = provider.cognitive_options(InferenceOptions(think=True, max_output_tokens=512), 1_000_000)
-        self.assertTrue(enabled.think)
-        self.assertEqual(enabled.output_token_reserve, 393216)
+        with self.assertRaisesRegex(ProviderError, "TOTAL_GENERATION_BOUND_UNVERIFIED"):
+            provider.cognitive_options(InferenceOptions(think=True, max_output_tokens=512), 1_000_000)
         plain = OpenAICompatibleProvider(base_url="https://gateway.test/v1", api_key=KEY, model="chat-model")
         self.assertNotIn("thinking", plain.budget_payload(ModelRequest(messages=(ModelMessage(role="user", content="test"),))))
 
     async def test_native_disable_violation_is_not_a_valid_cognitive_result(self):
         provider = OpenAICompatibleProvider(base_url="https://gateway.test/v1", api_key=KEY,
-            model="deepseek-flash", transport=httpx.MockTransport(lambda _: httpx.Response(200, json={
+            model="deepseek-flash", thinking_parameter="thinking", transport=httpx.MockTransport(lambda _: httpx.Response(200, json={
                 "choices": [{"message": {"content": '{"ok":true}', "reasoning_content": "must never be logged"}}],
                 "usage": {"completion_tokens": 655, "completion_tokens_details": {"reasoning_tokens": 583}}})))
         request = ModelRequest(messages=(ModelMessage(role="user", content="test"),),
@@ -352,7 +354,7 @@ class CompatibleProviderTests(unittest.IsolatedAsyncioTestCase):
         request = ModelRequest(messages=(ModelMessage(role="system", content="system"),
                                          ModelMessage(role="user", content="user")),
                                response_schema={"type": "object"},
-                               inference_options=InferenceOptions(temperature=0.3, think=True,
+                               inference_options=InferenceOptions(temperature=0.3, think=False,
                                                                   max_output_tokens=45))
         result = await adapter.generate(request)
         self.assertEqual("https://gateway.test/v1/chat/completions", captured["url"])

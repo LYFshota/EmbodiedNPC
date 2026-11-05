@@ -13,20 +13,88 @@ namespace EmbodiedNPC.Tests
 {
     public sealed class ModelProfileSettingsTests
     {
-        [Test] public void P3A_NewMainIsBlank_CustomFirst_PlaceholderCannotSubmit()
+        [Test] public void PlayerUx_ConnectionSuccessBelongsToDraftAndExpiresAfterEdit()
+        {
+            Invoke("EnsureCompactLayout");
+            Set("verifiedMainSignature", Invoke("ProbeSignature", false));
+            Set("verifiedMainSuccess", (bool?)true);
+            Invoke("RefreshBriefAiState");
+            Assert.That(((TMP_Text)Get("mainConnectionState")).text, Does.Contain(SettingsUiLanguage.IsEnglish ? "passed" : "已通过"));
+            ((TMP_InputField)Get("mainModel")).text = "changed-model";
+            Invoke("RefreshBriefAiState");
+            Assert.That(((TMP_Text)Get("mainConnectionState")).text, Does.Contain(SettingsUiLanguage.IsEnglish ? "unverified" : "尚未验证"));
+        }
+
+        [Test] public void PlayerUx_OrdinaryPageKeepsStatusRefreshAndFoldsRecentDialogue()
+        {
+            Invoke("EnsureCompactLayout");
+            var advanced = ((GameObject)Get("advancedSettings")).transform;
+            Assert.IsFalse(advanced.gameObject.activeSelf);
+            Assert.IsTrue(((Transform)Get("recentDialogueGroup")).IsChildOf(advanced));
+            Assert.IsTrue(((Button)Get("recheckButton")).transform.IsChildOf((Transform)Get("aiStateGroup")));
+        }
+
+        [TestCase("THINKING_CONTROL_UNVERIFIED")] [TestCase("OPENAI_COMPATIBLE_PARAMETER_REJECTED")]
+        [TestCase("MODEL_DISCOVERY_TIMEOUT")] [TestCase("MODEL_DISCOVERY_AUTH_FAILED")]
+        public void PlayerUx_ModelFailureHasReasonAndNextStepInBothLanguages(string code)
+        {
+            var message = P0FeedbackText.ModelError(code);
+            Assert.IsNotEmpty(message.Chinese); Assert.IsNotEmpty(message.English);
+            Assert.That(message.Chinese, Does.Contain("请"));
+            Assert.That(message.English, Does.Not.Contain("secret-sentinel"));
+        }
+
+        [Test] public void CustomDefault_EmptyModelCannotSubmit()
         {
             var view = (ModelProfilesView)Get("profilesView");
             view.main_presets = new[] { view.main_presets[0], Preset("custom", "openai_compatible", ""), view.main_presets[1] };
             Invoke("ChooseInitial", false);
             var dropdown = (TMP_Dropdown)Get("mainSupplier");
             Assert.AreEqual("custom", ((ModelPresetView[])Get("mainChoices"))[0].preset_id);
-            Assert.AreEqual(-1, dropdown.value); Assert.IsNotNull(dropdown.placeholder);
+            Assert.AreEqual(0, dropdown.value); Assert.IsNotNull(dropdown.placeholder);
             Assert.AreEqual("", ((TMP_InputField)Get("mainModel")).text);
             Assert.AreEqual("32768", ((TMP_InputField)Get("contextLength")).text);
-            Assert.IsInstanceOf<ArgumentException>(Assert.Throws<TargetInvocationException>(()=>Invoke("BuildProfileCommand",false)).InnerException);
+            Assert.AreEqual("", (string)((Newtonsoft.Json.Linq.JObject)Invoke("BuildProfileCommand", false))["config"]["model"]);
+            Invoke("PromptProbe", false, "connection");
+            Assert.IsNull(Get("profileModal"), "An empty model must not open paid confirmation.");
             Invoke("RequestSupplierSwitch", false, 0);
             Assert.AreEqual("openai_compatible", ((ModelPresetView[])Get("mainChoices"))[dropdown.value].protocol);
             Assert.AreEqual("main-custom", Get("mainEditingId"));
+        }
+
+        [Test] public void Compatibility_AdvancedOrderIsGenerationRecentProtocol_WithoutNestedFoldout()
+        {
+            Invoke("EnsureCompactLayout");
+            var advanced = ((GameObject)Get("advancedSettings")).transform;
+            var fields = new[] { "contextLength", "maxOutputTokens", "temperature", "mainTimeout", "thinking" };
+            int previous = -1;
+            foreach (var name in fields) { int next = ((Component)Get(name)).transform.parent.GetSiblingIndex(); Assert.Greater(next, previous); previous = next; }
+            Assert.Greater(((Transform)Get("recentDialogueGroup")).GetSiblingIndex(), previous);
+            Assert.Greater(((TMP_Dropdown)Get("schemaMode")).transform.parent.GetSiblingIndex(), ((Transform)Get("recentDialogueGroup")).GetSiblingIndex());
+            Assert.AreEqual(SettingsUiLanguage.IsEnglish ? "Automatic" : "自动", ((TMP_Dropdown)Get("schemaMode")).options[0].text);
+            Assert.AreEqual(3, ((TMP_Dropdown)Get("sendTemperature")).options.Count);
+            Assert.IsFalse(advanced.gameObject.activeSelf);
+        }
+
+        [TestCase(false)] [TestCase(true)]
+        public void Compatibility_LocalizedProtocolOptionsKeepStableSavedKeys(bool english)
+        {
+            bool previous = SettingsUiLanguage.IsEnglish;
+            try
+            {
+            Invoke("EnsureCompactLayout");
+            SettingsUiLanguage.SetEnglish(english); Invoke("RefreshProfileLanguage");
+            Invoke("SelectOption", Get("schemaMode"), "json_object");
+            Invoke("SelectOption", Get("tokenMode"), "max_completion_tokens");
+            Invoke("SelectOption", Get("thinkingMode"), "reasoning_effort");
+            ((TMP_Dropdown)Get("sendTemperature")).SetValueWithoutNotify(0);
+            var command = (Newtonsoft.Json.Linq.JObject)Invoke("BuildProfileCommand", false);
+            Assert.AreEqual("json_object", (string)command["config"]["schema_profile"]);
+            Assert.AreEqual("max_completion_tokens", (string)command["config"]["token_parameter"]);
+            Assert.AreEqual("reasoning_effort", (string)command["config"]["thinking_parameter"]);
+            Assert.AreEqual(Newtonsoft.Json.Linq.JTokenType.Null, command["config"]["send_temperature"].Type);
+            }
+            finally { SettingsUiLanguage.SetEnglish(previous); }
         }
 
         [TestCase("deepseek")] [TestCase("qwen")] [TestCase("custom")]
@@ -59,7 +127,7 @@ namespace EmbodiedNPC.Tests
             Invoke("OnMainCandidateChosen",0);Assert.AreEqual("one",((TMP_InputField)Get("mainModel")).text);
         }
 
-        [Test] public void P3A_GroupsDoNotHideMainAddressRecentOrEmbeddingBehindGeneration()
+        [Test] public void P3A_GroupsKeepMainConnectionVisibleAndRecentDialogueAdvanced()
         {
             Invoke("EnsureCompactLayout");
             var generation=((GameObject)Get("advancedSettings")).transform;
@@ -86,7 +154,7 @@ namespace EmbodiedNPC.Tests
             view.configured=true;view.active_runtime=activation;view.selected_to_activate=activation;
             Invoke("RefreshBriefAiState");
             string Read()=>((TMP_Text)Get("mainConnectionState")).text;
-            Assert.That(Read(),Does.Contain(SettingsUiLanguage.IsEnglish?"Applied":"已生效"));
+            Assert.That(Read(),Does.Contain(SettingsUiLanguage.IsEnglish?"applied":"运行配置已应用"));
             Assert.That(Read(),Does.Not.Contain("internal-private-id"));
             ((TMP_InputField)Get("mainModel")).text="unsaved";
             Assert.That(Read(),Does.Contain(SettingsUiLanguage.IsEnglish?"Unsaved":"未保存"));
@@ -229,8 +297,8 @@ namespace EmbodiedNPC.Tests
                 Invoke("RefreshContextCapacityState");
                 string capacity = ((TMP_Text)(Get("mainCapacityState") ?? Get("mainConnectionState"))).text;
                 StringAssert.Contains("32K", capacity);
-                StringAssert.Contains("64K", capacity);
-                Assert.That(capacity, Does.Contain(english ? "not a capability guarantee" : "不代表模型支持"));
+                StringAssert.Contains("8192", capacity);
+                Assert.That(capacity, Does.Contain(english ? "does not verify model support" : "不代表已经验证模型支持"));
             }
             finally { SettingsUiLanguage.SetEnglish(previous); }
         }
@@ -271,13 +339,14 @@ namespace EmbodiedNPC.Tests
             Assert.AreEqual((capacity > 0 ? capacity : 8192).ToString(), ((TMP_InputField)Get("contextLength")).text);
             string command = Invoke("BuildProfileCommand", false).ToString();
             Assert.That(command, Does.Contain("\"context_length\": " + (capacity == 0 ? "null" : capacity.ToString())));
+            Invoke("EnsureCompactLayout");
             string frozen = JsonUtility.ToJson(view);
             Invoke("OnContextPresetChosen", 0); Invoke("OnContextLengthChanged", "16384");
             Assert.AreEqual(frozen, JsonUtility.ToJson(view));
-            string status = ((TMP_Text)Get("mainConnectionState")).text;
+            string status = ((TMP_Text)Get("mainCapacityState")).text;
             Assert.That(status, Does.Contain("16384"));
             Assert.That(status, Does.Contain(capacity > 0 ? capacity.ToString() : "8192"));
-            Assert.IsTrue(status.Contains("尚未验证") || status.Contains("unverified"));
+            Assert.That(((TMP_Text)Get("mainConnectionState")).text, Does.Contain(SettingsUiLanguage.T("尚未验证", "unverified")));
             if (capacity == 0) Assert.IsTrue(status.Contains("最低 16K") || status.Contains("recommended 16K"));
         }
 
@@ -367,8 +436,10 @@ namespace EmbodiedNPC.Tests
         private void Set(string name, object value) => typeof(FirstRunModelSetup).GetField(name, flags).SetValue(form, value);
         private object Invoke(string name, params object[] values) => typeof(FirstRunModelSetup).GetMethod(name, flags | BindingFlags.Static).Invoke(form, values);
 
+        private bool previousUiLanguage;
         [SetUp] public void Setup()
         {
+            previousUiLanguage = SettingsUiLanguage.IsEnglish; SettingsUiLanguage.SetEnglish(false);
             root = new GameObject("SyntheticModelProfileForm", typeof(RectTransform)); root.SetActive(false);
             form = root.AddComponent<FirstRunModelSetup>(); Set("developerMode", true); Set("panel", root);
             main = new GameObject("Main", typeof(RectTransform), typeof(VerticalLayoutGroup)).transform; main.SetParent(root.transform);
@@ -405,7 +476,7 @@ namespace EmbodiedNPC.Tests
             if (control is Button button) { var caption = new GameObject("Caption", typeof(RectTransform), typeof(TextMeshProUGUI)); caption.transform.SetParent(go.transform); }
             return control;
         }
-        [TearDown] public void Cleanup() => UnityEngine.Object.DestroyImmediate(root);
+        [TearDown] public void Cleanup() { UnityEngine.Object.DestroyImmediate(root); SettingsUiLanguage.SetEnglish(previousUiLanguage); }
 
         [Test] public void P3D_DiscoveryUpdatesOnDraftChangesAndExplainsMissingFields()
         {
@@ -501,7 +572,7 @@ namespace EmbodiedNPC.Tests
                 foreach (string field in new[] { "embeddingBaseUrl", "embeddingApiKey", "embeddingDimensions", "embeddingVersion", "embeddingTimeout" })
                     Assert.IsFalse(((Component)Get(field)).transform.parent.gameObject.activeSelf, field);
                 Assert.That(((Toggle[])Get("embeddingCategories"))[0].GetComponentInChildren<TMP_Text>(true).text,
-                    Is.EqualTo(english ? "Built-in model (new configuration default) · EmbeddingGemma 300M Q4" : "内置模型（新配置默认） · EmbeddingGemma 300M Q4"));
+                    Is.EqualTo(english ? "Built-in local model (recommended)" : "内置本地模型（推荐）"));
                 Assert.IsNull(embedding.Find("BuiltinEmbeddingInformation"));
                 Assert.IsFalse(((TMP_Text)Get("embeddingConnectionState")).gameObject.activeSelf);
                 Assert.That(((TMP_Text)Get("indexState")).text, Does.Contain(english ? "missing" : "缺失"));
@@ -652,7 +723,7 @@ namespace EmbodiedNPC.Tests
             }
             Set("currentIndex", new EmbeddingIndexView { status = "disabled", applied = false });
             Invoke("RefreshMemoryIndex");
-            Assert.That(((TMP_Text)Get("embeddingBrief")).text, Does.Contain("尚未保存").Or.Contain("not saved"));
+            Assert.That(((TMP_Text)Get("embeddingBrief")).text, Does.Contain(SettingsUiLanguage.T("保存并应用 AI 配置后启用", "enabled after Save & Apply")));
             var command = Newtonsoft.Json.Linq.JObject.Parse(Invoke("BuildCombinedProfileCommand").ToString());
             Assert.IsTrue((bool)command["embedding_enabled"]);
             Assert.AreEqual("builtin_gemma", (string)command["embedding"]["preset_id"]);
@@ -819,7 +890,8 @@ namespace EmbodiedNPC.Tests
                 Assert.AreSame(((GameObject)read("advancedSettings")).transform, context.transform.parent.parent);
                 Assert.IsFalse(((GameObject)read("advancedSettings")).activeSelf);
                 string capacityStatus = ((TMP_Text)read("mainCapacityState")).text;
-                Assert.IsTrue(capacityStatus.Contains("尚未验证") || capacityStatus.Contains("unverified"));
+                Assert.That(capacityStatus, Does.Contain(SettingsUiLanguage.T("不代表已经验证模型支持", "does not verify model support")));
+                Assert.That(((TMP_Text)read("mainConnectionState")).text, Does.Contain(SettingsUiLanguage.T("尚未验证", "unverified")));
                 var modes = (Toggle[])read("embeddingCategories");
                 Assert.AreEqual(4, modes.Length); Assert.IsTrue(modes[0].isOn);
                 Assert.IsFalse(((Toggle)read("embeddingEnabled")).transform.parent.gameObject.activeSelf);
@@ -1161,8 +1233,8 @@ namespace EmbodiedNPC.Tests
                 {
                     Set("currentIndex", new EmbeddingIndexView { status = state, applied = true }); Invoke("RefreshIndexState");
                     var action = (Button)Get("indexAction");
-                    string expected = state == "waiting" ? (english ? "Start indexing" : "开始构建") :
-                        state == "running" ? (english ? "Pause indexing" : "暂停构建") : (english ? "Resume indexing" : "继续构建");
+                    string expected = state == "waiting" ? (english ? "Start indexing" : "开始准备") :
+                        state == "running" ? (english ? "Pause indexing" : "暂停准备") : (english ? "Resume indexing" : "继续准备");
                     Assert.AreEqual(expected, action.transform.parent.Find("Label").GetComponent<TMP_Text>().text);
                     Assert.AreEqual(expected, action.GetComponentInChildren<TMP_Text>(true).text);
                 }
@@ -1343,9 +1415,10 @@ namespace EmbodiedNPC.Tests
             FieldInfo field = typeof(ModelConfigView).GetField("profiles");
             Assert.IsNotNull(field, "Startup projection must carry the already-read v2 profiles.");
             field.SetValue(config, profiles);
+            profiles.main_presets = profiles.main_presets.Concat(new[] { Preset("custom", "openai_compatible", "") }).ToArray();
             form.ApplyStartupResult(config, null);
             Assert.AreSame(profiles, Get("profilesView"));
-            Assert.IsNull(Get("mainEditingId"), "A truly unconfigured startup must leave Main unselected.");
+            Assert.AreEqual("main-custom", Get("mainEditingId"), "An unconfigured startup selects Custom without inventing a model.");
             Assert.IsNotNull(Get("contractTest")); Assert.IsNotNull(Get("indexState"));
         }
         [Test] public void MissingProfiles_BlocksLegacySaveAndTestsWithReloadGuidance()

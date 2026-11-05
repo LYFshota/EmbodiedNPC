@@ -2,9 +2,67 @@
 
 from copy import deepcopy
 import json
+import logging
+import re
 from jsonschema import Draft202012Validator
+from jsonschema.exceptions import best_match
 
 from .providers import ProviderError
+from .structured_output import extract_json_object
+
+
+class ModelSchemaOutputError(ProviderError):
+    """Keep the existing adapter code; expose only bounded, value-free details."""
+
+    def __init__(self, category, *, field_path="$", keyword="envelope"):
+        super().__init__("MODEL_SCHEMA_ENVELOPE_INVALID")
+        self.diagnostic_category = category
+        self.field_path = field_path
+        self.validation_keyword = keyword
+        logging.getLogger("embodiednpc.backend.model_output").warning(
+            "Model output rejected category=%s field=%s validator=%s", category, field_path, keyword)
+
+
+def _schema_error(error, schema, value):
+    # A union's generic error hides useful details such as a missing commitment
+    # flag. Pick only the schema-declared branch for the returned discriminator;
+    # this affects diagnostics, never the full-schema acceptance decision.
+    discriminator = schema.get("discriminator", {})
+    if error.validator in ("oneOf", "anyOf") and isinstance(value, dict):
+        tag = value.get(discriminator.get("propertyName"))
+        reference = discriminator.get("mapping", {}).get(tag) if isinstance(tag, str) else None
+        definitions = schema.get("$defs", {})
+        if isinstance(reference, str) and reference.startswith("#/$defs/"):
+            branch = definitions.get(reference.removeprefix("#/$defs/"))
+            if branch is not None:
+                detail = best_match(Draft202012Validator({**branch, "$defs": definitions}).iter_errors(value))
+                if detail is not None:
+                    error = detail
+    # Dynamic map keys, rejected values and jsonschema's human-readable message
+    # can contain private model output. Only developer-declared field names pass.
+    names = set()
+    def declared(node):
+        if isinstance(node, dict):
+            names.update(k for k in node.get("properties", {})
+                         if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", k))
+            for child in node.values():
+                declared(child)
+        elif isinstance(node, list):
+            for child in node:
+                declared(child)
+    declared(schema)
+    parts = list(error.absolute_path)
+    if error.validator == "required" and isinstance(error.instance, dict):
+        missing = next((k for k in error.validator_value if k not in error.instance and k in names), None)
+        if missing is not None:
+            parts.append(missing)
+    path = "$" + "".join(f"[{part}]" if isinstance(part, int) else "." + (part if part in names else "*")
+                          for part in parts[:8])
+    keyword = error.validator if error.validator in {
+        "required", "type", "enum", "const", "maxLength", "minLength", "additionalProperties",
+        "oneOf", "anyOf", "maxItems", "minItems", "pattern", "minimum", "maximum"} else "schema"
+    category = "RESPONSE_TOO_LONG" if keyword == "maxLength" else "RESPONSE_FIELDS_INVALID"
+    return ModelSchemaOutputError(category, field_path=path, keyword=keyword)
 
 
 def _map_values(schema, profile):
@@ -23,7 +81,7 @@ def _map_values(schema, profile):
 
 
 def project_schema(original, profile):
-    if original is None or profile == "raw":
+    if original is None or profile in ("raw", "json_object"):
         return original, False
     definitions = original.get("$defs", {})
     dropped = {"minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum",
@@ -104,13 +162,19 @@ def project_schema(original, profile):
     return projected, wrapped
 
 
-def unwrap_text(text, wrapped, original=None, profile="raw"):
+def unwrap_text(text, wrapped, original=None, profile="raw", *, allow_json_envelope=False):
     if original is None and not wrapped:
         return text
-    if not wrapped and profile not in ("anthropic", "openai_strict", "portable_union"):
+    if not wrapped and profile not in ("anthropic", "openai_strict", "portable_union", "json_object"):
         return text
     try:
-        value = json.loads(text)
+        try:
+            # Consumer-specific limits (cognition 4K, memory 32K) still apply
+            # downstream, as before. This transport layer never owned that cap.
+            value = (extract_json_object(text, max_chars=None, require_single_result=True)
+                     if allow_json_envelope else json.loads(text))
+        except ValueError:
+            raise ModelSchemaOutputError("RESPONSE_JSON_INVALID", keyword="json") from None
         if wrapped:
             if not isinstance(value, dict) or set(value) != {"result"}:
                 raise ValueError
@@ -148,12 +212,16 @@ def unwrap_text(text, wrapped, original=None, profile="raw"):
                 return [restore(v, schema["items"]) for v in data]
             return data
         if original is not None:
-            value = restore(value, original)
-            if not Draft202012Validator(original).is_valid(value):
-                raise ValueError
+            # JSON Object carries the original shape. Do not decode transport
+            # key/value arrays that were never projected (e.g. pattern maps).
+            if profile != "json_object":
+                value = restore(value, original)
+            error = best_match(Draft202012Validator(original).iter_errors(value))
+            if error is not None:
+                raise _schema_error(error, original, value)
         return json.dumps(value, ensure_ascii=False)
     except (ValueError, TypeError, KeyError):
-        raise ProviderError("MODEL_SCHEMA_ENVELOPE_INVALID") from None
+        raise ModelSchemaOutputError("RESPONSE_SCHEMA_INVALID") from None
 
 
 def rejection_reason(response):

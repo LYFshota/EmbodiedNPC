@@ -13,6 +13,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from .model_list_transport import get_model_list, transport_error_suffix
 from .canonical_embeddings import OllamaEmbeddingProvider, OpenAICompatibleEmbeddingProvider
 from .deepseek_provider import DeepSeekOfficialResponsesProvider
 from .model_api_config import (
@@ -117,9 +118,10 @@ async def _discover(input: DiscoverModelsRequest, transport: httpx.AsyncBaseTran
         headers = {"Authorization": "Bearer " + input.api_key} if input.api_key else {}
         async with httpx.AsyncClient(timeout=input.timeout_seconds, trust_env=False,
                                      transport=transport) as client:
-            response = await client.get(url, headers=headers)
+            response = await get_model_list(client, url, headers=headers, timeout_seconds=input.timeout_seconds)
         if response.status_code >= 400:
-            return {"success": False, "models": [], "error_code": "MODEL_DISCOVERY_HTTP_FAILED"}
+            code = {401: "AUTH_FAILED", 403: "AUTH_FAILED", 404: "ENDPOINT_NOT_FOUND", 429: "RATE_LIMITED"}.get(response.status_code, "HTTP_FAILED")
+            return {"success": False, "models": [], "error_code": "MODEL_DISCOVERY_" + code}
         body = response.json()
         records = body["models"] if input.provider_type == "ollama" else body["data"]
         if not isinstance(records, list):
@@ -136,35 +138,43 @@ async def _discover(input: DiscoverModelsRequest, transport: httpx.AsyncBaseTran
                 {"success": False, "models": [], "error_code": "MODEL_DISCOVERY_EMPTY"})
     except httpx.TimeoutException:
         code = "MODEL_DISCOVERY_TIMEOUT"
-    except httpx.HTTPError:
-        code = "MODEL_DISCOVERY_UNAVAILABLE"
+    except httpx.HTTPError as error:
+        code = "MODEL_DISCOVERY_" + transport_error_suffix(error)
     except (KeyError, TypeError, ValueError):
         code = "MODEL_DISCOVERY_PROTOCOL_ERROR"
     return {"success": False, "models": [], "error_code": code}
 
 
-async def _test_main(main: MainModelConfig, transport: httpx.AsyncBaseTransport | None) -> dict[str, object]:
+async def _test_main(main: MainModelConfig, transport: httpx.AsyncBaseTransport | None, *, probe_budget=None) -> dict[str, object]:
     if main.provider_type == "mock":
         return {"success": True, "error_code": None}
     try:
-        provider = build_main_provider(main, transport)
+        provider = build_main_provider(main, transport, probe_budget=probe_budget)
     except ValueError:
         return {"success": False, "error_code": "MODEL_TEST_CONFIG_INVALID"}
+    def result_view(success, code=None):
+        result = {"success": success, "error_code": code}
+        if probe_budget is not None:
+            from .model_compatibility import report
+            result["compatibility"] = report(main, provider._policy(), probe_budget.calls)
+        return result
     request = ModelRequest(
         messages=(ModelMessage(role="user", content='Reply with JSON: {"ok":true}'),),
         response_schema=_TEST_SCHEMA,
-        inference_options=InferenceOptions(temperature=0, think=False, max_output_tokens=32),
+        inference_options=InferenceOptions(temperature=0, think=False, max_output_tokens=32, output_token_reserve=32),
     )
     try:
         result = await provider.generate(request)
         payload = json.loads(result.text)
-        if not isinstance(payload, dict) or payload.get("ok") is not True:
+        if not isinstance(payload, dict) or set(payload) != {"ok"} or payload.get("ok") is not True:
             raise ValueError
-        return {"success": True, "error_code": None}
+        return result_view(True)
     except ProviderError as exc:
-        return {"success": False, "error_code": _safe_code(str(exc), "MODEL_TEST_FAILED")}
+        from .model_schema_projection import ModelSchemaOutputError
+        code = exc.diagnostic_category if isinstance(exc, ModelSchemaOutputError) else str(exc)
+        return result_view(False, _safe_code(code, "MODEL_TEST_FAILED"))
     except (ValueError, TypeError, json.JSONDecodeError):
-        return {"success": False, "error_code": "MODEL_TEST_RESPONSE_INVALID"}
+        return result_view(False, "MODEL_TEST_RESPONSE_INVALID")
 
 
 async def _test_embedding(config: ModelApiConfig, transport: httpx.BaseTransport | None) -> dict[str, object]:

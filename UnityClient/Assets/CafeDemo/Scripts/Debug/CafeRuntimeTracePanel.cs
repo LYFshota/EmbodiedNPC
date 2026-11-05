@@ -52,7 +52,7 @@ namespace CafeDemo
                 if (summary.Length > 220) summary = summary.Substring(0, 219) + "…";
                 bool error = IsErrorEntry(kind, data);
                 if (entries.Count == Capacity) entries.RemoveAt(0);
-                entries.Add(new Entry(line, category, summary, error));
+                entries.Add(new Entry(line, category, kind, time, summary, error));
                 return true;
             }
             catch (Exception)
@@ -76,7 +76,7 @@ namespace CafeDemo
                 if (filter == "Errors" ? !entry.Error :
                     !string.IsNullOrEmpty(filter) && filter != "All" && entry.Category != filter) continue;
                 if (text.Length > 0) text.AppendLine();
-                text.Append(entry.Summary);
+                text.Append(entry.Time).Append("  ").Append(EventCaption(entry.Kind)).Append(" · ").Append(entry.Summary.Substring(entry.Time.Length).TrimStart());
             }
             return text.ToString();
         }
@@ -128,10 +128,27 @@ namespace CafeDemo
                 status.Contains("unavailable") || status.Contains("disconnect");
         }
 
+        private static string EventCaption(string kind) => kind switch {
+            "cognitive_run_started" => SettingsUiLanguage.T("开始思考", "Thinking started"),
+            "agent_event_emitted" => SettingsUiLanguage.T("事件触发", "Event triggered"),
+            "observation_applied" => SettingsUiLanguage.T("观察已更新", "Observation updated"),
+            "cognitive_request_created" => SettingsUiLanguage.T("发送 AI 请求", "AI request sent"),
+            "cognitive_response" => SettingsUiLanguage.T("收到 AI 结果", "AI result received"),
+            "utterance_presented" => SettingsUiLanguage.T("回复已展示", "Reply displayed"),
+            "goal_plan_presentation" => SettingsUiLanguage.T("展示动作计划", "Action plan displayed"),
+            "goal_outcome" or "skill_result" => SettingsUiLanguage.T("动作执行结果", "Action result"),
+            "connection_status" => SettingsUiLanguage.T("连接状态", "Connection status"),
+            "experience_append_result" => SettingsUiLanguage.T("记录保存结果", "Record storage result"),
+            "cognitive_transport_failure" => SettingsUiLanguage.T("AI 请求未完成", "AI request failed"),
+            _ => kind
+        };
+
         private readonly struct Entry
         {
-            public Entry(string rawLine, string category, string summary, bool error)
-            { RawLine = rawLine; Category = category; Summary = summary; Error = error; }
+            public Entry(string rawLine, string category, string kind, string time, string summary, bool error)
+            { RawLine = rawLine; Category = category; Kind = kind; Time = time; Summary = summary; Error = error; }
+            public string Time { get; }
+            public string Kind { get; }
             public string RawLine { get; }
             public string Category { get; }
             public string Summary { get; }
@@ -158,6 +175,11 @@ namespace CafeDemo
         private readonly RuntimeTraceLiveBuffer buffer = new();
         private RuntimeTraceSelectionField selectionField;
         private bool refreshAfterSelection;
+        // Display labels are independent of the recorder's stable filter keys.
+        public static string CategoryKey(int index) => index >= 0 && index < CategoryKeys.Length ? CategoryKeys[index] : "All";
+        private static readonly string[] CategoryKeys = { "All", "session", "agent_event", "perception", "cognition", "action", "transport", "experience", "Errors" };
+        private static readonly string[] CategoryChinese = { "全部", "本次运行", "事件触发", "感知变化", "思考与回复", "动作执行", "连接通信", "记录保存", "仅错误" };
+        private static readonly string[] CategoryEnglish = { "All", "Session", "Events", "Perception", "Thinking & replies", "Actions", "Connections", "Stored records", "Errors" };
         public RuntimeTraceLiveBuffer Buffer => buffer;
 
         private void EnsureSelectableText()
@@ -175,6 +197,8 @@ namespace CafeDemo
             selectionField.customCaretColor = true;
             selectionField.selectionColor = new Color(0.35f, 0.55f, 0.85f, 0.4f);
             entriesText.richText = false;
+            entriesText.textWrappingMode = TextWrappingModes.Normal;
+            entriesText.overflowMode = TextOverflowModes.Overflow;
             entriesText.raycastTarget = true;
             selectionField.SetTextWithoutNotify(entriesText.text);
         }
@@ -233,13 +257,11 @@ namespace CafeDemo
             try
             {
                 EnsureSelectableText();
-                string filter = categoryDropdown != null && categoryDropdown.value < categoryDropdown.options.Count
-                    ? categoryDropdown.value == 0 ? "All" : categoryDropdown.value == categoryDropdown.options.Count - 1 ? "Errors" :
-                        categoryDropdown.options[categoryDropdown.value].text : "All";
-                if (categoryDropdown != null && categoryDropdown.options.Count >= 2)
+                string filter = CategoryKey(categoryDropdown?.value ?? 0);
+                if (categoryDropdown != null)
                 {
-                    categoryDropdown.options[0].text = SettingsUiLanguage.T("全部", "All");
-                    categoryDropdown.options[^1].text = SettingsUiLanguage.T("仅错误", "Errors");
+                    for (int i = 0; i < categoryDropdown.options.Count && i < CategoryKeys.Length; i++)
+                        categoryDropdown.options[i].text = SettingsUiLanguage.T(CategoryChinese[i], CategoryEnglish[i]);
                     categoryDropdown.RefreshShownValue();
                 }
                 bool selecting = selectionField != null && selectionField.isFocused;
@@ -251,6 +273,7 @@ namespace CafeDemo
                         SettingsUiLanguage.T("运行追踪不可用", "Runtime Trace unavailable") :
                     SettingsUiLanguage.T($"最近 {buffer.Count}/{RuntimeTraceLiveBuffer.Capacity} 条 · {(buffer.Paused ? "视图已暂停" : "实时")}",
                         $"Latest {buffer.Count}/{RuntimeTraceLiveBuffer.Capacity} entries · {(buffer.Paused ? "Paused" : "Live")}");
+                if (statusText != null) statusText.text += recorder?.IsRecording == true ? SettingsUiLanguage.T("\n暂停只停止列表更新，日志继续保存；恢复不补回。清空只清理列表，不删除日志。", "\nPause stops list updates only; logs continue, without backfill on resume. Clear removes list entries only, not log files.") : SettingsUiLanguage.T("\n暂停和清空仅作用于列表，不删除已有日志。当前记录状态见上方。", "\nPause and clear affect this list only, not existing log files. Recording status is shown above.");
                 if (folderButton != null) folderButton.interactable = recorder != null &&
                     !string.IsNullOrEmpty(recorder.CurrentTracePath);
                 if (!selecting && autoScrollToggle != null && autoScrollToggle.isOn && scrollRect != null)

@@ -20,6 +20,34 @@ namespace EmbodiedNPC.Settings
             ? PortablePreferences.Current.Language == 1 : PlayerPrefs.GetInt(PreferenceKey, 0) == 1;
         public static string T(string chinese, string english) => IsEnglish ? english : chinese;
 
+        // Presentation aliases retain original identifiers for diagnostics.
+        public static string DebugValue(string value)
+        {
+            string label = value switch {
+                "Npc" => T("NPC 角色", "NPC"), "Player" => T("玩家", "Player"),
+                "Work" or "work" => T("工作", "Work"), "Rest" or "rest" => T("休息", "Rest"), "Leisure" or "leisure" => T("休闲", "Leisure"),
+                "Idle" or "idle" or "NaturalIdle" => T("待机", "Idle"), "HomeIdle" => T("原地待机", "Home idle"),
+                "WindowIdle" => T("窗边待机", "Window idle"), "SeatedIdle" => T("坐着休息", "Seated idle"), "ObserveEnvironment" => T("观察周围", "Observe surroundings"),
+                "CounterMove" => T("走到柜台", "Move to counter"), "CounterWipe" => T("擦拭柜台", "Wipe counter"), "SeatedDrink" => T("坐着喝饮料", "Seated drink"),
+                "Running" => T("处理中", "Processing"), "WaitingActionResult" => T("等待动作结果", "Waiting for action result"),
+                "Completed" => T("已完成", "Completed"), "Cancelled" => T("已取消", "Cancelled"), "Failed" => T("未完成", "Failed"),
+                "initialized" => T("初始化已完成", "Initialized"),
+                "deferred_busy_or_cooldown" => T("忙碌或等待切换间隔", "Busy or awaiting switch interval"),
+                "system_event_applied" or "cognition_mode_applied" => T("模式切换已完成", "Mode switch completed"),
+                "expired_condition" => T("切换条件已失效", "Switch condition expired"),
+                "transition_not_allowed" => T("当前不允许切换", "Switch not currently allowed"),
+                "already_current" => T("已经是所选模式", "Mode already selected"),
+                "formal_task" => T("正在执行正式任务", "Executing a formal task"),
+                "interaction_or_cognition_busy" => T("正在互动或思考", "Interacting or thinking"),
+                "safe_existing_idle" => T("保持当前待机", "Keeping current idle"),
+                "navigation_unavailable_fallback" => T("无法导航，暂时待机", "Navigation unavailable; idling"),
+                "profile_preference_conditions_met" => T("按当前偏好活动", "Acting on current preferences"),
+                _ => null
+            };
+            return label == null ? string.IsNullOrEmpty(value) ? T("暂无状态", "No status yet") : value == "N/A" ? T("未提供", "Not provided") : value
+                : label + " (" + value + ")";
+        }
+
         // Cafe UI aliases only. Never feed these labels back into profiles or identity data.
         public static string NpcDisplayName(string entityId, string original)
         {

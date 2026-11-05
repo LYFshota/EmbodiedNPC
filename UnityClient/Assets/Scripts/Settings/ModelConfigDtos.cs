@@ -21,7 +21,7 @@ namespace EmbodiedNPC.Settings
         public string schema_profile = "raw";
         public string token_parameter = "max_tokens";
         public string thinking_parameter = "none";
-        public bool send_temperature = true;
+        public bool? send_temperature = true;
         public float top_p = -1;
         public string reasoning_effort;
         public int thinking_budget;
@@ -62,6 +62,9 @@ namespace EmbodiedNPC.Settings
         public MainModelConfig main_model;
         public EmbeddingConfig embedding;
         public ModelProfilesView profiles;
+        // Client observations only; never part of the persisted configuration document.
+        public RuntimeStatusView runtime_status;
+        public string runtime_error_code;
     }
 
     [Serializable]
@@ -126,6 +129,7 @@ namespace EmbodiedNPC.Settings
         public string provider;
         public string model;
         public bool available;
+        public string detail;
     }
 
     [Serializable]

@@ -27,12 +27,15 @@ namespace EmbodiedNPC.Animation
         private Quaternion headBase, neckBase, headApplied, neckApplied;
         private bool applied;
         private Vector2 angles;
+        private Vector3? gazePoint;
         public float CurrentWeight { get; private set; }
         public Vector2 CurrentAngles => angles;
         public bool IsRigReady => head != null;
         public Transform Head => head;
         public Transform Neck => neck;
         public void SetGesturePlayback(GestureController playback) => gesturePlayback = playback;
+        // An actor-owned presentation source can reuse this writer without NPC attention selection.
+        public void SetGazePoint(Vector3? point) => gazePoint = point;
 
         private void Awake()
         { expressive = actorRoot == null ? null : actorRoot.GetComponent<ExpressiveController>();
@@ -41,7 +44,7 @@ namespace EmbodiedNPC.Animation
 
         public void Configure(AttentionController selection, Animator character, Transform body, Transform actor)
         {
-            ResetPresentation(); attention = selection; animator = character; visualBody = body; actorRoot = actor;
+            ResetPresentation(); gazePoint = null; attention = selection; animator = character; visualBody = body; actorRoot = actor;
             expressive = actorRoot == null ? null : actorRoot.GetComponent<ExpressiveController>();
             dialogueAnimation = actorRoot == null ? null : actorRoot.GetComponentInChildren<DialogueAnimationPresenter>();
             ResolveRig();
@@ -85,8 +88,9 @@ namespace EmbodiedNPC.Animation
                 !channels.IsEmergencyMotionActive && !channels.IsCarryPresentationActive && !channels.IsAmbientUsingArms && channels.ActiveGesture != "wave";
             float accentPitch = accentAllowed ? dialogueAnimation.HeadPitchAccent : 0;
             float accentTilt = accentAllowed ? dialogueAnimation.HeadTiltAccent : 0;
-            bool tracking = !nod && attention != null && attention.isActiveAndEnabled && attention.HasGazePoint && !attention.IsSuppressed;
-            Vector3 desired = tracking ? SolveAngles(actorRoot, visualBody, head.position, attention.CurrentGazePoint,
+            bool tracking = !nod && (gazePoint.HasValue ||
+                (attention != null && attention.isActiveAndEnabled && attention.HasGazePoint && !attention.IsSuppressed));
+            Vector3 desired = tracking ? SolveAngles(actorRoot, visualBody, head.position, gazePoint ?? attention.CurrentGazePoint,
                 fullYaw, maxYaw, combinedYawCap, downPitch, upPitch) : Vector3.zero;
             float duration = nod ? .15f : desired.z > CurrentWeight ? blendIn : blendOut;
             CurrentWeight = Mathf.MoveTowards(CurrentWeight, desired.z, deltaTime / Mathf.Max(.01f, duration));

@@ -312,7 +312,12 @@ def start(root, backend, player, port, startup_timeout, stop_timeout):
                     try:
                         current = backend_record(root, backend, process)
                         state["backend_instance"] = current["instance_id"]
-                        if current.get("state") == "listening": break
+                        if current.get("state") == "listening":
+                            actual_port = current.get("port")
+                            if type(actual_port) is not int or not 1 <= actual_port <= 65535 or (port and actual_port != port):
+                                raise LaunchError("UNIFIED_BACKEND_PORT_INVALID")
+                            state["port"] = actual_port
+                            break
                     except FileNotFoundError: pass
                     except OSError as error:
                         if os.name != "nt" or getattr(error, "winerror", None) not in (5, 32, 33): raise
@@ -328,14 +333,14 @@ def start(root, backend, player, port, startup_timeout, stop_timeout):
                     time.sleep(.1)
                 state["state"] = "launching_player"
                 publish(path, state)
-                print(f"Backend 已监听 127.0.0.1:{port}（{time.monotonic()-began:.1f}s 采样）；正在打开主菜单，AI 就绪由游戏检查。", flush=True)
-                player_values = values.copy()
+                print(f"Backend 已监听 127.0.0.1:{actual_port}（{time.monotonic()-began:.1f}s 采样）；正在打开主菜单，AI 就绪由游戏检查。", flush=True)
+                player_values = environment(root, actual_port)
                 supervisor = identity(os.getpid())
                 player_values.update(EMBODIEDNPC_UNIFIED_RESTART="1" if restarts < MAX_AI_CONFIG_RESTARTS else "0",
                     EMBODIEDNPC_UNIFIED_PID=str(supervisor["pid"]),
                     EMBODIEDNPC_UNIFIED_CREATED=str(supervisor["created"]))
                 try:
-                    game = subprocess.Popen([str(player), "--backend-url", f"ws://127.0.0.1:{port}/ws", "-logFile", str(root / ("logs/Player.log" if restarts == 0 else "logs/Player-restarted.log"))],
+                    game = subprocess.Popen([str(player), "--backend-url", f"ws://127.0.0.1:{actual_port}/ws", "-logFile", str(root / ("logs/Player.log" if restarts == 0 else "logs/Player-restarted.log"))],
                         cwd=player.parent, env=player_values, stdin=subprocess.DEVNULL)
                 except OSError:
                     raise LaunchError("UNIFIED_PLAYER_START_FAILED") from None
@@ -409,7 +414,7 @@ def start(root, backend, player, port, startup_timeout, stop_timeout):
 def main():
     parser = argparse.ArgumentParser(description="Portable Backend/Player orchestration only")
     parser.add_argument("action", choices=("start", "stop"))
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=0, help="0: OS-assigned port; explicit ports remain available for debugging")
     parser.add_argument("--startup-timeout", type=float, default=60)
     parser.add_argument("--stop-timeout", type=float, default=20)
     args = parser.parse_args()
@@ -422,7 +427,8 @@ def main():
         "UNIFIED_STILL_SUPERVISING": "本入口仍持有进程句柄和锁；请正常关闭游戏并等待入口停止 Backend。",
         "UNIFIED_PLAYER_IDENTITY_UNCONFIRMED": "旧启动记录不足以证明 Player 已退出；未启动新游戏或停止 Backend，请保留现场检查。",
         "PORTABLE_ALREADY_RUNNING": "此 UserData 已有 Backend；不会接管或再打开游戏。",
-        "PORTABLE_PORT_UNAVAILABLE": "端口已被占用；没有连接或停止其他服务。",
+        "PORTABLE_PORT_UNAVAILABLE": "指定端口不可用；请移除 --port 参数，让系统自动选择空闲端口。没有连接或停止其他服务。",
+        "UNIFIED_BACKEND_PORT_INVALID": "无法确认本包服务端口，未连接其他服务；请检查启动日志。",
         "UNIFIED_BACKEND_START_FAILED": "Backend 启动失败，请查看 UserData/logs。",
         "UNIFIED_BACKEND_START_TIMEOUT": "Backend 启动超时，游戏尚未打开；请检查日志与受控 Stop.cmd 提示。",
         "UNIFIED_PLAYER_START_FAILED": "游戏启动失败；将尝试正常停止本次 Backend。",
@@ -433,7 +439,7 @@ def main():
         "PORTABLE_INSTANCE_NOT_READY": "本次 Backend 仍在初始化，暂不能确认停止会话；请稍后使用 Stop.cmd。",
     }
     try:
-        if not 1 <= args.port <= 65535 or not 0 < args.startup_timeout <= 300 or not 0 < args.stop_timeout <= 120:
+        if not 0 <= args.port <= 65535 or not 0 < args.startup_timeout <= 300 or not 0 < args.stop_timeout <= 120:
             raise LaunchError("UNIFIED_ARGUMENT_INVALID")
         # Stop does not require Player/model resources still to be installed.
         if args.action == "stop":

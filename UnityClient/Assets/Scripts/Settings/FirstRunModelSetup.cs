@@ -193,7 +193,14 @@ namespace EmbodiedNPC.Settings
             ApplyInitialConfig(value);
             if (value.saved_configured && !value.configured)
             {
-                SetStatus("配置已保存，但运行模型未就绪；请应用、重启并检查连接。", "Configuration is saved, but runtime is not ready. Apply, restart and check the connection.");
+                if (value.profiles?.restart_required == true || value.profiles?.active_runtime == null)
+                    SetStatus("配置已保存，重启后生效。", "Settings are saved and will apply after restart.");
+                else
+                {
+                    var reason = P0FeedbackText.ModelError(value.runtime_error_code);
+                    SetStatus("运行配置已应用，连接检查未通过。" + reason.Chinese,
+                        "Runtime settings are applied, but the connection check failed. " + reason.English);
+                }
                 return;
             }
             SetStatus(value.configured ? "配置已重新加载。" : "当前没有已保存的模型配置。");
@@ -684,9 +691,11 @@ namespace EmbodiedNPC.Settings
             {
                 var message = P0FeedbackText.BackendError(error, httpCode);
                 SetStatus(message.Chinese, message.English);
+                checkedRuntimeStatus = null; runtimeReadError = error ?? "INVALID_RUNTIME_RESPONSE"; RefreshBriefAiState();
                 RuntimeStatusChecked?.Invoke(null,error??"INVALID_RUNTIME_RESPONSE");
                 yield break;
             }
+            checkedRuntimeStatus = status; runtimeReadError = null;
             ApplyRuntimeStatus(status, closeWhenReady);
             RuntimeStatusChecked?.Invoke(status,null);
             if (profilesView != null)
@@ -696,6 +705,7 @@ namespace EmbodiedNPC.Settings
         public void ApplyRuntimeStatus(RuntimeStatusView status, bool closeWhenReady)
         {
             if (status == null) return;
+            checkedRuntimeStatus = status; runtimeReadError = null; RefreshBriefAiState();
             if (status.restart_required)
             {
                 SetStatus("已选定的配置待重启生效。", "Selected settings require a Backend restart.");
@@ -709,16 +719,22 @@ namespace EmbodiedNPC.Settings
                     SetStatus("配置已生效。");
                     ConfigurationActivated?.Invoke();
                 }
-                else SetStatus("配置尚未可用，请检查模型连接并重新检查。");
+                else ShowRuntimeConnectionFailure(status);
                 return;
             }
             if (status.active_provider == null || !status.active_provider.available)
             {
-                SetStatus("配置尚未可用，请检查模型连接并重新检查。");
+                ShowRuntimeConnectionFailure(status);
                 return;
             }
             SetStatus("配置已保存并已生效。");
             if (closeWhenReady && savedThisSession) Complete();
+        }
+
+        private void ShowRuntimeConnectionFailure(RuntimeStatusView status)
+        {
+            var reason = P0FeedbackText.ModelError(status?.active_provider?.detail);
+            SetStatus(reason.Chinese, reason.English);
         }
 
         private bool RequireDeveloperProfiles()
@@ -856,12 +872,16 @@ namespace EmbodiedNPC.Settings
             if (error != null || result == null || !result.success || result.models == null ||
                 result.models.Length == 0)
             {
-                SetStatus("无法获取模型列表，请手动输入模型名称。");
+                var message = P0FeedbackText.ModelError(error ?? result?.error_code ?? "MODEL_DISCOVERY_EMPTY");
+                if (mainChoices != null) ShowOperation("获取模型失败：" + message.Chinese, "Fetch models failed: " + message.English, forEmbedding, "discover");
+                else SetStatus("获取模型失败：" + message.Chinese, "Fetch models failed: " + message.English);
                 return;
             }
             ApplyDiscoveredModels(forEmbedding ? embeddingCandidates : mainCandidates, result.models);
             RefreshCandidateControls();
-            SetStatus("模型列表已更新；可选择或输入模型。", "Model list updated. Choose or enter a model.");
+            string zh = $"已获取 {result.models.Length} 个模型，列表已更新。";
+            string en = $"Fetched {result.models.Length} models; the list is updated.";
+            if (mainChoices != null) ShowOperation(zh, en, forEmbedding, "discover"); else SetStatus(zh, en);
         }
 
         public static void ApplyDiscoveredModels(TMP_Dropdown dropdown, string[] models)

@@ -24,18 +24,23 @@ At its core is a working loop: **perception → cognition → memory / action �
 - **Everyday animation:** Vivi moves, pauses and wipes behind the counter. Wen and Jiang occasionally pick up their cups. The player has a subtle idle smile and expressions tied to actions.
 - **Concurrency and model choices:** Bounded concurrent foreground and background work across NPCs, with separate configuration for the Main LLM, embeddings and runtime settings.
 
-### Latest release: v0.1.5-preview
+### Latest release: v0.1.6-preview
 
-This update adds **everyday NPC activities, snack service, player expression blending, and Left Alt cursor control**, alongside memory, relationship and interaction refinements.
+This release focuses on **first-time AI setup, API compatibility and failure feedback, portable startup, and natural player head gaze during conversation**.
 
-Snack choices include croissants, macarons, cupcakes and pudding. Vivi approaches the appropriate display point for a short pickup animation and presents the service result. See [Releases](https://github.com/LYFshota/EmbodiedNPC/releases) for version details and validation records.
+- A clear Chinese launch entry, automatically allocated ports, configuration restart guidance and a flat ZIP layout.
+- Clearer settings and reorganized advanced options, preserving existing controls and adding right-click text editing.
+- Evidence-based JSON format and parameter adaptation for custom OpenAI-compatible APIs, with strict validation and distinct connection, format, reasoning-control and budget errors.
+- Smooth player gaze toward the speaking NPC, blending back after dialogue; single JSON replies can also be read from code blocks or after introductory text.
+
+The official DeepSeek API has targeted live-test evidence. Other official endpoints are mainly validated through documented protocols and Mock tests. Some gateway models passed targeted tests; compatibility still depends on the model and route. A short connection test does not certify full NPC dialogue compatibility.
 
 ## 🎮 Download and play
 
-**[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [v0.1.5-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
+**[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.6-preview/EmbodiedNPC-v0.1.6-preview-Windows-x64.zip)** · [v0.1.6-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.6-preview)
 
-1. Extract the ZIP and run `Start.cmd`. Unity Editor and a separate Python installation are not required.
-2. Configure your own Main LLM in Settings, using a compatible cloud API or local model service.
+1. Extract the ZIP and double-click `启动游戏.cmd` (`Start.cmd` remains available). Unity Editor and a separate Python installation are not required.
+2. Enter your API URL, key and model ID in Settings → AI configuration. The default is a custom OpenAI-compatible API; existing provider presets remain available.
 3. Enter the café to talk with NPCs, request services, or observe their everyday activities.
 
 The preview includes **EmbeddingGemma-300M Q4 ONNX** for local memory embeddings. Bring your own chat model and API key if your provider requires one.

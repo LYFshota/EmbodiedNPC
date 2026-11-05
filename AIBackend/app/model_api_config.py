@@ -51,10 +51,10 @@ class MainModelConfig(BaseModel):
         background = self.model_background_concurrency or min(total, 1 if local else 2)
         return total, foreground, background
 
-    schema_profile: Literal["raw", "portable_union", "openai_strict", "anthropic"] = "raw"
-    token_parameter: Literal["max_tokens", "max_completion_tokens"] = "max_tokens"
-    thinking_parameter: Literal["none", "enable_thinking", "thinking", "reasoning_effort"] = "none"
-    send_temperature: bool = True
+    schema_profile: Literal["auto", "json_object", "raw", "portable_union", "openai_strict", "anthropic"] = "raw"
+    token_parameter: Literal["auto", "max_tokens", "max_completion_tokens"] = "max_tokens"
+    thinking_parameter: Literal["auto", "none", "enable_thinking", "thinking", "reasoning_effort"] = "none"
+    send_temperature: bool | None = True
     top_p: float | None = Field(default=None, ge=0, le=1)
     reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None = None
     thinking_budget: int | None = Field(default=None, ge=1024, le=32768)

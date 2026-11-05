@@ -69,6 +69,11 @@ namespace CafeDemo.Tests
                 var store = new CharacterOverrideStore(Path.Combine(directory, CharacterOverrideStore.FileName));
                 Set(page, "store", store);
                 Call(page, "OnEnable");
+                page.SelectCandidate(0);
+                background.text = "未保存的人物背景";
+                page.SelectCandidate(0);
+                Assert.AreEqual("未保存的人物背景", background.text, "Re-selecting an NPC must retain its draft.");
+
                 Call(page, "LoadSelected");
                 Assert.That(background.characterLimit, Is.Zero);
 

@@ -26,6 +26,7 @@ namespace EmbodiedNPC.Settings
             "EMBEDDING_PAUSED EMBEDDING_CLOUD_CONFIRMATION_REQUIRED EMBEDDING_PREVIOUS_REQUEST_FAILED " +
             "EMBEDDING_CONTROL_STATE_INVALID EMBEDDING_CONTROL_WRITE_FAILED BUILTIN_EMBEDDING_FILE_MISSING " +
             "BUILTIN_EMBEDDING_LOAD_FAILED BUILTIN_EMBEDDING_RESOURCE_INVALID MODEL_NOT_CONFIGURED " +
+            "DEEPSEEK_TLS_FAILED DEEPSEEK_TLS_CERTIFICATE_FAILED DEEPSEEK_CONNECTION_FAILED DEEPSEEK_TIMEOUT OPENAI_COMPATIBLE_TLS_FAILED OPENAI_COMPATIBLE_TLS_CERTIFICATE_FAILED OPENAI_COMPATIBLE_CONNECTION_FAILED OPENAI_COMPATIBLE_TIMEOUT MODEL_DISCOVERY_TLS_FAILED MODEL_DISCOVERY_TLS_CERTIFICATE_FAILED MODEL_DISCOVERY_CONNECTION_FAILED MODEL_DISCOVERY_TIMEOUT OPENAI_COMPATIBLE_BAD_REQUEST OPENAI_COMPATIBLE_ENDPOINT_NOT_FOUND OPENAI_COMPATIBLE_RATE_LIMITED MODEL_LIST_RECOVERED MODEL_LIST_TLS_FAILED MODEL_LIST_TLS_CERTIFICATE_FAILED MODEL_LIST_CONNECTION_FAILED MODEL_LIST_TIMEOUT MODEL_LIST_UNAVAILABLE " +
             "PROVIDER_UNAVAILABLE PROVIDER_REQUEST_FAILED MODEL_CONFIG_CONFLICT REVISION_CONFLICT " +
             "KNOWLEDGE_ADMIN_FILE_MISSING KNOWLEDGE_ADMIN_SESSION_INVALID KNOWLEDGE_ACCESS_DENIED " +
             "UNIFIED_START_FAILED UNIFIED_DIAGNOSTIC UNIFIED_ALREADY_RUNNING UNIFIED_RECORD_DEFERRED " +
@@ -56,6 +57,7 @@ namespace EmbodiedNPC.Settings
             modelStatus = view == null ? null : new JObject {
                 ["revision"]=view.revision, ["saved_configured"]=view.saved_configured,
                 ["observed_at_utc"]=DateTime.UtcNow.ToString("o",CultureInfo.InvariantCulture),
+                ["runtime_error_code"]=view.runtime_error_code != null && Codes.Contains(view.runtime_error_code) ? view.runtime_error_code : null,
                 ["startup_ready"]=view.configured, ["restart_required"]=view.profiles?.restart_required,
                 ["saved_provider"]=Name(view.main_model?.provider_type), ["saved_model"]=Name(view.main_model?.model),
                 ["active_provider"]=Name(view.profiles?.active_runtime?.main_model?.provider_type),

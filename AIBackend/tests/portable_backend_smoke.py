@@ -26,6 +26,7 @@ from app.model_profile_config import ModelConfigV2Document, MainProfile, Embeddi
 
 SOURCE = Path(__file__).parents[1]
 PROCESSES = []
+PORT_ROOTS = {}
 
 
 def port():
@@ -38,6 +39,7 @@ def port():
 
 def call(p, path, method="GET", body=None, root=None, token=None):
     assert p not in (8000, 18000)
+    root = root or PORT_ROOTS.get(p)
     headers = {}
     if root is not None:
         if token is None:
@@ -74,6 +76,7 @@ def invoke(python, backend, root, action, p):
 
 
 def start(python, backend, root, p, evidence):
+    PORT_ROOTS[p] = root
     output = (evidence / f"process-{p}-{time.time_ns()}.log").open("wb")
     child = subprocess.Popen(command(python, backend, root, "start", p), env=env(root), cwd=backend.parent,
         stdout=output, stderr=subprocess.STDOUT, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -110,6 +113,7 @@ def stage(package, model_source):
         target = backend / "models" / MODEL / name
         target.parent.mkdir(parents=True, exist_ok=True)
         os.link(model_source / name, target)  # Actual package-relative files, not a path to old installation.
+    shutil.copy2(SOURCE.parent / "UnityClient/Assets/Resources/CafeSnackCatalog.json", backend / "app/knowledge/cafe_snacks.json")
     return backend
 
 
@@ -159,12 +163,13 @@ def main():
         assert call(p, "/v1/context-policy", "PUT", dict(expected_revision=0,
             config=dict(mode="manual", target_messages=7)))[0] == 200
         status, catalog = call(p, "/v1/developer/knowledge", root=root)
-        assert status == 200 and len(catalog["items"]) == 4
-        assert call(p, "/v1/developer/knowledge", "POST", dict(expected_revision=0,
+        assert status == 200 and len(catalog["items"]) > 0, (status, len(catalog.get("items", [])))
+        initial_knowledge_count = len(catalog["items"])
+        assert call(p, "/v1/developer/knowledge", "POST", dict(expected_revision=catalog["revision"],
             name="Portable B1 synthetic", content="Private persistence fixture", knowledge_type="reference",
             access_mode="default", attributes={}, related_ids=[], character_ids=[], scene_ids=[]), root=root)[0] == 200
         payload = json.loads((SOURCE.parent / "Contracts/examples/valid/experience_append_request.json").read_text())
-        with connect(f"ws://127.0.0.1:{p}/ws", proxy=None) as ws:
+        with connect(f"ws://127.0.0.1:{p}/ws", proxy=None, additional_headers={"Authorization": "Bearer " + json.loads((root / "runtime/knowledge_admin_session.json").read_text())["token"]}) as ws:
             ws.send(json.dumps(payload))
             ack = json.loads(ws.recv(timeout=10))
             assert ack["status"] == "inserted"
@@ -192,8 +197,8 @@ def main():
         assert status == 200 and view["revision"] == 7 and not view["restart_required"]
         assert view["selected_to_activate"]["embedding"]["resource_directory"] == str(backend / "models" / MODEL)
         assert call(p, "/v1/context-policy")[1]["applied"]["config"]["target_messages"] == 7
-        assert len(call(p, "/v1/developer/knowledge", root=root)[1]["items"]) == 5
-        with connect(f"ws://127.0.0.1:{p}/ws", proxy=None) as ws:
+        assert len(call(p, "/v1/developer/knowledge", root=root)[1]["items"]) == initial_knowledge_count + 1
+        with connect(f"ws://127.0.0.1:{p}/ws", proxy=None, additional_headers={"Authorization": "Bearer " + json.loads((root / "runtime/knowledge_admin_session.json").read_text())["token"]}) as ws:
             ws.send(json.dumps(payload))
             assert json.loads(ws.recv(timeout=10))["status"] == "already_exists"
         stop(args.python, backend, root, p, second)

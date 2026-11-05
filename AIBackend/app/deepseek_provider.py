@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from .model_list_transport import get_model_list, transport_error_suffix
 from .providers import ModelRequest, ModelResult, ModelUsage, ProviderError, ProviderHealth
 
 
@@ -190,11 +191,10 @@ class DeepSeekOfficialResponsesProvider:
     async def health(self) -> ProviderHealth:
         try:
             async with self._client() as client:
-                response = await client.get(self.base_url + "/models", headers=self._headers())
-        except httpx.TimeoutException:
-            detail = "DEEPSEEK_UNAVAILABLE"
-        except httpx.HTTPError:
-            detail = "DEEPSEEK_UNAVAILABLE"
+                response = await get_model_list(client, self.base_url + "/models", headers=self._headers(),
+                                                timeout_seconds=min(self.timeout_seconds, 5.0))
+        except httpx.HTTPError as error:
+            detail = "DEEPSEEK_" + transport_error_suffix(error)
         else:
             if response.status_code >= 400:
                 detail = self._http_error(response)

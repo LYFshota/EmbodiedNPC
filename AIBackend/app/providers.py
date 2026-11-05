@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, Protocol
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class ProviderError(RuntimeError):
@@ -38,6 +38,8 @@ class InferenceOptions(BaseModel):
 
 
 class ModelRequest(BaseModel):
+    # Bind the measured transport to this request; never serialized or persisted.
+    _transport_state: dict = PrivateAttr(default_factory=dict)
     model_config = ConfigDict(extra="forbid")
 
     messages: tuple[ModelMessage, ...] = Field(min_length=1, max_length=32)

@@ -94,6 +94,22 @@ class PortableBackendTests(unittest.TestCase):
                 launcher.writable(self.root)
         self.assertEqual(1, opening.call_count)
 
+    def test_os_assigned_port_remains_reserved_and_published_to_server(self):
+        import socket
+        (self.backend / "app").mkdir()
+        (self.backend / "app/main.py").touch()
+        observed = []
+        async def server(root, backend, port, listener, *paths):
+            self.assertGreater(port, 0)
+            self.assertEqual(port, listener.getsockname()[1])
+            self.assertEqual(f"http://127.0.0.1:{port}", os.environ["EMBODIEDNPC_KNOWLEDGE_ADMIN_URL"])
+            with socket.socket() as other:
+                with self.assertRaises(OSError): other.bind(("127.0.0.1", port))
+            observed.append(port)
+        with patch.object(launcher, "serve", server), patch.object(portable_runtime, "own_portable_data"):
+            launcher.start(self.root, self.backend, 0)
+        self.assertEqual(1, len(observed))
+
     def test_stop_does_not_initialize_or_rewrite_configuration(self):
         launcher.stop(self.root, self.backend, 1)
         self.assertFalse(self.root.exists())

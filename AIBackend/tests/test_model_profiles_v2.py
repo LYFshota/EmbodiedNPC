@@ -396,7 +396,7 @@ class ModelProfilesV2Tests(unittest.TestCase):
             operation="contracts", confirm_paid_requests=True)
         response = client.post("/v2/model-config/probe", json=command)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(calls), 3)
+        self.assertEqual(len(calls), 1)
         self.assertTrue(all(c["model"] == "unsaved-draft" for c in calls))
         self.assertTrue(all(r["error_code"] == "MODEL_CONTRACT_RESPONSE_INVALID"
             for r in response.json()["results"] if r["status"] != "NOT_RUN"))

@@ -51,7 +51,7 @@ class RestartTests(unittest.TestCase):
                 return backend_failure
             stack.enter_context(patch.object(entry.subprocess, "Popen", spawn))
             stack.enter_context(patch.object(entry, "owned_identity", lambda p: dict(pid=p.pid)))
-            stack.enter_context(patch.object(entry, "backend_record", return_value=dict(instance_id="a"*64, state="listening")))
+            stack.enter_context(patch.object(entry, "backend_record", return_value=dict(instance_id="a"*64, state="listening", port=18962)))
             stack.enter_context(patch.object(entry, "controlled_stop", stop))
             stack.enter_context(patch.object(entry, "wait_player", wait))
             if publication_failure: stack.enter_context(patch.object(entry, "publish_optional", return_value=False))

@@ -98,6 +98,9 @@ demo_player_uid = validate_demo_player_uid(os.getenv("EMBODIEDNPC_DEMO_PLAYER_UI
 def cognitive_failure_diagnostic(error: Exception) -> str | None:
     """Only stable adapter codes cross this read-only feedback boundary."""
     from .context_budget_allocator import ContextBudgetExceeded
+    from .model_schema_projection import ModelSchemaOutputError
+    if isinstance(error, ModelSchemaOutputError):
+        return error.diagnostic_category
     if isinstance(error, ContextBudgetExceeded):
         return "CONTEXT_BUDGET_EXCEEDED"
     if not isinstance(error, ProviderError) or len(error.args) != 1 or not isinstance(error.args[0], str):
@@ -105,7 +108,12 @@ def cognitive_failure_diagnostic(error: Exception) -> str | None:
     codes = {f"{prefix}_{category}": category
              for prefix in ("OLLAMA", "DEEPSEEK", "OPENAI_COMPATIBLE", "GEMINI", "ANTHROPIC")
              for category in ("TIMEOUT", "AUTH_FAILED", "RATE_LIMITED", "UNAVAILABLE",
-                              "CONTEXT_LENGTH_EXCEEDED", "OUTPUT_RESERVE_EXCEEDS_CONTEXT")}
+                              "CONTEXT_LENGTH_EXCEEDED", "OUTPUT_RESERVE_EXCEEDS_CONTEXT",
+                              "PROTOCOL_ERROR", "OUTPUT_TRUNCATED", "REQUEST_REJECTED", "PARAMETER_REJECTED", "SCHEMA_REJECTED",
+                              "THINKING_CONTROL_UNVERIFIED", "THINKING_DISABLE_NOT_HONORED",
+                              "TOTAL_GENERATION_BOUND_UNVERIFIED", "OUTPUT_RESERVE_VIOLATED")}
+    if error.args[0] == "MODEL_SCHEMA_ENVELOPE_INVALID":
+        return "RESPONSE_SCHEMA_INVALID"
     return codes.get(error.args[0])
 
 
@@ -564,7 +572,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 return
             diagnostic = cognitive_failure_diagnostic(error)
             adapter_codes = {"OPENAI_COMPATIBLE_" + suffix for suffix in (
-                "THINKING_DISABLE_NOT_HONORED", "OUTPUT_RESERVE_VIOLATED", "PROTOCOL_ERROR",
+                "THINKING_DISABLE_NOT_HONORED", "OUTPUT_RESERVE_VIOLATED", "PROTOCOL_ERROR", "OUTPUT_TRUNCATED",
                 "THINKING_CONTROL_UNVERIFIED", "TOTAL_GENERATION_BOUND_UNVERIFIED",
                 "REQUEST_REJECTED", "PARAMETER_REJECTED", "SCHEMA_REJECTED")}
             adapter_code = (error.args[0] if isinstance(error, ProviderError) and len(error.args) == 1

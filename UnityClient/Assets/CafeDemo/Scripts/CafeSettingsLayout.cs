@@ -88,7 +88,27 @@ namespace CafeDemo
         {
             for (int i = 0; i < navigation.Length; i++) pages.Add((navigation[i], pageObjects[i]));
             foreach (var label in window.GetComponentsInChildren<SettingsLocalizedLabel>(true))
+            {
+                if (label.Chinese == "界面" && label.transform.IsChildOf(Find("OverviewTitle").parent)) label.gameObject.SetActive(false);
+                if (label.name == "OverviewLabel")
+                {
+                    var caption = label.Chinese switch {
+                        "后端" => ("服务连接", "Connections"), "主模型" => ("NPC 回复模型", "NPC reply model"),
+                        "Embedding" => ("记忆查找模型", "Memory search model"), "服务状态" => ("模型检查", "Model check"),
+                        "需要重启" => ("已保存设置需重启", "Restart to apply settings"), _ => (label.Chinese, label.English) };
+                    label.Chinese = caption.Item1; label.English = caption.Item2;
+                }
+                if (label.Chinese == "角色背景") { label.Chinese = "角色背景：身份、经历与关系"; label.English = "Background: role, experiences and relationships"; }
+                if (label.Chinese == "人格与表达") { label.Chinese = "人格与表达：性格、语气与意愿"; label.English = "Personality, tone and preferences"; }
                 labels.Add((label.GetComponent<TMP_Text>(), label.Chinese, label.English));
+            }
+            var overviewContent = Find("Backend").parent.parent;
+            if (FindRuntime(overviewContent, "DeveloperPurpose") == null)
+            {
+                var purpose = Text(overviewContent, "DeveloperPurpose", "查看 AI 连接和 NPC 运行情况。刷新只读取状态；其他工具会标明是否即时调试或需要保存。", "Inspect AI connections and NPC runtime. Refresh only reads status here; other tools explain whether changes are immediate or require saving.", 20);
+                var size = purpose.gameObject.AddComponent<LayoutElement>(); size.minHeight = 56; size.preferredHeight = -1;
+                purpose.transform.SetSiblingIndex(1);
+            }
             // The shipped prefab already has its layout; Build() is an authoring path.
             // Apply these local changes to the live prefab too, without rebuilding its pages.
             foreach (string name in new[]{"NpcStatus","TraceStatus","SelectedNpcReadout","PerceptionReadout"})
@@ -245,9 +265,11 @@ namespace CafeDemo
         {
             Title(Find("OverviewTitle"),page.transform);var content=Scroll(page.transform);
             Section(content,"运行概况","Runtime overview");
+            var purpose = Text(content,"DeveloperPurpose","查看 AI 连接和 NPC 运行情况。此页刷新只读取状态；其他工具会标明是否即时调试或需要保存。","Inspect AI connections and NPC runtime. Refresh only reads status here; other tools explain whether changes are immediate or require saving.",20);
+            purpose.gameObject.AddComponent<LayoutElement>().minHeight = 56;
             string[] names={"Backend","Main LLM","Embedding","Provider Health","Restart Required"};
-            string[] chinese={"后端","主模型","Embedding","服务状态","需要重启"};
-            string[] english={"Backend","Main model","Embedding","Provider health","Restart required"};
+            string[] chinese={"服务连接","NPC 回复模型","记忆查找模型","模型检查","应用已保存设置"};
+            string[] english={"Connections","NPC reply model","Memory search model","Model check","Apply saved settings"};
             for(int i=0;i<names.Length;i++)
             {
                 var value=Find(names[i]);
@@ -358,10 +380,10 @@ namespace CafeDemo
             Title(Find("NpcTitle"),page.transform);var content=Scroll(page.transform);
             Section(content,"当前角色","Selected character");
             Row(content,Find("NpcPickerLabel"),Find("NpcPicker"));Row(content,Find("NpcIdLabel"),Find("NpcId"));
-            Row(content,Find("NameLabel"),Find("DisplayName"));Section(content,"角色背景","Character background");
+            Row(content,Find("NameLabel"),Find("DisplayName"));Section(content,"角色背景：身份、经历与关系","Background: role, experiences and relationships");
             Row(content,Find("RoleLabel"),Find("RoleSummary"),160);
             Row(content,Find("BackstoryLabel"),Find("Backstory"),190);
-            Section(content,"人格与表达","Personality & communication");
+            Section(content,"人格与表达：性格、语气与意愿","Personality, tone and preferences");
             Row(content,Find("PersonalityLabel"),Find("Personality"),190);
             Row(content,Find("StyleLabel"),Find("SpeakingStyle"),160);
             Row(content,Find("BoundariesLabel"),Find("Boundaries"),190);
@@ -459,8 +481,8 @@ namespace CafeDemo
         public void FormatOverview()
         {
             string[] names={"Backend","Main LLM","Embedding","Provider Health","Restart Required"};
-            string[] chinese={"后端：","主模型：","Embedding：","服务状态：","需要重启："};
-            string[] english={"Backend:","Main model:","Embedding:","Provider health:","Restart required:"};
+            string[] chinese={"后端：","NPC 回复模型：","记忆查找模型：","服务状态：","已保存设置需重启游戏应用："};
+            string[] english={"Backend:","NPC reply model:","Memory search model:","Provider health:","Saved settings require a game restart:"};
             for(int i=0;i<names.Length;i++)
             {
                 var text=Find(names[i]).GetComponent<TMP_Text>();
@@ -468,6 +490,11 @@ namespace CafeDemo
                 string prefix=text.text.StartsWith(chinese[i],StringComparison.Ordinal)?chinese[i]:
                     text.text.StartsWith(english[i],StringComparison.Ordinal)?english[i]:null;
                 if(prefix!=null)text.text=text.text.Substring(prefix.Length).TrimStart();
+                if (text.transform.parent.TryGetComponent<LayoutElement>(out var size))
+                {
+                    float width = Mathf.Max(200, text.rectTransform.rect.width);
+                    size.minHeight = size.preferredHeight = Mathf.Max(SettingsPanelTheme.RowHeight, text.GetPreferredValues(text.text, width, 0).y + 20);
+                }
             }
         }
         public static Transform FindRuntime(Transform root,string name)

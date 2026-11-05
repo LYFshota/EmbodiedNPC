@@ -47,8 +47,10 @@ namespace EmbodiedNPC.Settings
             // Index action belongs with index status/progress, not with model credentials or generation.
             indexAction.transform.parent.SetParent(memoryIndexSection.transform,false);
             ArrangeAiSettingGroups();
+            recheckButton.transform.SetParent(aiStateGroup, false);
             // Keep the original index control/progress/confirmation together in AI advanced settings.
             memoryIndexSection.transform.SetParent(advancedSettings.transform,false);
+            ordinaryIndexAction.transform.parent.SetParent(advancedSettings.transform, false);
             diagnosticsContent = SettingsContent("ModelDiagnosticsContent", content);
             developerDiagnostics.SetParent(diagnosticsContent.transform, false);
             developerDiagnostics.gameObject.SetActive(true);
@@ -90,8 +92,8 @@ namespace EmbodiedNPC.Settings
             diagnosticsContent.SetActive(page==ModelSettingsPage.Diagnostics);
             concurrencyContent.SetActive(page==ModelSettingsPage.Concurrency);
             concurrencyHelp.text=SettingsUiLanguage.T(
-                "前台对话与后台记忆任务共享模型总并发，各自同时受前台／后台上限约束。云端默认 6 / 6 / 2，本地默认 1 / 1 / 1。\n保存并应用后需重启 Backend 生效；保存也会包含 AI 配置页的待保存修改。",
-                "Foreground dialogue and background memory jobs share the total model capacity, with separate class limits. Cloud defaults: 6 / 6 / 2; local defaults: 1 / 1 / 1.\nSave & Apply requires a Backend restart and also saves pending edits in AI configuration.");
+                "总上限决定最多同时处理多少个 AI 请求；对话与记忆整理等后台工作共用此上限，并各有上限。通常保持供应商默认即可。\n保存会同时保存 AI 配置页尚未保存的修改；重启游戏后生效。",
+                "The total limit controls simultaneous AI requests. Dialogue and background work such as memory organization share it and have separate limits. Provider defaults are usually suitable.\nSaving also saves unsaved AI configuration edits; restart the game to apply.");
             saveButton.gameObject.SetActive(page==ModelSettingsPage.Configuration || page==ModelSettingsPage.Concurrency);
             if(restoreDefaultsButton!=null)restoreDefaultsButton.gameObject.SetActive(page==ModelSettingsPage.Configuration);
             if(saveButton.transform.parent.name=="FooterActions")
@@ -113,8 +115,8 @@ namespace EmbodiedNPC.Settings
             Transform pageRoot=mainModel.transform;
             while(pageRoot!=null && pageRoot.name!="ModelPage")pageRoot=pageRoot.parent;
             var title=pageRoot?.Find("Title")?.GetComponent<TMP_Text>();
-            if(title!=null)title.text=SettingsUiLanguage.T(page==ModelSettingsPage.Configuration?"AI 配置":page==ModelSettingsPage.Contracts?"模型合同测试":page==ModelSettingsPage.Diagnostics?"运行诊断 · 模型配置状态":page==ModelSettingsPage.Concurrency?"并发调整":"记忆索引维护",
-                page==ModelSettingsPage.Configuration?"AI configuration":page==ModelSettingsPage.Contracts?"Model contracts":page==ModelSettingsPage.Diagnostics?"Runtime diagnostics · Model configuration":page==ModelSettingsPage.Concurrency?"Concurrency settings":"Memory index maintenance");
+            if(title!=null)title.text=SettingsUiLanguage.T(page==ModelSettingsPage.Configuration?"AI 配置":page==ModelSettingsPage.Contracts?"NPC 兼容性测试":page==ModelSettingsPage.Diagnostics?"运行诊断 · 模型配置状态":page==ModelSettingsPage.Concurrency?"并发调整":"记忆索引维护",
+                page==ModelSettingsPage.Configuration?"AI configuration":page==ModelSettingsPage.Contracts?"NPC compatibility":page==ModelSettingsPage.Diagnostics?"Runtime diagnostics · Model configuration":page==ModelSettingsPage.Concurrency?"Concurrency settings":"Memory index maintenance");
             RebuildSettingsLayout();
         }
 
@@ -138,8 +140,10 @@ namespace EmbodiedNPC.Settings
 
         public bool ConsumeSettingsEscape()
         {
+            if (TextInputContextMenu.ConsumeCancel()) return true;
             foreach (var dropdown in GetComponentsInChildren<TMP_Dropdown>())
                 if (dropdown.IsExpanded) { dropdown.Hide(); return true; }
+            if (CancelSettingsConfirmation()) return true;
             return BlocksSettingsNavigation;
         }
 

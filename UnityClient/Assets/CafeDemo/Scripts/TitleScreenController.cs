@@ -28,6 +28,8 @@ namespace CafeDemo
         private ModelConfigView config;
         private string configError;
         private bool loading, returnAfterActivation;
+        private int recoveryAttempts;
+        private float recoveryAt = -1;
         private TMP_FontAsset runtimeFont;
         private StartupProgressDisplay startupProgress;
         private GameObject languageRow;
@@ -97,7 +99,15 @@ namespace CafeDemo
         }
         private void Update()
         {
+            if (!loading && recoveryAt >= 0 && Time.realtimeSinceStartup >= recoveryAt &&
+                check == null && !settings.IsOpen && !instructions.activeSelf)
+            {
+                recoveryAt = -1;
+                recoveryAttempts++;
+                check = StartCoroutine(Check());
+            }
             if (loading || Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame) return;
+            if (TextInputContextMenu.ConsumeCancel()) return;
             if (settings.IsOpen) settings.TryClose();
             else if (instructions.activeSelf) CloseInstructions();
         }
@@ -117,6 +127,7 @@ namespace CafeDemo
         public void Retry()
         {
             if (loading) return;
+            recoveryAttempts = 0;
             CancelCheck();
             check = StartCoroutine(Check());
         }
@@ -124,11 +135,12 @@ namespace CafeDemo
         {
             if (check != null) StopCoroutine(check);
             check = null;
+            recoveryAt = -1;
             while (requests.Count > 0) (requests.Pop() as IDisposable)?.Dispose();
         }
-        private IEnumerator ReadConfig()
+        private IEnumerator ReadConfig(RuntimeStatusView observedStatus)
         {
-            requests.Push(client.GetStartupConfig((value, error) => { config = value; configError = error; }, 6));
+            requests.Push(client.GetStartupConfig((value, error) => { config = value; configError = error; }, 6, observedStatus));
             while (requests.Count > 0)
             {
                 var next = requests.Peek();
@@ -137,7 +149,7 @@ namespace CafeDemo
                 else yield return next.Current;
             }
         }
-        private IEnumerator Check()
+        private IEnumerator Check(RuntimeStatusView observedStatus = null)
         {
             config = null; configError = null;
             startupProgress.Begin(new[]{"读取模型配置 / Backend HTTP","确认配置、active 与 Provider","建立 WebSocket","检查完成"},new[]{"Model configuration / Backend HTTP","Configuration, active model & Provider","WebSocket connection","Checks complete"});
@@ -150,7 +162,7 @@ namespace CafeDemo
                 yield break;
             }
             SetState(TitleStartupState.Checking, "正在检查 AI 连接…", "读取模型配置与当前运行状态。");
-            yield return ReadConfig();
+            yield return ReadConfig(observedStatus);
             if (configError != null || config == null)
                 SetState(TitleStartupState.Unavailable, "暂时无法连接 AI 服务", "请先在外部启动 Backend，再重试；也可打开 AI 配置。\n错误：" + (configError ?? "INVALID_RESPONSE"));
             else if (!config.saved_configured)
@@ -178,8 +190,11 @@ namespace CafeDemo
             if(config?.configured!=true)
             {
                 var reason=StartupProgressDisplay.ConfigFailure(config,configError);
-                startupProgress.Fail(startupProgress.States[0]==StartupStepState.Completed?1:0,reason,configError??reason.ToString());
+                startupProgress.Fail(startupProgress.States[0]==StartupStepState.Completed?1:0,reason,configError??config?.runtime_error_code??reason.ToString());
             }
+            if (State == TitleStartupState.Unavailable && recoveryAttempts < 2 && ModelConfigClient.CanRetryStartup(config))
+                recoveryAt = Time.realtimeSinceStartup + 1 + recoveryAttempts;
+            RefreshLanguage();
             check = null;
         }
         private string ActiveModel() => "当前模型：" + (config?.profiles?.active_runtime?.main_model?.model ?? "未知");
@@ -262,8 +277,15 @@ namespace CafeDemo
             enterCaption.text = State == TitleStartupState.Loading ? T("正在进入…","Entering…") : State == TitleStartupState.Unconfigured ? T("配置 AI，进入咖啡馆","Configure AI to enter") : T("进入咖啡馆","Enter cafe");
             if (statusMessage != null) stateText.text = TranslateStatus(statusMessage);
             if (statusDetail != null) detailText.text = TranslateStatus(statusDetail);
+            if (State == TitleStartupState.Unavailable && !string.IsNullOrEmpty(config?.runtime_error_code))
+            {
+                var reason = P0FeedbackText.ModelError(config.runtime_error_code);
+                detailText.text = T(reason.Chinese, reason.English);
+            }
+            if (recoveryAt >= 0)
+                detailText.text += "\n" + T("将自动重新检查连接…", "The connection will be checked again shortly…");
             detailText.gameObject.SetActive(diagnosticsVisible || State is TitleStartupState.Unconfigured or TitleStartupState.Unavailable or TitleStartupState.PendingApplication);
-            retryButton.gameObject.SetActive(State != TitleStartupState.Ready && !loading);
+            retryButton.gameObject.SetActive(false);
             diagnosticsButton.transform.parent.gameObject.SetActive(menu.activeSelf && !loading);
             if (instructions.activeSelf) instructions.GetComponentInChildren<TMP_Text>(true).text = SettingsOperationHelp.Text;
             languageRow.SetActive(menu.activeSelf && !loading);
@@ -317,8 +339,26 @@ namespace CafeDemo
             // A saved pending configuration invalidates an earlier Ready cached by the menu.
             // Reuse the original check; saving is never ConfigurationActivated.
             if (settings.AIRequiresRestart) Retry();
+            else if (settings.RuntimeReadError != null)
+            {
+                CancelCheck();
+                if (config != null) { config.configured = false; config.runtime_error_code = settings.RuntimeReadError; }
+                SetState(TitleStartupState.Unavailable, "暂时无法连接 AI 服务", "模型配置检查未通过，请打开 AI 配置检查连接。");
+            }
+            else if (settings.CheckedRuntimeStatus != null && !ReferenceEquals(settings.CheckedRuntimeStatus, config?.runtime_status))
+            {
+                recoveryAttempts = 0;
+                CancelCheck();
+                check = StartCoroutine(Check(settings.CheckedRuntimeStatus));
+            }
         }
-        private void ConfigurationActivated() { returnAfterActivation = true; Retry(); }
+        private void ConfigurationActivated(RuntimeStatusView status)
+        {
+            returnAfterActivation = true;
+            recoveryAttempts = 0;
+            CancelCheck();
+            check = StartCoroutine(Check(status));
+        }
         private void OpenInstructions()
         {
             instructions.GetComponentInChildren<TMP_Text>(true).text = SettingsOperationHelp.Text;

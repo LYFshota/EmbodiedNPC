@@ -41,7 +41,7 @@ class C1RecoveryTests(unittest.TestCase):
         with contextlib.ExitStack() as stack:
             stack.enter_context(patch.object(entry.subprocess, "Popen", side_effect=[self.backend_process, self.player_process]))
             stack.enter_context(patch.object(entry, "owned_identity", changes.pop("identity", self.identity)))
-            stack.enter_context(patch.object(entry, "backend_record", return_value=dict(instance_id="a"*64, state="listening")))
+            stack.enter_context(patch.object(entry, "backend_record", return_value=dict(instance_id="a"*64, state="listening", port=18993)))
             stopping = stack.enter_context(patch.object(entry, "controlled_stop"))
             for name, value in changes.items(): stack.enter_context(patch.object(entry, name, value))
             result = entry.start(self.root, self.backend, self.game / "Player.exe", 18993, 1, 1)
@@ -197,7 +197,7 @@ class C1RecoveryTests(unittest.TestCase):
             return wait(process, game)
         with patch.object(entry.subprocess, "Popen", side_effect=[self.backend_process, self.player_process]) as spawning, \
              patch.object(entry, "owned_identity", self.identity), \
-             patch.object(entry, "backend_record", return_value=dict(instance_id="a"*64, state="listening")), \
+             patch.object(entry, "backend_record", return_value=dict(instance_id="a"*64, state="listening", port=18993)), \
              patch.object(entry, "wait_player", failure_once), patch.object(entry, "controlled_stop") as stopping:
             with self.assertRaises(ValueError): entry.start(self.root, self.backend, self.game / "Player.exe", 18993, 1, 1)
         self.assertEqual(2, spawning.call_count)

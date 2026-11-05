@@ -79,6 +79,9 @@ def save_and_activate(document, command):
 def public_connection(config):
     config = resolve_embedding_resources(config)
     view = {**config.model_dump(mode="json", exclude={"api_key"}, exclude_none=True), "key_present": bool(config.api_key)}
+    if isinstance(config, MainModelConfig):
+        # Null is the automatic Temperature choice, not a missing/default true.
+        view["send_temperature"] = config.send_temperature
     if config.provider_type == "builtin":
         from pathlib import Path
         from .builtin_embedding_provider import RESOURCE_SPEC
@@ -118,7 +121,7 @@ def public_profile_view(document, active=None) -> dict:
             "migration_notes": value.migration_notes,
             "main_presets": [asdict(p) for p in MAIN_PRESETS],
             "embedding_presets": [asdict(p) for p in EMBEDDING_PRESETS],
-            "default_main_preset_id": "deepseek",
+            "default_main_preset_id": "custom",
             "default_embedding_preset_id": "builtin_gemma" if document is None else "aliyun",
             "builtin_embedding_defaults": public_connection(builtin),
             # Presence is not integrity verification, model loading, or activation.
@@ -247,12 +250,14 @@ def create_model_profile_router(store: ModelApiConfigStore, *, active_document=N
                 return await discover_profile(config, command.kind, preset, async_transport)
             if not command.confirm_paid_requests:
                 return _error(422, "MODEL_PROBE_CONFIRMATION_REQUIRED")
+            from .model_compatibility import ProbeBudget
+            budget = ProbeBudget() if command.kind == "main" and command.preset_id == "custom" else None
             if command.operation == "contracts":
                 if command.kind != "main":
                     return _error(422, "MODEL_CONTRACT_MAIN_REQUIRED")
-                return await contract_probe(config, async_transport)
+                return await contract_probe(config, async_transport, probe_budget=budget)
             if command.kind == "main":
-                return await _test_main(config.model_copy(update={"timeout_seconds": min(config.timeout_seconds, 20.0)}), async_transport)
+                return await _test_main(config.model_copy(update={"timeout_seconds": min(config.timeout_seconds, 20.0)}), async_transport, probe_budget=budget)
             return await _test_embedding(ModelApiConfig(main_model=MainModelConfig(display_name="Probe",
                 provider_type="mock", model="probe"), embedding=config.model_copy(update={"timeout_seconds": min(config.timeout_seconds, 20.0)})), sync_transport)
         except ModelConfigStoreError as error:

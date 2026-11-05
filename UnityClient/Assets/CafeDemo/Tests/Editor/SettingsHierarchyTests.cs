@@ -30,7 +30,7 @@ namespace CafeDemo.Tests
     {
         private const string Session="SettingsHierarchy.Tests.";
         private const BindingFlags Private=BindingFlags.Instance|BindingFlags.NonPublic;
-        private static string Evidence=>Path.GetFullPath(Path.Combine(Application.dataPath,"../Temp/SettingsHierarchy"));
+        private static string Evidence=>Environment.GetEnvironmentVariable("EMBODIEDNPC_UX_TEST_EVIDENCE") ?? Path.GetFullPath(Path.Combine(Application.dataPath,"../Temp/SettingsHierarchy"));
         private Keyboard keyboard;
         private static T Find<T>() where T:Object=>Object.FindAnyObjectByType<T>();
         private static object Get(object target,string field)=>target.GetType().GetField(field,Private).GetValue(target);
@@ -66,7 +66,7 @@ namespace CafeDemo.Tests
             SessionState.SetBool(Session+"hadLanguage",PlayerPrefs.HasKey("EmbodiedNPC.Settings.Language"));SessionState.SetInt(Session+"language",PlayerPrefs.GetInt("EmbodiedNPC.Settings.Language"));
             var game=typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
             SessionState.SetInt(Session+"size",(int)game.GetProperty("selectedSizeIndex",BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).GetValue(EditorWindow.GetWindow(game)));Size(3);
-            File.WriteAllText(Path.Combine(Evidence,"session.json"),new JObject{["schema_version"]=1,["base_url"]="http://127.0.0.1:18846",["token"]="hierarchy-fixture-token-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}.ToString());
+            File.WriteAllText(Path.Combine(Evidence,"session.json"),new JObject{["schema_version"]=1,["pid"]=System.Diagnostics.Process.GetCurrentProcess().Id,["created_at"]=DateTime.UtcNow.ToString("o"),["base_url"]="http://127.0.0.1:18846",["token"]="hierarchy-fixture-token-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}.ToString());
             Environment.SetEnvironmentVariable("EMBODIEDNPC_KNOWLEDGE_ADMIN_FILE",Path.Combine(Evidence,"session.json"));
             Environment.SetEnvironmentVariable("EMBODIEDNPC_KNOWLEDGE_ADMIN_URL","http://127.0.0.1:18846");
             using(var reset=UnityWebRequest.Get("http://127.0.0.1:18846/fixture/reset"))yield return reset.SendWebRequest();
@@ -128,7 +128,7 @@ namespace CafeDemo.Tests
             if(back!=null){Hit(back);Assert.IsFalse(ScreenRect(back.transform).Overlaps(bounds));}
         }
         private static IEnumerator Capture(string name)
-        {yield return null;ScreenCapture.CaptureScreenshot(Path.Combine(Evidence,name+"-"+Screen.width+".png"));yield return new WaitForSecondsRealtime(.2f);}
+        {yield return null;ScreenCapture.CaptureScreenshot(Path.Combine(Evidence,name+"-"+(SettingsUiLanguage.IsEnglish?"en":"zh")+"-"+Screen.width+".png"));yield return new WaitForSecondsRealtime(.2f);}
         private static void Selected(PlayerSettingsNavigation nav,string key)
         {Assert.AreEqual(key,nav.SelectedNavigation);Assert.AreEqual(SettingsPanelTheme.Accent,((Image)Button(key).targetGraphic).color);}
         private static void ModelView(FirstRunModelSetup form,ModelSettingsPage page)
@@ -140,6 +140,37 @@ namespace CafeDemo.Tests
             Assert.AreEqual(page==ModelSettingsPage.IndexMaintenance,((TMP_Text)Get(form,"indexState")).gameObject.activeInHierarchy);
             if(page!=ModelSettingsPage.Configuration)Assert.IsFalse(((TMP_InputField)Get(form,"temperature")).gameObject.activeInHierarchy);
         }
+        [UnityTest] public IEnumerator ModelCompatibility_TitleAdvancedAndFeedback720()
+        {
+            Size(5); yield return null; yield return null;
+            Find<TitleScreenController>().OpenSettings();
+            var host=Find<TitleSettingsHost>(); yield return Wait(()=>!host.IsBusy);
+            host.Navigation.ShowAi(false); yield return null;
+            var form=Find<FirstRunModelSetup>();
+            Assert.IsFalse(form.AdvancedSettingsRoot.gameObject.activeSelf);
+            Button("AdvancedSettingsToggle").onClick.Invoke(); yield return null;
+            foreach(bool english in new[]{false,true})
+            {
+                SettingsUiLanguage.SetEnglish(english); yield return null; Canvas.ForceUpdateCanvases();
+                var panel=(GameObject)Get(form,"panel");
+                var scroll=panel.GetComponentsInChildren<ScrollRect>(true).First(x=>x.gameObject.activeInHierarchy);
+                scroll.verticalNormalizedPosition=1; yield return null; yield return Capture("compatibility-generation");
+                int recent=((Transform)Get(form,"recentDialogueGroup")).GetSiblingIndex();
+                Assert.Greater(recent,((Toggle)Get(form,"thinking")).transform.parent.GetSiblingIndex());
+                Assert.Greater(((TMP_Dropdown)Get(form,"schemaMode")).transform.parent.GetSiblingIndex(),recent);
+                Canvas.ForceUpdateCanvases();
+                var protocol=form.AdvancedSettingsRoot.Find("ApiCompatibilityTitle");
+                float offset=scroll.content.rect.yMax-scroll.content.InverseTransformPoint(protocol.position).y-12;
+                scroll.verticalNormalizedPosition=1-Mathf.Clamp01(offset/Mathf.Max(1,scroll.content.rect.height-scroll.viewport.rect.height));
+                yield return null; yield return Capture("compatibility-protocol");
+                Hit((Button)Get(form,"saveButton"));
+                Set(form,"lastProbeOperation","connection"); Set(form,"lastProbeSignature",typeof(FirstRunModelSetup).GetMethod("ProbeSignature",Private).Invoke(form,new object[]{false}));
+                typeof(FirstRunModelSetup).GetMethod("ApplyProbeResult",Private).Invoke(form,new object[]{new ModelProbeView{success=true,compatibility=new ModelCompatibilityView{response_format="json_object",token_parameter="max_tokens",api_calls=2,send_temperature=false,strict_validation=true}},null});
+                scroll.verticalNormalizedPosition=1; yield return null; yield return Capture("compatibility-feedback");
+                Assert.That(((TMP_Text)Get(form,"operationFeedback")).text,Does.Contain("JSON Object"));
+            }
+        }
+
         [UnityTest] public IEnumerator FeedbackPrompt_CafeEmbeddingStateAndCompactLayout()
         {
             var host=Find<CafeDemoDeveloperPanel>();host.Open();yield return null;
@@ -168,7 +199,8 @@ namespace CafeDemo.Tests
                 Assert.That(brief.text,Does.Contain(SettingsUiLanguage.T("已应用","Applied")));
                 Assert.That(brief.text,Does.Not.Contain(SettingsUiLanguage.T("尚未确认","unconfirmed")));
                 Assert.That(summary.text,Does.Contain(SettingsUiLanguage.T("已加载","Loaded")));
-                Assert.That(summary.text,Does.Contain(SettingsUiLanguage.T("无可索引数据","no indexable data")));
+                Assert.That(summary.text,Does.Contain(SettingsUiLanguage.T("已完成","Completed")));
+                Assert.That(((TMP_Text)Get(form,"indexState")).text,Does.Contain(SettingsUiLanguage.T("无可索引数据","no indexable data")));
                 Assert.That(summary.text,Does.Not.Contain("100.0%"));
                 Assert.Less(brief.GetComponent<LayoutElement>().minHeight,40);
                 Assert.Less(summary.GetComponent<LayoutElement>().minHeight,40);
@@ -270,9 +302,13 @@ namespace CafeDemo.Tests
             var host=Find<CafeDemoDeveloperPanel>();host.Open();yield return null;var nav=host.PlayerNavigation;var form=host.ModelForm;
             foreach(int size in new[]{3,5})
             {
-                Size(size);yield return null;yield return null;Assert.That(Screen.width,Is.EqualTo(size==3?1920:1280));
+                Size(size);SettingsUiLanguage.SetEnglish(size==5);yield return null;yield return null;Assert.That(Screen.width,Is.EqualTo(size==3?1920:1280));
                 foreach(var key in new[]{"GeneralSettingsNav","AudioSettingsNav","AiSettingsNav","NpcCharacterSettingsNav","WorldKnowledgeSettingsNav"})
-                {Button(key).onClick.Invoke();yield return Wait(()=>!form.BlocksSettingsNavigation);yield return null;Selected(nav,key);Hit(Button(key));}
+                {Button(key).onClick.Invoke();yield return Wait(()=>!form.BlocksSettingsNavigation);yield return null;Selected(nav,key);Hit(Button(key));yield return Capture("cafe-"+key);}
+                nav.ShowAppearance(); yield return null; yield return Capture("cafe-player");
+                var playerScroll = ((GameObject)Get(nav,"appearance")).GetComponent<ScrollRect>(); playerScroll.verticalNormalizedPosition = 0;
+                yield return null; yield return Capture("cafe-player-bottom");
+                Button("WorldKnowledgeSettingsNav").onClick.Invoke(); yield return null;
                 var knowledge=Find<CafeWorldKnowledgePanel>();yield return Wait(()=>!knowledge.IsBusy && knowledge.SelectedId!=null);
                 Assert.IsFalse(Button("AdvancedSettingsToggle").gameObject.activeInHierarchy);
                 Assert.IsFalse(Button("KnowledgeAdvanced").GetComponentInChildren<TMP_Text>().text.Contains("高级设置"));
@@ -282,10 +318,12 @@ namespace CafeDemo.Tests
                 var dropdown=((GameObject)Get(host,"npcPage")).GetComponentInChildren<TMP_Dropdown>();Hit(dropdown);dropdown.Show();yield return null;
                 Assert.IsTrue(dropdown.IsExpanded);var option=dropdown.GetComponentsInChildren<Toggle>().First();Hit(option);
                 yield return Escape();yield return Wait(()=>!dropdown.IsExpanded);Assert.IsTrue(host.IsOpen);Selected(nav,"NpcCharacterSettingsNav");
-                Button("DeveloperToolsEntry").onClick.Invoke();yield return null;Selected(nav,"DeveloperTool0");
-                Button("DeveloperTool1").onClick.Invoke();yield return null;Selected(nav,"DeveloperTool1");Assert.IsTrue(nav.DailyDebugRoot.gameObject.activeInHierarchy);
-                Button("PerceptionDebugNav").onClick.Invoke();yield return null;Assert.IsTrue(((GameObject)Get(host,"debugPage")).activeInHierarchy);
+                Button("DeveloperToolsEntry").onClick.Invoke();yield return null;Selected(nav,"DeveloperTool0");yield return Capture("cafe-diagnostics");
+                Button("DeveloperTool1").onClick.Invoke();yield return null;Selected(nav,"DeveloperTool1");Assert.IsTrue(nav.DailyDebugRoot.gameObject.activeInHierarchy);yield return Capture("cafe-daily");
+                Button("PerceptionDebugNav").onClick.Invoke();yield return null;Assert.IsTrue(((GameObject)Get(host,"debugPage")).activeInHierarchy);yield return Capture("cafe-perception");
                 Button("DeveloperTool2").onClick.Invoke();yield return null;Selected(nav,"DeveloperTool2");
+                var trace = Find<CafeRuntimeTracePanel>(); trace.Buffer.Add(new JObject { ["utc"] = DateTime.UtcNow.ToString("o"), ["category"] = "transport", ["kind"] = "cognitive_transport_failure", ["entity_id"] = "npc_cafe_01", ["data"] = new JObject { ["request_id"] = "synthetic-layout-request", ["reason"] = "THINKING_CONTROL_UNVERIFIED" } }.ToString()); trace.RefreshView();
+                yield return Capture("cafe-trace");
                 nav.ShowIndexMaintenance();yield return Wait(()=>form.HasProfileSettings&&!form.BlocksSettingsNavigation);yield return null;
                 Selected(nav,"AiSettingsNav");Assert.IsTrue(((TMP_Text)Get(form,"indexState")).gameObject.activeInHierarchy);
                 nav.SetDeveloper(true);yield return null;
@@ -305,7 +343,7 @@ namespace CafeDemo.Tests
             Assert.IsFalse(Object.FindObjectsByType<Button>(FindObjectsInactive.Include).Any(b=>b.name=="NpcCharacterSettingsNav"||b.name=="WorldKnowledgeSettingsNav"));
             foreach(int size in new[]{3,5})
             {
-                Size(size);yield return null;Assert.That(Screen.width,Is.EqualTo(size==3?1920:1280));Button("AiSettingsNav").onClick.Invoke();yield return Wait(()=>form.HasProfileSettings&&!form.BlocksSettingsNavigation);yield return null;
+                Size(size);SettingsUiLanguage.SetEnglish(size==5);yield return null;Assert.That(Screen.width,Is.EqualTo(size==3?1920:1280));Button("AiSettingsNav").onClick.Invoke();yield return Wait(()=>form.HasProfileSettings&&!form.BlocksSettingsNavigation);yield return null;
                 ModelView(form,ModelSettingsPage.Configuration);Hit((Button)Get(form,"saveButton"));yield return Capture("title-ai");
                 nav.SetDeveloper(true);yield return null;
                 Button("ModelContractsNav").onClick.Invoke();yield return null;ModelView(form,ModelSettingsPage.Contracts);Hit(Button("BackToPlayerSettings"));yield return Capture("title-contracts");
@@ -338,6 +376,10 @@ namespace CafeDemo.Tests
             var store=(CharacterOverrideStore)Get(npc,"store");Assert.IsTrue(store.TryGet(npc.SelectedCharacterId,out _));Assert.IsTrue(store.FilePath.StartsWith(Evidence));
             Button("RestoreDefault").onClick.Invoke();Assert.IsFalse(store.TryGet(npc.SelectedCharacterId,out _));
             Button("WorldKnowledgeSettingsNav").onClick.Invoke();yield return null;var knowledge=Find<CafeWorldKnowledgePanel>();yield return Wait(()=>!knowledge.IsBusy&&knowledge.SelectedId!=null);
+            var persona = npc;
+            persona.SelectCandidate(0); var personaName = (TMP_InputField)Get(persona,"displayName"); string savedName = personaName.text;
+            personaName.text = "未保存的角色名"; persona.SelectCandidate(1); persona.SelectCandidate(0);
+            Assert.AreEqual("未保存的角色名", personaName.text); personaName.text = savedName;
             var input=(TMP_InputField)Get(knowledge,"nameInput");input.text="隔离知识草稿";Button("AiSettingsNav").onClick.Invoke();yield return null;
             Assert.IsTrue(knowledge.ConfirmationVisible);Assert.IsTrue(knowledge.gameObject.activeInHierarchy);Selected(host.PlayerNavigation,"WorldKnowledgeSettingsNav");
             yield return Escape();Assert.IsFalse(knowledge.ConfirmationVisible);Assert.IsTrue(knowledge.IsDirty);Assert.AreEqual("隔离知识草稿",input.text);

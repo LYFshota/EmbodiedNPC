@@ -20,7 +20,7 @@ namespace CafeDemo.Tests
         [Test] public void OptionalDescriptionRestoresAndSwitchingModelsClearsItWithoutChangingProfile()
         {
             var file = new PortablePreferenceFile(paths); var store = new PlayerAvatarStore(paths,file);
-            Assert.IsNull(store.AppearanceDescription);
+            Assert.AreEqual(PortablePreferenceFile.DefaultAppearanceDescription, store.AppearanceDescription);
             var profile = new PlayerNamePreference("小羽",2,100); Assert.IsTrue(file.SetPlayerProfile(profile));
             var first = "Avatars/Imported/" + new string('a',64) + ".vrm";
             var second = "Avatars/Imported/" + new string('b',64) + ".vrm";
@@ -32,6 +32,18 @@ namespace CafeDemo.Tests
             Assert.IsTrue(store.SetAppearanceDescription("黑色外套。")); Assert.IsTrue(store.Select(null));
             Assert.IsNull(store.AppearanceDescription); Assert.AreEqual("小羽",new PortablePreferenceFile(paths).PlayerProfile.DisplayName);
         }
+        [Test] public void NewDefaultDescriptionPersistsButDoesNotRefillClearedOrLegacySettings()
+        {
+            var file = new PortablePreferenceFile(paths);
+            Assert.AreEqual(PortablePreferenceFile.DefaultAppearanceDescription, file.PlayerAppearanceDescription);
+            Assert.AreEqual(file.PlayerAppearanceDescription, new PortablePreferenceFile(paths).PlayerAppearanceDescription);
+            Assert.IsTrue(file.SetPlayerAppearanceDescription(""));
+            Assert.IsNull(new PortablePreferenceFile(paths).PlayerAppearanceDescription);
+            var document = JObject.Parse(File.ReadAllText(paths.SettingsFile)); document.Remove("player_appearance");
+            File.WriteAllText(paths.SettingsFile, document.ToString());
+            Assert.IsNull(new PortablePreferenceFile(paths).PlayerAppearanceDescription);
+        }
+
         [Test] public void BoundedTextClearAndFailedSaveKeepPreviousFile()
         {
             var file = new PortablePreferenceFile(paths);

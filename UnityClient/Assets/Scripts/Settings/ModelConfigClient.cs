@@ -22,8 +22,8 @@ namespace EmbodiedNPC.Settings
         public IEnumerator GetConfig(Action<ModelConfigView, string> done) => GetConfigProjection(done, 20);
 
         // Only the Cafe startup owner supplies a shorter timeout; manual consumers keep 20s.
-        public IEnumerator GetStartupConfig(Action<ModelConfigView, string> done, int timeoutSeconds) =>
-            GetStartupProjection(done, timeoutSeconds);
+        public IEnumerator GetStartupConfig(Action<ModelConfigView, string> done, int timeoutSeconds, RuntimeStatusView observedStatus = null) =>
+            GetStartupProjection(done, timeoutSeconds, observedStatus);
 
         // Saved/activated configuration and the running Provider must agree.
         // A live process, selected draft or successful save alone is not AI Ready.
@@ -32,7 +32,7 @@ namespace EmbodiedNPC.Settings
             status?.model_config != null && status.model_config.configured && !status.restart_required &&
             status.active_provider != null && status.active_provider.available;
 
-        private IEnumerator GetStartupProjection(Action<ModelConfigView, string> done, int timeoutSeconds)
+        private IEnumerator GetStartupProjection(Action<ModelConfigView, string> done, int timeoutSeconds, RuntimeStatusView observedStatus)
         {
             StartupCheckProgress?.Invoke(StartupHttpStage.ReadingProfiles);
             ModelProfilesView profiles = null; string error = null;
@@ -44,14 +44,32 @@ namespace EmbodiedNPC.Settings
             if (profiles.configured && profiles.active_runtime != null && !profiles.restart_required)
             {
                 StartupCheckProgress?.Invoke(StartupHttpStage.CheckingRuntime);
-                yield return Send<RuntimeStatusView>("GET", "v1/runtime-status", null, (value, code) => { status = value; error = code; }, timeoutSeconds);
+                if (observedStatus?.model_config != null && observedStatus.model_config.revision == profiles.revision)
+                    status = observedStatus;
+                else
+                    yield return Send<RuntimeStatusView>("GET", "v1/runtime-status", null, (value, code) => { status = value; error = code; }, timeoutSeconds);
                 if(error==null&&status!=null)StartupCheckProgress?.Invoke(StartupHttpStage.RuntimeReceived);
             }
             var view = new ModelConfigView { configured = StartupReady(profiles, status), saved_configured = profiles.configured,
                 revision = profiles.revision, main_model = profiles.selected_to_activate?.main_model,
-                embedding = profiles.selected_to_activate?.embedding, profiles = profiles };
+                embedding = profiles.selected_to_activate?.embedding, profiles = profiles, runtime_status = status,
+                runtime_error_code = error ?? status?.active_provider?.detail };
             DiagnosticsExport.ObserveModelStatus(view);
             done?.Invoke(view, error);
+        }
+
+        // Recovery may repeat read-only health checks, never generation_once probes.
+        public static bool CanRetryStartup(ModelConfigView view)
+        {
+            var main = view?.profiles?.active_runtime?.main_model;
+            if (view?.saved_configured != true || view.profiles.restart_required ||
+                main == null || main.health_strategy == "generation_once") return false;
+            if (main.provider_type != "deepseek_official_responses" && main.provider_type != "openai_compatible")
+                return false;
+            string code = view.runtime_error_code;
+            foreach (string prefix in new[] { "DEEPSEEK_", "OPENAI_COMPATIBLE_" })
+                if (code?.StartsWith(prefix, StringComparison.Ordinal) == true) { code = code.Substring(prefix.Length); break; }
+            return code is "TLS_FAILED" or "CONNECTION_FAILED" or "TIMEOUT" or "UNAVAILABLE" or "BACKEND_UNAVAILABLE";
         }
 
         private IEnumerator GetConfigProjection(Action<ModelConfigView, string> done, int timeoutSeconds)

@@ -143,9 +143,9 @@ namespace CafeDemo
                 var profile = audioRouter == null ? null : audioRouter.SpeechProfile;
                 if (hearing == null) return SettingsUiLanguage.T("听觉：未配置听觉传感器。", "Hearing: no hearing sensor configured.");
                 if (!hearing.isActiveAndEnabled) return SettingsUiLanguage.T("听觉：传感器已禁用。", "Hearing: sensor disabled.");
-                if (profile == null || !audioRouter.isActiveAndEnabled) return SettingsUiLanguage.T("听觉：语音 Profile 或路由不可用。", "Hearing: speech profile or router unavailable.");
-                string legend = SettingsUiLanguage.T("蓝圈：耳部语音标称参考范围；紫圈：最近声源范围。", "Blue: ear-centered nominal speech reference; magenta: latest source range.");
-                string boundary = SettingsUiLanguage.T("范围内不等于收到；仍需强度、遮挡及路由判定。", "Within range does not prove receipt; intensity, occlusion and routing still apply.");
+                if (profile == null || !audioRouter.isActiveAndEnabled) return SettingsUiLanguage.T("听觉：语音设置或声音分发组件不可用。", "Hearing: speech settings or sound delivery component unavailable.");
+                string legend = SettingsUiLanguage.T("蓝圈：从耳部估算的可听范围；紫圈：最近发言位置的传播范围。", "Blue: estimated hearing range around the ear; magenta: range around the latest speaker.");
+                string boundary = SettingsUiLanguage.T("在圈内不代表已经听到，还要结合音量、遮挡和实际接收记录。", "Being inside does not prove hearing; volume, obstacles and actual receipt also matter.");
                 if (!hasSpeech) return $"{legend}\n{profile.HearingRange:0.##} m · " + SettingsUiLanguage.T("等待发言。", "Waiting for speech.") + "\n" + boundary;
                 var text = new StringBuilder(legend + "\n" + SettingsUiLanguage.T("最近声源：", "Latest source: ") + speechSource + " · " + profile.HearingRange + " m\n");
                 text.Append(SettingsUiLanguage.T("距离内的潜在旁听者：", "Potential bystanders within range: "));
@@ -156,7 +156,7 @@ namespace CafeDemo
                         entity.EntityId == speechSource || entity.EntityId == speechTarget || Vector3.Distance(sensor.EarPosition, speechOrigin) >= profile.HearingRange) continue;
                     text.Append(SettingsUiLanguage.NpcDisplayName(entity.EntityId, entity.GetComponent<PerceivableEntity>()?.DisplayName) ?? entity.EntityId).Append(" · ");
                 }
-                text.AppendLine().AppendLine(HasSelectedSpeechReceipt ? SettingsUiLanguage.T("本 NPC：有匹配的 Audio Observation 接收证据。", "Selected NPC: matching Audio Observation receipt.") :
+                text.AppendLine().AppendLine(HasSelectedSpeechReceipt ? SettingsUiLanguage.T("本 NPC：已收到与这次发言匹配的听觉记录。", "Selected NPC: received a hearing record matching this speech.") :
                     SettingsUiLanguage.T("本 NPC：尚无匹配的接收证据。", "Selected NPC: no matching receipt evidence."));
                 return text.Append(boundary).ToString();
             }

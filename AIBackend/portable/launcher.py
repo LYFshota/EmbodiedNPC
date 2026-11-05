@@ -232,6 +232,8 @@ def start(root, backend, port):
                 listener.setblocking(False)
             except OSError:
                 raise PortableError("PORTABLE_PORT_UNAVAILABLE") from None
+            # Keep this socket: the OS allocates and reserves a free port atomically.
+            port = listener.getsockname()[1]
             prepare_environment(root, backend, port)
             from app.portable_runtime import own_portable_data
             own_portable_data(root, lambda: lock.held)
@@ -290,7 +292,7 @@ def main():
     args = parser.parse_args()
     sys.dont_write_bytecode = True
     try:
-        if not 1 <= args.port <= 65535 or not 0 < args.timeout <= 120:
+        if not 0 <= args.port <= 65535 or not 0 < args.timeout <= 120:
             raise PortableError("PORTABLE_ARGUMENT_INVALID")
         root, backend = data_root(), Path(__file__).resolve().parent
         if args.action in ("stop", "restart"):
