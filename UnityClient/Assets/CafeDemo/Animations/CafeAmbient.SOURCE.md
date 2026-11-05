@@ -1,72 +1,33 @@
-# Cafe local ambient clips
+[简体中文](CafeAmbient.SOURCE.md) | [English](CafeAmbient.SOURCE.en.md)
 
-These are baked Humanoid muscle curves authored inside this project with
-`CafeAmbientSetup`. No external asset was downloaded for this feature and no
-runtime IK, Animation Rigging package, root motion or procedural bone writer is
-required.
+# 咖啡馆日常动作来源与实现
 
-`CafeSeatedDrink.anim` is a 6.2 second right-arm/finger action calibrated on the
-existing Ao VRM (Wen). It uses the existing CC0 Quaternius seated idle as its
-authoring reference. Reach/contact is at 1.1 s, drinking occupies roughly
-2.4–4.1 s, release is at 5.1 s, and recovery ends at 6.2 s. The resulting clip
-contains only right shoulder/arm/forearm/wrist/finger curves. Body, head, root
-and legs are excluded by the existing conversation arms mask. Base SeatedIdle
-and the existing foot IK remain active.
+这里的日常动作由项目内 `CafeAmbientSetup` 等工具制作成 Humanoid 动画曲线，沿用现有动作层、导航及授权组件。日常表现由 Unity 调度，不需要每次动作都调用大模型。
 
-Wen's wrist approaches behind/outside the cup, with the elbow kept close to the
-body and fingers directed around the cup side. The cup position and rotation are
-calibrated in the actual evaluated hand's local space and follow that same rigid
-grip throughout the lift; the wrist animation supplies the small drinking tilt.
-The drinking target accounts for the cup rim height. Release withdraws
-the open hand sideways. `CafeAmbientSetup.RebuildDrink` rebakes only this motion
-and its scene grip calibration, leaving counter work setup alone.
+## 已使用的动作
 
-Conversation requests a bounded return under the same arms lease: a held cup
-blends into the existing lowering tail, while an uncommitted reach fades out.
-Dialogue arms wait for that lease to finish. Formal tasks, emergency, disable
-and unload still revoke immediately and restore the borrowed prop.
+| 动画 | 角色与用途 |
+| --- | --- |
+| `CafeSeatedDrink.anim` | 温予安与江亦舟坐姿端杯、饮用及放回 |
+| `CafeAmbientWipe.anim` | 薇薇在吧台进行轻量擦拭表现 |
+| `CafeServeSnack.anim` | 点心服务中的伸手、短暂保持与收回 |
 
-The supplied PickUp_Table, PickUp, Use_Item and Holding_B were actually previewed
-on Ao over the seated base. They do not provide a complete seated drink/return
-motion. Holding_B is not used as a drinking hand pose. Finger curves have their
-Animator binding names (`RightHand.Index.1 Stretched`, etc.), which differ from
-HumanTrait names (`Right Index 1 Stretched`).
+### 坐姿喝饮品
 
-`CafeAmbientWipe.anim` retains the existing project-authored CafeCleanCounter
-arm presentation as its starting reference and fits the real finger contact
-patch on Vivi. The existing cloth follows that contact patch while the lease
-is valid, then restores its exact formal local binding. Its standing reference is the existing
-Idle_Quiet_Vivi. It plays in the existing cleaning layer as AmbientClean; the
-formal CleanCounter state and original clip are unchanged. It is presentation
-only and cannot commit counter cleanliness.
+`CafeSeatedDrink.anim` 是约 **6.2 秒**的右臂和手指动作，最初以温予安的 VRM 调整杯子接触点。约 1.1 秒到达杯子，2.4–4.1 秒饮用，5.1 秒释放，随后回到坐姿。
 
-Ambient cleaning blends around the middle contact segment for the duration
-selected by DailyBehavior (merchant dwell 7–11 seconds), then plays the existing
-exit tail. Formal CleanCounter playback does not use this contact loop.
-After arriving at a cleanable ambient work point, DailyBehavior selects wiping
-after a short pause instead of randomly walking away again. A task check whose
-gates are closed cannot indefinitely reserve the local idle scheduler.
+杯子沿当前手部锚点移动，完成或取消时恢复原本桌面位置。头、身体、Root 和双腿继续使用原坐姿动画与脚部 IK。温予安、江亦舟分别配置交互锚点和动作间隔；沈知意当前未启用喝杯动画。
 
-Casual attention requires current visual evidence from the NPC's existing
-VisionSensor (its own FOV and occlusion), with a 3 m entry / 3.6 m maintenance
-range. Proximity, a second narrow root cone and the player's camera do not
-establish NPC sight. The bounded head turn covers that sensor's side-front FOV;
-the fixed seat and gameplay root remain unchanged.
+### 吧台擦拭
 
-Existing references and licenses: `ThirdParty/Quaternius/SOURCE.md`,
-`ThirdParty/Quaternius/LICENSE.txt`, `ThirdParty/KayKit/SOURCE.md` and
-`ThirdParty/KayKit/LICENSE.txt`. New authored curves are first-party project
-content under the repository license.
+`CafeAmbientWipe.anim` 使用项目已有擦拭动作的手臂表现，并根据薇薇模型修正手指接触点。环境擦拭属于视觉活动，正式 `CleanCounter` 任务仍由世界状态和对应执行器结算。正式任务、紧急状态和对话可能中断当前日常动作。
 
-The scene contains one existing cup-only prefab for Wen, replacing only her
-original decorative cup-and-saucer mesh. It has no WorldEntity/HeldItemState,
-does not impersonate cup_01, and is never instantiated per action. During a
-drink it follows the hand anchor while retaining its original scene parent;
-completion/cancellation restores the exact saved local transform.
+### 点心动作
 
-To extend to another seated NPC, configure the same Presenter/admission/Daily
-profile fields, a distinct decorative cup, table and hand anchors, grip offsets,
-timings and interval scale. Retargeting is Humanoid; each model/seat still needs
-visual contact calibration before enabling it. Jiang uses the same Presenter with the quieter Humanoid override and an independent interval scale. Shen remains disabled.
+`CafeServeSnack.anim` 是项目制作的手臂伸出、保持和收回片段，不生成实体食物。服务是否成功由动作执行结果确认。
 
-CafeServeSnack.anim is a first-party, baked arms-only reach/hold/retract presentation produced by CafeSnackServiceSetup from the existing licensed project animation reference. It owns no food prop and does not certify a service outcome.
+## 扩展与许可
+
+动画参考了现有 [Quaternius](ThirdParty/Quaternius/SOURCE.md) 与 [KayKit](ThirdParty/KayKit/SOURCE.md) 的已授权片段，新增曲线为项目内制作内容。为新 NPC 启用喝杯行为时，需要分别校准桌面位置、手部锚点和人物动作间隔。
+
+[日常行为架构](../../../../Docs/ARCHITECTURE.md) · [第三方许可](../../../../THIRD_PARTY_NOTICES.md)
