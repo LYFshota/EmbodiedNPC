@@ -1,177 +1,94 @@
-# EmbodiedNPC Architecture
+[简体中文](ARCHITECTURE.md) | [English](ARCHITECTURE.en.md)
 
-This document follows the runtime path from **perception and events** to **cognition, action, world feedback, and long-term memory**. Unity owns live world state and execution; the Python Backend handles model inference, knowledge, and memory. The demo starts at TitleScene and runs in CafeDemoV2.
+# EmbodiedNPC 系统架构
 
-For gameplay highlights and downloads, start with the [README](../README.en.md). Published version notes are available in [GitHub Releases](https://github.com/LYFshota/EmbodiedNPC/releases).
+EmbodiedNPC 是一套以 Unity 为游戏世界、Python 为认知后端的 AI NPC 运行架构。目前使用四名 NPC 的咖啡馆场景进行演示。系统围绕 **环境感知 → 认知决策 → 行为执行 → 记忆反思** 协作，让对话、行动及真实世界结果能够影响后续交互。
 
-## Reading the diagrams
-
-The [README overview](../README.en.md#architecture) ([中文](../README.md#系统架构)) introduces the perception → cognition → memory/action → world-feedback loop. The diagram below expands the ordinary dialogue path; branches are alternatives or optional reads, not work that every turn must perform. Unity remains the authority for current world state and action outcomes throughout.
-
-| Part of the flow | How to read it |
-| --- | --- |
-| Perception → CognitiveRun | Observer-local events and context wake one foreground run per NPC; noticing an event does not grant action permission. |
-| Knowledge capture → Step 0 → optional Step 1 | Automatic knowledge prefetch comes before the first inference. One optional batch can read knowledge, memory and task context; Step 1 must terminate. |
-| Terminal decision → presentation or action execution | A reply, no action and an action proposal are distinct. Backend validation and independent Unity admission precede world-action execution. |
-| Presented dialogue / Unity outcome → Experience → Memory | Only source-qualified actual experiences enter the Ledger. Consolidation and reflection run asynchronously; a promise or generated reply is not proof of execution or delivery. |
-| Memory / Relationship → later cognition | Recall supplies historical evidence; Relationship supplies a pair-scoped interpretation. Neither overrides current Unity state or grants action authority. |
-
-## Runtime flow
+## 总体结构
 
 ```mermaid
 flowchart TD
-    W["Unity world authority"] --> P["Observer-local Perception"]
-    P --> E["AgentEvent / EventInterest"]
-    E --> R["One foreground CognitiveRun per NPC"]
-    CP["CharacterDefinition + local override + resolver"] --> C["Bounded CognitiveRequest snapshot"]
-    R --> C
-    C --> K["Backend: capture authorized knowledge snapshot"]
-    K --> PRE["Constant background + automatic knowledge prefetch"]
-    PRE --> B["Step 0: Main model inference"]
-    RD["Recent presented dialogue + pair-local Relationship + trusted facts"] --> B
-    B -->|"direct terminal decision"| D["Terminal decision / task adapter"]
-    B -->|"CONTEXT_READ or legacy read"| Q["Validate one batch of requested reads"]
-    Q --> WK["Optional World Knowledge supplement"]
-    Q --> MR["Optional scoped Memory Recall"]
-    Q --> TR["Optional Task Read: task-aware schema only"]
-    WK --> J["Per-source status + snapshot validation + shared context budget"]
-    MR --> J
-    TR --> J
-    J --> S1["Step 1: terminal-only schema; no further reads"]
+    P["Unity · 环境感知 / AgentEvent"] --> C["认知请求 / CognitiveRun"]
+    C --> B["Python · 上下文装配"]
+    K["人设 / 关系 / 近期对话 / 世界知识"] --> B
+    B --> S0["Step 0 · 首次推理"]
+    S0 -->|需要补充| R["一次受限联合读取：知识 / 记忆 / 任务"]
+    R --> S1["Step 1 · 最终推理"]
+    S0 -->|直接决策| D["结构化决策"]
     S1 --> D
-    D -->|"DIRECT_RESPONSE"| V["Speech lifecycle / bubbles / expressions / icons"]
-    D -->|"NO_ACTION"| FIN["End run"]
-    D -->|"ACTION_PROPOSAL"| A["Backend validator + independent Unity admission"]
+    D -->|回复| V["Unity · 对话呈现"]
+    D -->|行动提案| A["后端校验 → Unity 准入"]
     A --> X["Mini-GOAP / PlanExecutor"]
-    X --> O["Unity GoalOutcome + world receipt"]
-    V -->|"actually presented conversation"| EX["ExperienceLedger"]
-    O --> EX
-    EX --> EP["Episode / asynchronous consolidation"]
-    EP --> LM["Canonical Memory"]
-    LM --> MR
-    EX --> RR["Pair-scoped Relationship reflection"]
-    RR --> RD
-    R -.-> T["Read-only RuntimeTrace"]
-    O -.-> T
+    X --> W["WorldState / GoalOutcome"]
+    V --> E["ExperienceLedger"]
+    W --> E
+    E --> EP["Episode → 异步 Consolidation"]
+    EP --> M["长期记忆"]
+    E --> RR["独立关系反思"]
+    M -.-> R
+    RR -.-> B
 ```
 
-Solid arrows show control/data flow, not equal authority or synchronous completion; dotted arrows to RuntimeTrace are read-only observation. World changes from executed actions re-enter subsequent observer-local perception at the top of the diagram. Long-term Memory is available through later on-demand Recall.
+这里的箭头表达数据流与执行关系；检索、行动和记忆整理是按条件发生的路径。Unity 负责实时世界状态与行动结果，模型负责形成回复或受约束的行动提案。
 
-This is the ordinary dialogue path. Fixed mode decisions, restricted action-feedback recovery, dialogue continuation and task-consideration events retain their own restricted schemas; the diagram does not grant them all dialogue reads or player action authority. A turn ends after Step 0 or Step 1: at most two model inferences, with no separate LLM query rewriter or third inference. Independent read branches can wait concurrently; shared Embedding provider gates still apply.
+## 1. 环境感知层
 
-## 1. Unity authority and identity
+每个 NPC 维护独立的局部感知：视觉传感器周期扫描可见实体，结合距离、视角与遮挡判断；近距离和听觉感知补充附近实体与声音事件。观察结果更新 `PerceivedState`，并非每次刷新都触发模型调用。
 
-Unity owns WorldEntity/EntityRegistry, world state, navigation, action admission, execution, cancellation and final success/failure. Model output is an untrusted proposal. `definition_id` describes content, `entity_id` identifies a current instance, and trusted persistent identity provides Memory/Relationship continuity. Display names are not identity keys. Cafe currently has one local Player.
+玩家输入、挥手及世界变化被封装为 `AgentEvent`。事件路由按目标身份交付，兴趣评估决定忽略、记录或唤起认知。定向发言只由目标 NPC 接收为当前请求；附近角色的旁听经过独立感知链路。满足条件后，`AgentOrchestrator` 为角色启动一个前台 `CognitiveRun`。
 
-## 2. Perception and events
+## 2. 认知决策层
 
-Vision/proximity and PerceivedState are observer-local; the model does not receive the entire registry. AgentEvent records an actual occurrence; EventInterest may wake cognition. Waking a run does not grant permission to initiate a world action. Player Wave is emitted after the animation starts and only reaches observers currently seeing the player.
+`CognitiveContextComposer` 从当前事件、感知、角色定义、行为模式、相关玩家和可用能力创建有界快照。后端再结合近期对话、关系摘要、系统规则与世界知识完成模型输入装配。
 
-## 3. CognitiveRun and bounded context
+- **人设**：身份、背景、个性、说话风格及交流边界，可在游戏内修改。
+- **世界知识**：按角色权限读取常驻背景并自动预检索相关条目；必要时可补充查询。
+- **近期对话与关系**：分别承接当前话题、提供针对特定对象的交流印象。
+- **长期记忆**：历史证据按需召回，和角色背景知识分别检索。
+- **上下文预算**：`ContextBudgetAllocator` 为规则、正文、检索结果、输出和安全余量分配容量。新建 Main 配置默认 32K，可按模型实际情况调整。
 
-AgentOrchestrator owns one foreground CognitiveRun per NPC. CognitiveContextComposer creates a bounded request snapshot from trigger/current event, character, behavior mode, relevant Player, observer-local perception and current capabilities. Persona/settings edits affect new requests, not previously built snapshots. Knowledge reads within a run use one captured catalog; a catalog change or unreadable catalog is detected before evidence reuse and before releasing a knowledge-grounded result, rather than silently mixing versions. There is no generic unrestricted Tool Loop or autonomous Goal/Plan Drive.
+普通对话采用**最多两次模型推理**。Step 0 可以直接决策，也可以发起一次 `CONTEXT_READ`，由后端分别读取知识、记忆和允许的任务信息；Step 1 接收补充结果后输出最终决策。
 
-## 4. Character Persona v2 Lite
+普通决策包括 `DIRECT_RESPONSE`、`NO_ACTION`、`ACTION_PROPOSAL`。运行时还支持面向特定系统事件的受限模式意图与自主行动意图，沿用相应身份、事件和能力检查。
 
-CharacterDefinition has exactly CharacterId, DisplayName, RoleSummary, Backstory, Personality, SpeakingStyle and Boundaries. ID is read-only (120 characters); the six editable limits are 80/240/600/600/480/600. Authoring, override store, DTO and Backend reject blank/oversized content; the Backend contract is frozen and rejects extra fields.
+## 3. 行为执行层
 
-The unique CharacterProfileResolver combines built-in authoring defaults and local overrides. Override schema 1 preserves its three editable values and falls back to real defaults for the three new fields without writing; the next Save atomically writes complete schema 2. Save at defaults removes the entry; Restore removes only the selected entry and refreshes UI. Persona is untrusted low-authority JSON data: it influences stance, tone and wording, not capabilities, EntityRefs, current world/perception, historical evidence, relationship or Goal success.
+行动提案由后端验证动作 ID、绑定和允许的能力，再送回 Unity。Unity 根据当前场景实体、执行者、目标、世界状态与任务占用独立准入。
 
-## 5. Recent Dialogue
+`GoalPlanRunner` 接收目标，`ActionCatalog` 与计划工厂提供动作及前置条件、效果，`Mini-GOAP` 搜索可行步骤，`PlanExecutor` 逐步执行。导航、拿取、递送、制作饮品及清洁台面等操作复用现有执行组件，包含超时、取消、资源预约与有限重规划。
 
-Recent dialogue is bounded, read-only conversation evidence. CurrentEvent remains the turn to answer. DialogueController keeps sessions when presentation is hidden. A non-conversation Wave response can be presented and traced but is not projected into dialogue_response persistence; this prevents an empty conversation from blocking later valid Dialogue ACKs.
+例如 `prepare_drink` 的正式计划主要是 `WalkTo → PrepareDrink`。制作完成后，`WorldStateService` 提交饮品回执，Unity 发布 `GoalOutcome`。结果按原请求、执行者和提案追踪，后续对话与记忆可以引用这次真实执行。
 
-## 6. Hybrid context reads
+### 日常行为与正式任务
 
-Before ordinary dialogue Step 0, [WorldKnowledgeResolver](../AIBackend/app/world_knowledge_store.py) captures the authorized complete catalog, assembles `constant` background and automatically retrieves relevant `retrieval` knowledge. The query normally uses current player text; short follow-ups may include the nearest current-session dialogue topic. Automatic prefetch requires lexical topic support in names/keywords after hybrid ranking; an explicit model supplement can retrieve additional semantic matches.
+NPC 有 Work、Rest、Leisure 等日常模式，模式的目标与行为倾向会进入下一次认知上下文。Unity 本地按模式调度走动、擦拭、饮用等低优先级环境活动；正式任务通过准入后接管导航与交互控制权。
 
-Step 0 may answer directly or request `CONTEXT_READ` with a `knowledge_plan`, `memory_plan`, and, in the task-aware schema, `task_plan`. At least one plan is required. Legacy `MEMORY_RECALL` and `TASK_READ` remain accepted. Backend executes one read batch, preserves each source's unavailable/no-match/budget status, and builds terminal Step 1 using an explicit phase. A failed source does not erase another source's valid result or prove a fact absent. Step 1 cannot request another read.
+**行为模式与正式任务相互独立**：处于 Rest 的薇薇仍可执行经授权的制作请求，也可以由认知提出合规的模式切换意图，最终由 Unity 校验并提交。
 
-Automatic and supplementary knowledge together expose at most three distinct retrieval IDs; constants are deduplicated separately and do not occupy Top-K or require Embedding. Permission, deployment/scene scope, persistent identity and budgets are trusted Backend inputs, not model choices. Memory remains a separate historical retriever; `shared` is pair-evidence qualification, not a global memory scope. See [Memory](MEMORY.md), [World Knowledge](../AIBackend/WORLD_KNOWLEDGE.md) and [internal contracts](../Contracts/README.md#backend-internal-context-reads).
+## 4. 记忆反思层
 
-## 7. Relationship Context
+已呈现的对话、可信观察和行动结果先写入角色自己的追加式 `ExperienceLedger`。连续经历按语义边界及时间、数量等规则分成 `Episode`；片段关闭后，后台异步整理为事件记忆和有来源的语义事实。
 
-Pair-scoped RelationshipReflectionRecord derives subjective interpretation from evidence. A bounded on-read RelationshipSummary enters cognition without exposing persistent IDs. It can inform supported familiarity, but cannot establish exact history, present facts or action permission. Persistent Mood/CurrentAffect is not implemented.
+低频维护负责比较事实的重复、细化、更新和冲突；跨 Episode 反思形成有证据关联的暂定洞察。关系反思独立按 **NPC 持久身份 × 对象持久身份** 维护交流偏好与社会印象。
 
-## 8. Structured decisions
+长期记忆使用向量与词法检索，按当前角色、主体和证据范围选取候选，随后在认知时通过一次受限读取提供相关历史。关系摘要作为独立的上下文内容提供。详细实现参见 [记忆系统](MEMORY.md)。
 
-Ordinary CognitiveDecision uses DIRECT_RESPONSE, NO_ACTION or ACTION_PROPOSAL, with bounded presentation metadata `emotion` / `gesture` / `look_at`, optional `expression_icon`, and optional `episode_directive`. The response decision union also admits restricted system-event DAILY_MODE_INTENT and AUTONOMOUS_ACTION_INTENT; their source and eligibility checks remain mandatory. Cognitive envelopes support 1.0 and task-aware 1.1, not a different version per decision kind. Internal CONTEXT_READ, legacy MEMORY_RECALL/TASK_READ and task mutation steps are adapted to terminal envelopes; they are not arbitrary Unity tools. See [Contracts](../Contracts/README.md). Recall is internal to Backend. A preference statement is not an action request; a spoken acknowledgment without a proposal does not execute anything.
+## 5. 前后台并发与模型配置
 
-## 9. Capabilities and action validation
+多个 NPC 的前台推理与 Episode 整理、关系反思、记忆维护共享有界模型执行器，采用前台优先、后台公平的调度方式。云端默认上限为 **总并发 6 / 前台 6 / 后台 2**，本地 Ollama 默认 **1 / 1 / 1**；三个值是共享容量约束，不能直接相加。
 
-The current Runtime manifest and Backend supported definitions bound action IDs, bindings, kinds, affordances and request-scoped entities. Backend ActionProposalValidator checks the proposal; Unity independently checks provenance, eligibility and current state. Validator acceptance is not proof of semantic permission or execution success. Cafe merchant's bounded service capabilities include `bring_object`, `prepare_drink` and `clean_counter`; current bindings and scene eligibility are checked in the manifests and Unity, not inferred from dialogue. Other NPCs do not gain staff actions through Persona.
+主模型与 Embedding 可分别配置；支持 DeepSeek、OpenAI 兼容接口、Gemini、Anthropic、Ollama 等适配器。设置经保存、应用及必要的后端重启生效。配置说明参见 [Backend](../AIBackend/README.md) 和 [源码运行](SOURCE_SETUP.md)。
 
-The ten hot-drink IDs are `latte`, `cappuccino`, `americano`, `espresso`, `flat_white`, `mocha`, `caramel_macchiato`, `hot_chocolate`, `matcha_latte` and `black_tea`. Backend contracts, task goals, action metadata and historical-result validation reuse [DrinkType](../AIBackend/app/drink_types.py). Unity maintains IDs and bilingual display names in [DrinkTypes](../UnityClient/Assets/Scripts/Actions/PrepareDrinkAction.cs); its manifest derives the same ordered values. They share one preparation flow, animation, duration and receipt semantics. Knowledge descriptions do not grant preparation capability or create a second menu/recipe authority.
+## 6. 设置、扩展与当前范围
 
-## 10. Mini-GOAP and execution
+- **角色配置**：通过 Unity 页面修改 NPC 人设；新的认知请求使用更新后的配置。
+- **世界知识**：支持搜索、编辑、权限控制、JSON 导入导出和默认条目恢复。
+- **持久任务**：可保存部分未来委托，在再次来访或空闲机会中考虑执行，并根据世界回执结算。详见 [任务系统](NPC_TASK_SYSTEM.md)。
+- **表现层**：对话气泡、表情、眼神、肢体表现与动作通道协调，与认知事实和世界执行分别管理。
+- **迁移到其他场景**：保留认知和记忆核心，针对新游戏适配世界实体、感知事件、可用动作和呈现层。
 
-GoalPlanRunner/ActionCatalog/ActionPlanFactory and PlanExecutor run deterministic WalkTo/PickUp/Carry/Give with reservations, timeout, cancellation and recovery. WorldStateService commits mutations and Unity publishes GoalOutcome. Give-to-Actor transfers ownership and hides Renderer/Collider/Perceivable while preserving entity/registry identity and HeldItemState. It does not implement Player Inventory, Equipment, Player Carry or general world-placement delivery.
+当前公开演示面向单机咖啡馆。后续重点继续改进自然交流、长期关系、日常自主活动及场景复用。
 
-## 11. Experience, Episode and canonical Memory
+## 相关文档
 
-Accepted conversation and authoritative action evidence enter an append-only ExperienceLedger. Episode lifecycle combines semantic closure with deterministic limits and recovery. Asynchronous consolidation admits evidence-backed canonical records; migration 15 retires old physical Memory/Relationship tables while preserving migration definitions. Character background is not a player profile fact or shared-history evidence.
-
-## 12. Expressive Runtime and player appearance
-
-[ExpressiveController](../UnityClient/Assets/Scripts/Animation/ExpressiveController.cs) associates accepted metadata with the owning NPC and actual [SpeechPresentationLifecycle](../UnityClient/Assets/Scripts/Dialogue/Presentation/SpeechPresentationLifecycle.cs). [DialogueAnimationPresenter](../UnityClient/Assets/Scripts/Animation/DialogueAnimationPresenter.cs) adds low-priority, arms-only speech accents with phrase/rest intervals; serialized strengths and timing allow character differences. Gesture, facing and [HeadGazeController](../UnityClient/Assets/Scripts/Animation/HeadGazeController.cs) work under [MotionChannelCoordinator](../UnityClient/Assets/Scripts/Animation/MotionChannelCoordinator.cs). Walking, carrying and formal task/action motion retain priority. Ending or replacing speech clears presentation rather than creating action success.
-
-[CafeVrmExpressionPresenter](../UnityClient/Assets/CafeDemo/Scripts/CafeVrmExpressionPresenter.cs) blends supported VRM blink/happy/relaxed/sad/surprised presets, with subtle tone-dependent weights and transitions. Missing or incompatible bindings degrade gracefully; models do not all support the same visible expressions. This is facial presentation, not audio-driven LipSync.
-
-[DialogueEmotionIconPresenter](../UnityClient/Assets/Scripts/Dialogue/Presentation/DialogueEmotionIconPresenter.cs) displays optional `expression_icon` hints: happy (♪), confused (?), surprised (!) and thinking (…). Null/`none` is the normal default; punctuation alone does not select an icon. A valid cue is shown only for its NPC's active presented speech/session, with a per-NPC cooldown (default 18 seconds), a short fade/float (default 1.35 seconds) and stable placement beside the head. Reply replacement, speech end, session change and disable clean it up. Icons are cosmetic, not Memory or world events.
-
-Player locomotion and Wave remain separate. [PlayerVrmAppearance](../UnityClient/Assets/CafeDemo/Scripts/PlayerVrmAppearance.cs) imports a local VRM into the player's visual wrapper using UniVRM, checks eligibility and model compatibility, and preserves the actor root, identity, collision, camera, cognition and task/action bindings. It supports rollback/default appearance; it is not unrestricted NPC/model mod loading. Procedural speech motion and text bubbles do not imply TTS, ASR, general audio LipSync, or staged PickUp/HandOver animation.
-
-## 13. Default Routine
-
-Merchant uses Engagement Hold and ReturnToHome after foreground/task/dialogue and busy state permit it. Formal tasks can preempt the routine's navigation. Home comes from startup pose; this is a low-priority fallback, not daily scheduling or autonomous planning. Focused tests and real bring/hold/return evidence exist; the old validation-blocked status no longer applies.
-
-## 14. Settings and providers
-
-Developer Panel has Overview, Model/API, NPC Character, World Knowledge, Debug and Runtime Trace. HTTP startup readiness and WebSocket startup recovery are implemented. Config checks open Model/API at each Play; missing configuration gates normal dialogue. Main adapters include Mock, Ollama, DeepSeek Official Responses, OpenAI-compatible, Gemini Native and Anthropic Native; adapter presence does not certify every remote model. Embedding has an independent slot.
-
-Saved local Model Config takes precedence over environment bootstrap. Save changes the JSON; invocation-affecting values apply on Backend restart. Cognition, task failure, consolidation and relationship reflection share the startup Main provider/executor. Persona override edits apply on the next Run without restart. See [Operations](OPERATIONS.md).
-
-### World Knowledge management and context budgets
-
-[WorldKnowledgeStore](../AIBackend/app/world_knowledge_store.py) owns a complete player JSON catalog (`schema_version=2`). The 156-entry system template is read-only, used for initialization, explicit legacy migration or restore; installed template updates never merge into an existing player catalog. Backend enforces `public`/`restricted` CharacterId access plus trusted deployment/scene binding. `constant` background and `retrieval` knowledge remain low-authority reference data, not actual player experience, current stock or action completion.
-
-[CafeWorldKnowledgePanel](../UnityClient/Assets/CafeDemo/Scripts/CafeWorldKnowledgePanel.cs) uses [KnowledgeManagementClient](../UnityClient/Assets/Scripts/Settings/KnowledgeManagementClient.cs) and the existing [management API](../AIBackend/app/knowledge_management_api.py) for search/filter/edit, complete JSON export, import preview/confirmation, and single-entry or whole-template restore. Import replaces the catalog; stale previews fail local revision checks. Cross-process locking, backup and atomic writes protect modifications. The SQLite [knowledge index](../AIBackend/app/knowledge_embeddings.py) is derived: only the actual embedding projection changes its content fingerprint, not ACL/usage/source bookkeeping. Constant entries need no vector; lexical fallback remains available.
-
-Step 0/1 use one [ContextBudgetAllocator](../AIBackend/app/context_budget_allocator.py) policy for the final provider payload, including schema, output/safety reserves, whole Memory evidence, knowledge, dialogue, Relationship and Task context. Constants count toward the mandatory budget and fail explicitly with `CONSTANT_KNOWLEDGE_BUDGET_EXCEEDED` if they cannot fit intact. New Main profiles default to 32768 tokens via [provider presets](../AIBackend/app/model_provider_presets.py); this is a requested budget, not a provider capacity guarantee. Saved explicit capacities remain unchanged; unknown capacity falls back conservatively to 8192 in the entry point, and a smaller declared provider capacity limits the effective window. Earlier 8K/16K acceptance profiles are historical evidence, not today's universal setting.
-
-### Read-only complete experience export
-
-Settings → General & controls → Support & diagnostics offers an explicitly confirmed local ZIP export. [ExperienceDataExport](../UnityClient/Assets/CafeDemo/Scripts/ExperienceDataExport.cs) combines loaded default/override/effective Personas, saved player settings/avatar metadata, and existing sanitized [DiagnosticsExport](../UnityClient/Assets/Scripts/Settings/DiagnosticsExport.cs) output with the authenticated local [Backend exporter](../AIBackend/app/experience_export.py) (`GET /v1/experience-export`). It is a read model over existing stores, never another source of truth or a trigger for consolidation, reflection, migration or model calls.
-
-Backend reads retained current-player Experience, displayed conversations, Episodes, canonical Memory/source links, Relationship and Task/Action records in one read-only SQLite transaction that includes committed WAL data. It exports current knowledge as a separate revisioned snapshot; Unity settings are separately captured too, so the ZIP is not a single cross-system transaction. Identity/evidence filters exclude foreign or unbound private records; missing categories and partially scoped Episodes are reported in manifests, not invented. Task promises, action proposals and unpresented replies are not promoted to completed actions or displayed dialogue.
-
-The ZIP contains `manifest.json`, `npc_personas.json`, `player_profile.json`, `world_knowledge.json`, `experiences.jsonl`, `conversations.jsonl`/`.md`, `episodes.json`, `memories.json`, `relationships.json`, `tasks.json`, `actions.json`, Backend/projection metadata and `diagnostics/` as available. No raw live SQLite/WAL files, credentials, weights or avatar binary are bundled. It preserves authored chat/knowledge text, which may contain personal information; sharing is voluntary and nothing uploads automatically. Resource limits fail rather than silently trim records; partial availability is reported, and failed archive construction does not publish a complete ZIP.
-
-### Persistent tasks
-
-TaskService owns durable task status and attempt phase; Unity TaskExecutionBridge.stage only describes its local handshake. A reserved ticket, begin permission, world commit and successful settlement are separate facts. GameVisit binds the process session and stable Player identity; scene_instance_id invalidates old world attempts. Sync may reconcile lost-world/stale-condition records but never replays begin_execution. See [task system](NPC_TASK_SYSTEM.md).
-
-## 15. RuntimeTrace and validation
-
-JSONL is the single trace source. A live view projects the last 300 written lines with category/errors filter, pause/clear/autoscroll and folder access. Pause does not pause recording; Clear does not truncate the file. Trace is read-only and never Runtime authority.
-
-For reproducible examples, see the [runtime contracts](../Contracts/README.md) and [source setup](SOURCE_SETUP.md).
-
-## Current scope
-
-The public demo focuses on four NPCs in a local, single-player café. Perception, bounded cognition, authorized actions, long-term memory, relationships and daily activities share this runtime. Cross-game reuse requires adapting scene entities, action catalogs and presentation.
-
-## Model concurrency and retained outcomes
-
-The shared bounded model executor limits active Provider calls, with total/foreground/background caps. Cloud defaults are 6/6/2 and Ollama defaults to 1/1/1; each is configurable up to 32 through Developer tools. Context reads do not hold inference slots. Background consolidation, relationship reflection and maintenance use bounded lanes while retaining Episode transactions, pair/scope exclusions, active-attempt protection and drained shutdown. This remains a single-process Demo.
-
-Retained source dialogue can read its associated validated historical GoalOutcome independently of the ordinary 900-second recent-result filter. Order dialogue and available outcome evidence share one budget dependency; an unfit group degrades safely. Current Runtime Snapshot remains independent. Display segmentation retains one conversation record and sanitizes presentation markers into paragraph boundaries.
-
-
-## Ambient activities and snack service
-
-DailyBehaviorController selects ambient activities using the existing mode/profile. NpcDefaultRoutineController supplies admission and suspends the existing ReturnToHomeRoutine; it does not choose a second ambient action. MotionChannelCoordinator grants a per-instance revocable Ambient lease. CafeAmbientPresenter executes that selection, delegates navigation/cleaning to existing components and restores borrowed cup state. Formal GoalPlanRunner/PlanExecutor actions revoke Ambient before taking control. Conversation may retain a bounded cup-return lease or pause the same travel target. These presentations create no Cognition, Memory, Relationship or formal cleanliness facts.
-
-The shared CafeSnackCatalog resource defines legal snack IDs, display names and quantities. Backend validates proposals and typed deferred tasks; Unity independently validates service capability, bindings and approach. ServeSnackActionRunner uses the existing plan/navigation/interaction path; only WorldStateService commits a logical receipt after successful execution, with the existing task guard and result correlation. Cancellation/failure cannot generate that receipt. No food entity, HeldItemState or player inventory is introduced.
-
-Player base/action facial semantics share CafeVrmExpressionPresenter and UniVRM expression weights. Action expressions override the subtle base smile and blend back on completion/cancellation; blink remains a separate key. Look/seat/foot layers retain their existing writers. Left Alt reuses CafeDemoOrbitCamera capture state and existing UI focus guards.
+[记忆系统](MEMORY.md) · [世界知识](../AIBackend/WORLD_KNOWLEDGE.md) · [通信协议](../Contracts/README.md) · [源码运行](SOURCE_SETUP.md) · [贡献指南](../CONTRIBUTING.md)
