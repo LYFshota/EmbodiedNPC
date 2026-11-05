@@ -115,7 +115,7 @@ solver widened the idle stance and distorted the existing walk. The Walk clips,
 blend thresholds, playback rates, locomotion speeds and movement code are unchanged.
 
 
-## v0.1.2-preview: accepted quiet idle and player wave
+## Derived idle and wave clips
 
 Idle_Relaxed is a CC0 derivative of the existing KayKit Character Animations
 1.1 Idle_A. It adjusts relaxed arms, fingers/thumbs and standing legs, with
@@ -135,6 +135,3 @@ main right waving arm, remain unchanged. Duration is 2.133333 seconds with no
 events. Player Wave uses its own arms layer; Cheer/Proud retain their authored
 torso motion. There is no runtime bone-forcing component or new animation framework.
 
-The owner accepted the final standing/wave behavior in the R4 Windows manual
-test package. Release-specific test/startup boundaries are linked from
-Docs/RELEASE_STATUS.md; automated posture checks are not a clean-machine certificate.
