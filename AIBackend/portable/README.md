@@ -83,9 +83,11 @@ exception types, Win32 codes and stack locations without exception arguments or 
 overwriting an old one or copying UserData, developer data, keys or session tokens.
 It is not a ZIP/release pipeline. Close both processes before copying an installed game.
 
-## Current build/acceptance boundary (2026-10-18)
+## Build and distribution
 
-The GitHub repository contains portable launcher and assembler source, not a committed Windows Player or final release ZIP. Local Windows candidate P0-F was build/start/exit and offline diagnostics tested; P0-G was built successfully and remains `READY_FOR_MANUAL_TEST`, with real AI/NPC, window/display coverage and clean-machine checks incomplete. See [current status](../../InternalDocs/CURRENT_STATUS.md) and [P0-G evidence](../../InternalDocs/Reports/Standalone_IntegratedBuild_P0G_2026-10-18.md). **Do not redistribute a candidate with UserData, API credentials or development evidence.**
+The repository contains portable launcher and assembler sources. Player binaries are distributed through [GitHub Releases](https://github.com/LYFshota/EmbodiedNPC/releases).
+
+Use the assembler to stage a Windows package, then verify startup, the configuration flow, and clean shutdown. Distributable archives contain runtime and licensed assets; keep `UserData`, personal configuration, API keys and development logs out of the package.
 
 ## UserData backup and restore
 
@@ -130,6 +132,6 @@ The current entry does not repair copied credential-file ACLs automatically; ver
 restore their private permissions before using real credentials in the restored installation.
 
 
-## Candidate archive
+## Package archive
 
 `assemble.py --zip <new-file.zip>` archives package contents directly at the ZIP root. A normal Extract-to-folder operation therefore creates one enclosing folder. It refuses an existing ZIP and never packages a stage containing UserData. Player instructions are `README-试玩说明.txt`; this technical document is copied to `Backend/PORTABLE-START.txt`. Keep Licenses and LICENSES.md in their established package locations. The assembler copies the same authored CafeSnackCatalog.json into the Backend’s existing bundled resource path.
