@@ -21,7 +21,7 @@
    ```
 
    不使用多 worker、反向代理或公开监听。导入应用会初始化数据路径；若要隔离测试，必须在启动 Python/导入应用**之前**配置所有数据、模型配置、知识索引及私有会话路径，详见 [OPERATIONS](OPERATIONS.md)。不要在正式存档上运行测试。
-3. 在 Editor 打开 `Assets/Scenes/TitleScene.unity` 并运行；可按开发测试需要直接运行 `CafeDemoV2.unity`，仍需通过原配置准入。当前 Build Settings 正式入口是 TitleScene → CafeDemoV2，旧 CafeDemo 仅作历史回归。
+3. 在 Editor 打开 `Assets/Scenes/TitleScene.unity` 并运行；可按开发测试需要直接运行 `CafeDemoV2.unity`，仍需通过原配置准入。当前 Build Settings 正式入口是 TitleScene → CafeDemoV2，旧 CafeDemo 为早期场景。
 4. 首次为 Main 模型配置有效 Provider、模型和必要 Key，保存并应用，按提示重启 Backend。源码 Editor 模式通过本机开发重启脚本/人工停止再启动 Backend 生效；Portable 的“重启并应用”由 `Start.cmd` 的现有监督进程处理，不能混用两个入口。
 
 新建 Main 草稿默认 32768 上下文，已有值不自动迁移。该值是请求预算配置，不证明 Provider 实际容量。首次 Main 保存会一并启用默认预选的内置 Embedding；**需先准备下面的资源**，或在保存前明确选择已有外部 Embedding / 关闭 Embedding 的路径。关闭向量能力仍有 lexical/structured fallback，不等于启用向量检索。
@@ -43,7 +43,7 @@ PUBLIC_SOURCE_MODEL_IMPORT_READY: repaired=6; no source assets saved
 -batchmode -quit -executeMethod PublicSourceModelImport.ValidateBatch
 ```
 
-[首次冷启动验证记录](Validation/UnitySourceFirstImport-20261101.md)包含全新 Library、二次打开和 Editor Play 的测试过程。常用 Backend 定向测试可从 `AIBackend` 运行 `.\.venv\Scripts\python.exe -B -m unittest -v tests.test_cognitive_request tests.test_world_action_eligibility`；涉及数据读写的自定义测试请使用独立数据目录，参见 [运行说明](OPERATIONS.md)。
+资源导入完成后，可通过 Unity Editor Play 验证场景和模型是否正常。常用 Backend 定向测试可从 `AIBackend` 运行 `.\.venv\Scripts\python.exe -B -m unittest -v tests.test_cognitive_request tests.test_world_action_eligibility`；涉及数据读写的自定义测试请使用独立数据目录，参见 [运行说明](OPERATIONS.md)。
 
 ## 内置 Embedding 资源
 
