@@ -26,14 +26,11 @@ At its core is a working loop: **perception → cognition → memory / action �
 
 ### Latest preview: v0.1.6-preview
 
-This release focuses on **first-time AI setup, API compatibility and failure feedback, portable startup, and natural player head gaze during conversation**.
+This update improves **first-time setup, model connections, and in-game conversations**.
 
-- A clear Chinese launch entry, automatically allocated ports, configuration restart guidance and a flat ZIP layout.
-- Clearer settings and reorganized advanced options, preserving existing controls and adding right-click text editing.
-- Evidence-based JSON format and parameter adaptation for custom OpenAI-compatible APIs, with strict validation and distinct connection, format, reasoning-control and budget errors.
-- Smooth player gaze toward the speaking NPC, blending back after dialogue; single JSON replies can also be read from code blocks or after introductory text.
-
-The official DeepSeek API has targeted live-test evidence. Other official endpoints are mainly validated through documented protocols and Mock tests. Some gateway models passed targeted tests; compatibility still depends on the model and route. A short connection test does not certify full NPC dialogue compatibility.
+- **Easier launch:** Start with `启动游戏.cmd`, with automatic handling of occupied ports.
+- **Simpler model setup:** Clearer AI settings, broader API compatibility, and more helpful error messages.
+- **More natural interactions:** The player smoothly turns toward the NPC during a conversation and returns afterward.
 
 ## 🎮 Download and play
 
