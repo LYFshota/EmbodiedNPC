@@ -2,7 +2,7 @@
 
 This document follows the runtime path from **perception and events** to **cognition, action, world feedback, and long-term memory**. Unity owns live world state and execution; the Python Backend handles model inference, knowledge, and memory. The demo starts at TitleScene and runs in CafeDemoV2.
 
-For gameplay highlights and downloads, start with the [README](../README.en.md). Release-specific checks are kept in [Release Status](RELEASE_STATUS.md).
+For gameplay highlights and downloads, start with the [README](../README.en.md). Published version notes are available in [GitHub Releases](https://github.com/LYFshota/EmbodiedNPC/releases).
 
 ## Reading the diagrams
 
@@ -155,23 +155,20 @@ TaskService owns durable task status and attempt phase; Unity TaskExecutionBridg
 
 JSONL is the single trace source. A live view projects the last 300 written lines with category/errors filter, pause/clear/autoscroll and folder access. Pause does not pause recording; Clear does not truncate the file. Trace is read-only and never Runtime authority.
 
-Validation records are version-specific. Earlier bring_object/Persona/M3 reports describe their own commits and environments, not the full current feature set. v0.1.3-preview includes the hybrid cognition, knowledge editor, presentation and export paths described here. Published artifact build/startup/export/restart checks belong to the [release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.3-preview); [release scope](RELEASE_STATUS.md) separates historical checks from current source. This documentation refresh runs no new gameplay/model validation.
+For reproducible examples, see the [runtime contracts](../Contracts/README.md) and [source setup](SOURCE_SETUP.md).
 
-## Next and limitations
+## Current scope
 
-VRM facial expressions, local player VRM import and Windows preview packages are implemented; their presence is not a guarantee of identical visuals across models or clean-machine certification. History/source safeguards reduce unsupported claims but do not prove model semantic correctness.
+The public demo focuses on four NPCs in a local, single-player café. Perception, bounded cognition, authorized actions, long-term memory, relationships and daily activities share this runtime. Cross-game reuse requires adapting scene entities, action catalogs and presentation.
 
-Not implemented as general systems: persistent Mood/decay, Motivation/Needs/Big Five, Narrative Graph, GraphRAG/automatic knowledge generation, Character Evolution, comprehensive Daily Schedule or long-term autonomous goals (limited daily modes/activities do exist), unrestricted Tool Loop, audio-driven LipSync/TTS/ASR/VLM, Player Inventory UI/Equipment/Carry, generic runtime PMX/NPC mod loading, unrestricted world placement or large-scale multiplayer.
-
-
-## v0.1.4 scheduling and retained outcomes
+## Model concurrency and retained outcomes
 
 The shared bounded model executor limits active Provider calls, with total/foreground/background caps. Cloud defaults are 6/6/2 and Ollama defaults to 1/1/1; each is configurable up to 32 through Developer tools. Context reads do not hold inference slots. Background consolidation, relationship reflection and maintenance use bounded lanes while retaining Episode transactions, pair/scope exclusions, active-attempt protection and drained shutdown. This remains a single-process Demo.
 
 Retained source dialogue can read its associated validated historical GoalOutcome independently of the ordinary 900-second recent-result filter. Order dialogue and available outcome evidence share one budget dependency; an unfit group degrades safely. Current Runtime Snapshot remains independent. Display segmentation retains one conversation record and sanitizes presentation markers into paragraph boundaries.
 
 
-## Local ambient and logical snack service (v0.1.5-preview)
+## Ambient activities and snack service
 
 DailyBehaviorController selects ambient activities using the existing mode/profile. NpcDefaultRoutineController supplies admission and suspends the existing ReturnToHomeRoutine; it does not choose a second ambient action. MotionChannelCoordinator grants a per-instance revocable Ambient lease. CafeAmbientPresenter executes that selection, delegates navigation/cleaning to existing components and restores borrowed cup state. Formal GoalPlanRunner/PlanExecutor actions revoke Ambient before taking control. Conversation may retain a bounded cup-return lease or pause the same travel target. These presentations create no Cognition, Memory, Relationship or formal cleanliness facts.
 
