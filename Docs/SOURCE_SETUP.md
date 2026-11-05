@@ -6,8 +6,9 @@
 
 ## 环境与首次启动
 
-1. 安装并激活 `UnityClient/ProjectSettings/ProjectVersion.txt` 指定的 Unity **6000.5.10f1**，安装 Git for Windows 并确保 `git --version` 可执行；UPM 的 Git 依赖需要它。Windows x64 构建支持只在构建对应 Standalone 时需要。用 Unity Hub 打开 `UnityClient`，按现有 manifest/lock 恢复包，不升级包、不重跑场景一次性生成菜单。
-   首次恢复依赖需要能访问 GitHub、`packages.unity.com` 和 `download.packages.unity.com`。若出现 `ECONNRESET`，先检查网络并重试自己的工程实例，保留错误日志；不要通过复制旧 Library、升级依赖或操作其他 Editor 掩盖恢复失败。
+1. 安装并激活 Unity **6000.5.10f1**，同时安装 Git for Windows（Unity 的 Git 包依赖需要它）。用 Unity Hub 打开 `UnityClient`，等待项目按现有 `manifest.json` 和 lock 文件恢复依赖。
+
+   首次导入需要能访问 GitHub 和 Unity 包服务。如果遇到 `ECONNRESET`，检查网络后重试；导入问题可参考下方的资源校验说明。
 
 2. 安装 Python **3.12 x64**。从仓库根目录运行：
 
