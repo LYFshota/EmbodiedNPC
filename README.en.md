@@ -24,7 +24,7 @@ At its core is a working loop: **perception → cognition → memory / action �
 - **Everyday animation:** Vivi moves, pauses and wipes behind the counter. Wen and Jiang occasionally pick up their cups. The player has a subtle idle smile and expressions tied to actions.
 - **Concurrency and model choices:** Bounded concurrent foreground and background work across NPCs, with separate configuration for the Main LLM, embeddings and runtime settings.
 
-### Latest release: v0.1.6-preview
+### Next release: v0.1.6-preview (in preparation)
 
 This release focuses on **first-time AI setup, API compatibility and failure feedback, portable startup, and natural player head gaze during conversation**.
 
@@ -37,7 +37,7 @@ The official DeepSeek API has targeted live-test evidence. Other official endpoi
 
 ## 🎮 Download and play
 
-**[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.6-preview/EmbodiedNPC-v0.1.6-preview-Windows-x64.zip)** · [v0.1.6-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.6-preview)
+**[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [published v0.1.5-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
 
 1. Extract the ZIP and double-click `启动游戏.cmd` (`Start.cmd` remains available). Unity Editor and a separate Python installation are not required.
 2. Enter your API URL, key and model ID in Settings → AI configuration. The default is a custom OpenAI-compatible API; existing provider presets remain available.

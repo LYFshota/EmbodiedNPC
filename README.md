@@ -24,7 +24,7 @@ EmbodiedNPC 是一个探索**游戏 NPC 长期交互与自主行为**的开源�
 - **更自然的场景表现**：薇薇会在柜台内走动、停留和擦拭；温予安与江亦舟会偶尔拿杯饮用；玩家拥有待机微笑和动作表情联动。
 - **多 NPC 并发与可配置模型**：前台对话和后台记忆任务支持有界并发；主模型、Embedding 与相关运行参数可分别配置。
 
-### 最新版本：v0.1.6-preview
+### 下一版：v0.1.6-preview（准备中）
 
 本版重点改善**首次 AI 配置、API 兼容与失败反馈、Windows 启动体验，以及玩家交谈时的自然转头**。
 
@@ -37,7 +37,7 @@ DeepSeek 官方接口已有定向真实验证；其他官方接口主要通过�
 
 ## 🎮 下载试玩
 
-**[下载 Windows x64 试玩版](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.6-preview/EmbodiedNPC-v0.1.6-preview-Windows-x64.zip)** · [查看 v0.1.6-preview 更新说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.6-preview)
+**[下载 Windows x64 试玩版](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [查看已发布的 v0.1.5-preview 说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
 
 1. 解压 ZIP，双击 `启动游戏.cmd`（保留 `Start.cmd` 兼容入口）启动游戏和 Backend，无需单独安装 Unity 或 Python。
 2. 在「设置 → AI 配置」填写 API 地址、Key 和模型 ID；默认自定义接口，也可选择已有供应商预设。
