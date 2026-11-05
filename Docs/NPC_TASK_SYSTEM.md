@@ -2,7 +2,7 @@
 
 这套系统让 NPC 能够接受部分未来委托，并在合适的时机重新考虑执行。它支持任务创建、查询、延期、取消及可信结果结算，模型负责选择意图，TaskService 和 Unity 负责身份、状态与实际执行。
 
-当前实现用于 CafeDemoV2，任务考虑与普通玩家对话使用现有的认知入口。历史验收见文末记录。
+当前实现用于 CafeDemoV2，任务考虑与普通玩家对话使用现有的认知入口。任务创建、考虑、执行和结果结算流程见下文。
 
 ## 存储与服务
 
@@ -60,7 +60,7 @@ ESC 一级保留继续、设置、操作说明和退出；有活动委托或重�
 
 `serve_drink` 复用 [Backend DrinkType](../AIBackend/app/drink_types.py) 的十种合法热饮 ID，与即时 `prepare_drink` 和 [Unity DrinkTypes](../UnityClient/Assets/Scripts/Actions/PrepareDrinkAction.cs) 保持一致；新增饮品不改变上述票据、收据和恢复边界。完整体验 ZIP 只读导出已保存的任务/命令及可归属行动结果，保留状态与证据，不把承诺或提案改写为成功，见[导出架构](ARCHITECTURE.md#read-only-complete-experience-export)。
 
-## Release 任务诊断
+## 任务诊断
 
 沿用 `TASK_DIAGNOSTIC` 与 RuntimeTrace 的 technicalOnly 白名单。只记录真实协议支持、结构化 decision/future_commitment/operation、可信 persistence receipt、Visit/Bridge、可见性与门控、sync/eligible_count、考虑决策、准入、Runner 和可信结算。没有 waiting→已考虑、提案→已完成的推断，也没有新增模型调用。
 
@@ -74,22 +74,9 @@ ESC 一级保留继续、设置、操作说明和退出；有活动委托或重�
 
 当前控制协议依赖本机 Demo 和预期稳定玩家身份，不宣称具有公网多人认证、完整任务列表或复杂生活模拟能力。
 
-## 历史验收记录（任务初次集成阶段）
+## 当前范围
 
-阶段一至三 C 的定向存储、双端协议、自主机会、真实世界结果和取消恢复证据已完成。历史阶段测试数量不能作为当前整套全量回归结果。
-
-最终正式 Cafe UI 验收使用 Scripted Provider，只替换模型输出，保留实际认知、服务、SQLite、感知、GameVisit、准入、Runner 和 WorldState。通过两次 Editor Play 的 next_visit 拿铁闭环、NO_ACTION、自主清理、waiting/executing 菜单取消，以及离线取消后重连确认。真实 GoalOutcome 与真实回执完成结算，重复结果没有新增世界效果。
-
-最后一轮最小修复涉及任务 Schema/Prompt 预算、同一 Run 的行动交接状态以及隐藏对话门控；追加的 Backend 4 项与 Unity EditMode 4 项定向验证通过。存储迁移、版本、幂等和未知执行保护另复用相应阶段证据。
-
-测试要求在应用模块导入前设置完整私有数据、配置、知识、索引和日志路径。Unity Editor 的便携数据根目录不能单独保证隔离。最终集成过程中曾因测试恢复场景丢失未保存隔离值，两次尝试默认端点但没有连接，新增两份默认追踪日志；已披露、保留证据并修正隔离流程，不能称为全程零接触。带固定测试端口/UID、依赖本地证据的 `TaskGameUiAcceptance` 是本地验收辅助，不纳入产品提交或发布依赖。
-
-## 当前边界与历史限制
-
-- 模型任务意图的语义正确性仍需实际体验判断，Scripted/Fake Provider 合同通过不等于真实模型理解始终正确。
-- 当前新 Main 配置默认 32K，已有配置不自动升级。实际输入仍受输出/安全预留和最终载荷预算限制；复杂 Memory/Task 场景可以安全失败，不能以读取成功推断可执行。
-- 结果无法核实时保留 blocked/uncertain 并提供诊断，不通过超时重制饮品伪装恢复成功。没有 Durable Outbox，不能承诺任意跨进程强杀、断电后自动恢复。
-- 原阶段的「16K 余量很小」「两个 Standalone 进程来访未验收」「完整混合 UI / 发布构建 NOT_RUN」是当时的验收范围，不是 v0.1.3-preview 的整体当前状态。后续已集成 32K 新配置默认、委托二级 UI、Toast、混合读取、Windows 发行包与体验导出。后续发行验证以[当前发布说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.3-preview)和[发布范围](RELEASE_STATUS.md)为准，不把旧 NOT_RUN 继续当作现状，也不把后续冒烟扩大为所有崩溃恢复或陌生机认证。
+目前支持 CafeDemoV2 的单机玩家委托、下次来访触发、取消与可信结果结算。执行状态异常时会保留待核实记录，避免重复制作或错误结算。复杂跨进程恢复及多人场景可在此基础上继续扩展。
 
 ## 代码入口
 
