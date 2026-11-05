@@ -1,6 +1,6 @@
 # 世界知识与管理
 
-当前 v0.1.3-preview 默认模板 [cafedemo_v2.json](app/knowledge/cafedemo_v2.json) 有 156 条知识；真实合同以 [world_knowledge.py](app/world_knowledge.py) 和[可信部署配置](app/knowledge/cafedemo_v2_deployment.json)为准。
+内置 [咖啡馆知识模板](app/knowledge/cafedemo_v2.json) 目前包含 **161 条**知识，覆盖角色、场景、饮品和点心等背景。玩家可在游戏中按角色配置访问范围、编辑知识或导入导出 JSON。具体结构由 [知识模型](app/world_knowledge.py) 与 [部署配置](app/knowledge/cafedemo_v2_deployment.json)定义。
 
 - 默认模板只读。首次初始化或旧覆盖格式显式迁移后，玩家的 `data/world_knowledge.json` 是 `schema_version=2` 的完整目录；游戏更新不合并新默认内容。
 - `access.mode=public` 面向部署/场景条件匹配的可信注册角色；`restricted` 只允许明确 CharacterId。缺失字段按旧 restricted 范围解释。
