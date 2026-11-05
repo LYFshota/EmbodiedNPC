@@ -7,6 +7,6 @@
 - **[长期记忆](MEMORY.md)** · **[持久任务](NPC_TASK_SYSTEM.md)** · **[世界知识](../AIBackend/WORLD_KNOWLEDGE.md)**：核心模块的实现。
 - **[Backend 接口](../AIBackend/README.md)** · **[通信协议](../Contracts/README.md)**：配置、请求和结构化输出。
 - **[本地运行](OPERATIONS.md)** · **[上下文容量](CONTEXT_CAPACITY_FEEDBACK.md)** · **[依赖版本](DEPENDENCIES.md)**：开发与排错。
-- **[发布与验证记录](RELEASE_STATUS.md)** · **[资源许可](../THIRD_PARTY_NOTICES.md)** · **[贡献指南](../CONTRIBUTING.md)**。
+- **[版本下载与更新说明](https://github.com/LYFshota/EmbodiedNPC/releases)** · **[资源许可](../THIRD_PARTY_NOTICES.md)** · **[贡献指南](../CONTRIBUTING.md)**。
 
 运行入口为 TitleScene → CafeDemoV2。玩家试玩与下载请返回 [项目首页](../README.md)。
