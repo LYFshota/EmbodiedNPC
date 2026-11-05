@@ -1,36 +1,10 @@
 # EmbodiedNPC Memory
 
-> **Current source: v0.1.3-preview.** Ordinary cognition combines automatic world-knowledge prefetch with one optional batch of Knowledge/Memory/Task reads. Memory remains observer-local and evidence-based. Dated acceptance sections below are historical records, not current configuration defaults or a replacement for [release-specific validation](RELEASE_STATUS.md). Bounded third-party hearing can persist observer-local Observation; it does not automatically establish shared player history or long-term claims.
+EmbodiedNPC 将真实对话、观察和行动结果保存为各 NPC 独立的经历，再通过 Episode 分段、异步整理和按需召回形成长期记忆。每条记忆都有来源，角色关系由独立的反思流程维护。
 
-EmbodiedNPC Memory is **observer-local, evidence-first, and provenance-aware**.
+**三种信息各有职责：** Persona 描述角色设定，World Knowledge 提供背景知识，Memory 记录实际经历；Unity 当前世界状态始终由游戏端确认。
 
-Memory is not the current world state. Character Persona v2 Lite is a stable, Unity-authored/user-editable profile; its Backstory/Personality/Boundaries are not player semantic facts or evidence of shared experiences. Exact player history comes from actual Dialogue/Memory evidence, not the character card.
-
-M3 uses canonical `memory_records`, `memory_subjects`, `memory_evidence`,
-`memory_semantic_facts`, `memory_derived_insights`, source links, and `memory_embeddings`.
-Schema 16 adds open Semantic Fact, 17 adds Maintenance, and 18 adds multi-Episode
-DerivedInsight. Existing Schema 16/17 semantic data upgrades without a reset.
-Historical Profile definitions remain in migrations, but production does not read or
-write `PROFILE_FACT`. Incompatible populated pre-semantic databases and future schemas
-are rejected explicitly rather than silently converted. Migration 15 and versions 1–14
-remain historical definitions.
-
-## Historical M3 acceptance (2026-10-13)
-
-Open Semantic Fact, independent Episodic Memory, low-frequency Memory Maintenance,
-cross-Episode DerivedInsight, async Embedding / Vector-first Recall, independent
-Relationship Reflection, and Observation sampling debounce are implemented.
-M3 is **PASS within the single-player, four-NPC CafeDemoV2 acceptance scope**, including
-restart persistence and real Unity action outcomes. This is not final project release
-acceptance. Free-text semantic accuracy depends on the model; bounded Maintenance
-candidates cannot guarantee all historical relationships are found. Multiplayer
-servers, large NPC populations, and cross-platform deployment remain unvalidated.
-
-## Historical Memory v2 Lite increment (2026-10-10)
-
-This historical increment used fixed ProfileFacts; M3 has replaced that production contract with open Semantic Facts and low-frequency semantic Maintenance. Its authority boundaries remain: the Demo binds one Player UID (default `cafe-local-player-001`), and checks request identity and linked Recall evidence, including open-subject reads. Displayed NPC speech can form owner-only self-statements with source limitations; it cannot certify world execution, another actor, or shared Player history. Skill/Goal outcomes use trusted Runtime participant bindings. Repetition does not independently verify a claim. NPC-only narration and autonomous continuation do not independently produce Player Relationship reflection.
-
-Historical real acceptance and current delivery checks are separated in [the validation summary](RELEASE_STATUS.md).
+当前实现以 canonical Memory 为主，包括 Episodic、Semantic Fact、Derived Insight 及其证据关联和 Embedding 索引。有关版本迁移与过往验收见文末历史记录及 [发布状态](RELEASE_STATUS.md)。
 
 ## Data model
 
@@ -246,3 +220,24 @@ The storage implementation can evolve without changing the identity and memory s
 ## Read-only experience export
 
 The settings experience export reads retained current-player Ledger dialogue/Experience, Episodes, canonical memories and source links, and pair-scoped Relationship records through the [existing exporter](../AIBackend/app/experience_export.py). SQLite is read in one read-only transaction, including committed WAL data; knowledge and Unity settings use separately identified snapshots. Export does not consolidate, reflect, recall, mutate or reconstruct cleaned history. Categories/counts, exclusions and incomplete evidence are reported in manifests. Personal text is preserved for voluntary analysis, while credentials and foreign private records are excluded. See [architecture and ZIP layout](ARCHITECTURE.md#read-only-complete-experience-export).
+
+---
+
+## 历史实现与验收记录
+
+### M3 acceptance (2026-10-13) (2026-10-13)
+
+Open Semantic Fact, independent Episodic Memory, low-frequency Memory Maintenance,
+cross-Episode DerivedInsight, async Embedding / Vector-first Recall, independent
+Relationship Reflection, and Observation sampling debounce are implemented.
+M3 is **PASS within the single-player, four-NPC CafeDemoV2 acceptance scope**, including
+restart persistence and real Unity action outcomes. This is not final project release
+acceptance. Free-text semantic accuracy depends on the model; bounded Maintenance
+candidates cannot guarantee all historical relationships are found. Multiplayer
+servers, large NPC populations, and cross-platform deployment remain unvalidated.
+
+### Memory v2 Lite increment (2026-10-10) (2026-10-10)
+
+This historical increment used fixed ProfileFacts; M3 has replaced that production contract with open Semantic Facts and low-frequency semantic Maintenance. Its authority boundaries remain: the Demo binds one Player UID (default `cafe-local-player-001`), and checks request identity and linked Recall evidence, including open-subject reads. Displayed NPC speech can form owner-only self-statements with source limitations; it cannot certify world execution, another actor, or shared Player history. Skill/Goal outcomes use trusted Runtime participant bindings. Repetition does not independently verify a claim. NPC-only narration and autonomous continuation do not independently produce Player Relationship reflection.
+
+Historical real acceptance and current delivery checks are separated in [the validation summary](RELEASE_STATUS.md).
