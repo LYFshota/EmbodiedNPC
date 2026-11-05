@@ -35,3 +35,5 @@ Rights not expressly granted are reserved. The assets are provided as-is, withou
 ---
 
 中文说明：本许可允许在 EmbodiedNPC 及其 Fork 内非商业使用、修改、改作，并随源码或游戏构建分发原模型或修改版；未经单独授权不得商用，不得单独销售或作为独立素材包分发。保留辉歪歪署名及现有暴力、性用途限制。模型内嵌且所有者有权许可的部件一并适用；实际独立第三方许可另行保留。原创 Apache-2.0 代码的商业使用不受本素材许可限制。
+
+[中文完整译文](Xingmang.LICENSE.zh-CN.md)
