@@ -39,8 +39,8 @@ DeepSeek 官方接口已有定向真实验证；其他官方接口主要通过�
 
 **[下载 Windows x64 试玩版](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [查看已发布的 v0.1.5-preview 说明](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
 
-1. 解压 ZIP，双击 `启动游戏.cmd`（保留 `Start.cmd` 兼容入口）启动游戏和 Backend，无需单独安装 Unity 或 Python。
-2. 在「设置 → AI 配置」填写 API 地址、Key 和模型 ID；默认自定义接口，也可选择已有供应商预设。
+1. 当前公开下载为 v0.1.5-preview：完整解压后双击 `Start.cmd`，无需单独安装 Unity 或 Python。下一版将新增「启动游戏.cmd」。
+2. 在设置中配置你自己的主聊天模型、API Key 和接口地址。
 3. 进入咖啡馆，和 NPC 交谈、提出委托，或观察他们的日常生活。
 
 试玩包已包含本地记忆向量模型 **EmbeddingGemma-300M Q4 ONNX**；主聊天模型和 API Key 需要自行准备。

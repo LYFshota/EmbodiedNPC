@@ -39,8 +39,8 @@ The official DeepSeek API has targeted live-test evidence. Other official endpoi
 
 **[Download the Windows x64 preview](https://github.com/LYFshota/EmbodiedNPC/releases/download/v0.1.5-preview/EmbodiedNPC-v0.1.5-preview-Windows-x64.zip)** · [published v0.1.5-preview release notes](https://github.com/LYFshota/EmbodiedNPC/releases/tag/v0.1.5-preview)
 
-1. Extract the ZIP and double-click `启动游戏.cmd` (`Start.cmd` remains available). Unity Editor and a separate Python installation are not required.
-2. Enter your API URL, key and model ID in Settings → AI configuration. The default is a custom OpenAI-compatible API; existing provider presets remain available.
+1. The current public download is v0.1.5-preview: extract it completely and run `Start.cmd`. No Unity Editor or separate Python installation is required. The next release adds a Chinese launch entry.
+2. Configure your own chat model, API key and service URL in Settings.
 3. Enter the café to talk with NPCs, request services, or observe their everyday activities.
 
 The preview includes **EmbeddingGemma-300M Q4 ONNX** for local memory embeddings. Bring your own chat model and API key if your provider requires one.
