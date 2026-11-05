@@ -29,7 +29,7 @@ $env:EMBODIEDNPC_PROVIDER = 'mock'
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 ```
 
-See [Source Setup](../Docs/SOURCE_SETUP.md) for the full Unity and model workflow. Windows preview packages have their own launcher.
+See [Source Setup](../Docs/SOURCE_SETUP.en.md) for the full Unity and model workflow. Windows preview packages have their own launcher.
 
 ## Model configuration
 
@@ -54,7 +54,7 @@ Configuration is stored in `data/model_api_configs.json`. Environment variables 
 
 The Backend generates local session credentials for protected Unity and HTTP/WS access. Unity Editor and the portable launcher discover the session through their respective local paths. Keep personal configuration, sessions and UserData out of public commits.
 
-See [Wire Contracts](../Contracts/README.md) when integrating a new client. They describe versioned messages, correlation IDs, structured model output and identity scoping.
+See [Wire Contracts](../Contracts/README.en.md) when integrating a new client. They describe versioned messages, correlation IDs, structured model output and identity scoping.
 
 ## Data and services
 
@@ -66,4 +66,4 @@ See [Wire Contracts](../Contracts/README.md) when integrating a new client. They
 
 ## Developer guides
 
-[Architecture](../Docs/ARCHITECTURE.en.md) · [Memory](../Docs/MEMORY.en.md) · [Tasks](../Docs/NPC_TASK_SYSTEM.md) · [World Knowledge](WORLD_KNOWLEDGE.md) · [Context Budget](../Docs/CONTEXT_CAPACITY_FEEDBACK.md) · [Source Setup](../Docs/SOURCE_SETUP.md) · [Operations](../Docs/OPERATIONS.md)
+[Architecture](../Docs/ARCHITECTURE.en.md) · [Memory](../Docs/MEMORY.en.md) · [Tasks](../Docs/NPC_TASK_SYSTEM.en.md) · [World Knowledge](WORLD_KNOWLEDGE.en.md) · [Context Budget](../Docs/CONTEXT_CAPACITY_FEEDBACK.en.md) · [Source Setup](../Docs/SOURCE_SETUP.en.md) · [Operations](../Docs/OPERATIONS.en.md)
