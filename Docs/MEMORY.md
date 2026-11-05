@@ -1,10 +1,10 @@
 # EmbodiedNPC Memory
 
-EmbodiedNPC 将真实对话、观察和行动结果保存为各 NPC 独立的经历，再通过 Episode 分段、异步整理和按需召回形成长期记忆。每条记忆都有来源，角色关系由独立的反思流程维护。
+EmbodiedNPC stores source-qualified dialogue, observations, and action outcomes as **NPC-local Experience**. Episodes group those experiences; asynchronous consolidation turns them into durable memories that can be recalled in later conversations. Relationship reflection maintains a separate, pair-scoped social understanding.
 
-**三种信息各有职责：** Persona 描述角色设定，World Knowledge 提供背景知识，Memory 记录实际经历；Unity 当前世界状态始终由游戏端确认。
+Persona describes the character, World Knowledge supplies authored background, and Memory records what actually happened. Unity remains the source of truth for the current world and completed actions.
 
-当前实现以 canonical Memory 为主，包括 Episodic、Semantic Fact、Derived Insight 及其证据关联和 Embedding 索引。有关版本迁移与过往验收见文末历史记录及 [发布状态](RELEASE_STATUS.md)。
+Canonical Memory includes Episodic records, Semantic Facts, Derived Insights, evidence links, and an Embedding index. Migration and validation history is collected at the end of this document and in [Release Status](RELEASE_STATUS.md).
 
 ## Data model
 
@@ -223,9 +223,9 @@ The settings experience export reads retained current-player Ledger dialogue/Exp
 
 ---
 
-## 历史实现与验收记录
+## Historical implementation and validation
 
-### M3 acceptance (2026-10-13) (2026-10-13)
+### M3 acceptance (2026-10-13)
 
 Open Semantic Fact, independent Episodic Memory, low-frequency Memory Maintenance,
 cross-Episode DerivedInsight, async Embedding / Vector-first Recall, independent
@@ -236,7 +236,7 @@ acceptance. Free-text semantic accuracy depends on the model; bounded Maintenanc
 candidates cannot guarantee all historical relationships are found. Multiplayer
 servers, large NPC populations, and cross-platform deployment remain unvalidated.
 
-### Memory v2 Lite increment (2026-10-10) (2026-10-10)
+### Memory v2 Lite increment (2026-10-10)
 
 This historical increment used fixed ProfileFacts; M3 has replaced that production contract with open Semantic Facts and low-frequency semantic Maintenance. Its authority boundaries remain: the Demo binds one Player UID (default `cafe-local-player-001`), and checks request identity and linked Recall evidence, including open-subject reads. Displayed NPC speech can form owner-only self-statements with source limitations; it cannot certify world execution, another actor, or shared Player history. Skill/Goal outcomes use trusted Runtime participant bindings. Repetition does not independently verify a claim. NPC-only narration and autonomous continuation do not independently produce Player Relationship reflection.
 
