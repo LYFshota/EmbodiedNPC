@@ -1,4 +1,6 @@
-# CafeDemo 当前角色
+# CafeDemo v1 · 历史角色配置
+
+本页保留早期 CafeDemo 的模型与组件信息；当前四 NPC 场景请参考 [CafeDemoV2](../V2/README.md)。
 
 Player 与 NPC 的 Visual wrapper 分别为 `Assets/CafeDemo/Prefabs/Characters/PlayerVisual.prefab` 和 `NPCVisual.prefab`，复用项目导入的 LowPoly man_1 / woman_2 模型及有效 Humanoid Avatar。第三方原资源和许可保持原样；Visual 不承担 collider、NavMesh 或世界 authority。
 
