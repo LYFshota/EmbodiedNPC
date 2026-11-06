@@ -11,7 +11,13 @@ EmbodiedNPC 是一个探索**游戏 NPC 长期交互与自主行为**的开源�
 项目的核心是一条可运行的闭环：**感知 → 认知 → 记忆 / 行动 → 世界反馈 → 下一次交互**。
 
 <p align="center">
-  <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC 咖啡馆实机画面" width="760">
+  <a href="https://www.bilibili.com/video/BV1rr4h6fExr/">
+    <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC 咖啡馆实机画面，点击观看介绍视频" width="760">
+  </a>
+</p>
+
+<p align="center">
+  <strong><a href="https://www.bilibili.com/video/BV1rr4h6fExr/">▶ 观看项目介绍视频（Bilibili）</a></strong>
 </p>
 
 ## ✨ 核心能力

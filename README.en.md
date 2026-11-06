@@ -11,7 +11,13 @@ EmbodiedNPC is an open-source exploration of **persistent NPC interactions and a
 At its core is a working loop: **perception → cognition → memory / action → world feedback → the next interaction**.
 
 <p align="center">
-  <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC café gameplay" width="760">
+  <a href="https://www.bilibili.com/video/BV1rr4h6fExr/">
+    <img src="Docs/Images/cafe-panorama.jpg" alt="EmbodiedNPC café gameplay — click to watch the introduction" width="760">
+  </a>
+</p>
+
+<p align="center">
+  <strong><a href="https://www.bilibili.com/video/BV1rr4h6fExr/">▶ Watch the project introduction (Bilibili)</a></strong>
 </p>
 
 ## ✨ Features
